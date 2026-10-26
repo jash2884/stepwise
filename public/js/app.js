@@ -51,7 +51,7 @@ async function route() {
     if (!slug || slug === "index") {
       const home = await import("./views/home.js");
       if (id !== renderId) return;
-      setMeta(`${SITE.name}: see every step of OS & DBMS algorithms`, "Interactive, step-by-step visualisers for operating systems and database algorithms, with practice questions that check your answers.", "/");
+      setMeta(`${SITE.name}: see every step of OS, DBMS & networking algorithms`, "Interactive, step-by-step visualisers for operating systems, database and computer networks algorithms, with practice questions that check your answers.", "/");
       cleanup = home.render(main) ?? null;
     } else if (!tool) {
       setMeta(`Page not found · ${SITE.name}`, "This page doesn't exist.", location.pathname);

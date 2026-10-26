@@ -1,6 +1,6 @@
 # Stepwise
 
-**See every step of the OS and DBMS algorithms you get examined on.** 11 interactive tools. Interactive visualisers that animate each algorithm one step at a time with the reasoning written out, plus a practice mode that generates fresh exam-style questions and checks every answer.
+**See every step of the OS, DBMS and computer networks algorithms you get examined on.** 17 interactive tools. Interactive visualisers that animate each algorithm one step at a time with the reasoning written out, plus a practice mode that generates fresh exam-style questions and checks every answer.
 
 **Live:** https://stepwise.jashparmar.com
 
@@ -17,10 +17,16 @@
 | DBMS | **SQL joins**: INNER, LEFT, RIGHT, FULL, CROSS, NATURAL, SEMI, ANTI, row pair by row pair, with NULL semantics | Predict the row count |
 | DBMS | **Serialisability**: precedence graph, conflict/view serialisability, recoverable/cascadeless/strict | Serialisable? Give a serial order |
 | DBMS | **Hashing**: chaining, linear/quadratic/double hashing, extendible hashing | Final slot and collisions; global depth and buckets |
+| CN | **Subnetting & VLSM**: network/broadcast/host range with the binary AND, VLSM planner | Network, broadcast and usable hosts |
+| CN | **Sliding window**: Stop-and-Wait, Go-Back-N, Selective Repeat on a sender/receiver timeline with lost frames and ACKs, plus an efficiency calculator | Utilisation and sequence-number bits |
+| CN | **Routing**: Dijkstra with forwarding tables; distance vector with count-to-infinity and poisoned reverse | Least costs and next hop |
+| CN | **TCP congestion control**: slow start, congestion avoidance, Tahoe vs Reno, cwnd chart | cwnd and ssthresh after losses |
+| CN | **Error detection**: CRC long division, Hamming encode/correct, Internet checksum | CRC remainder, flipped bit, checksum |
+| CN | **IP fragmentation**: fragment sizes, offsets and MF flags | Fragment count, last offset and length |
 
 ## Why it's built this way
 
-- **Correctness first.** Each algorithm is a pure engine (`public/js/engines/`) that returns the full list of steps, and the UI only renders them. The engines are tested against the worked examples in Silberschatz's *Operating System Concepts* and *Database System Concepts*, plus a property test that runs 12,000 random B+ tree inserts and deletes across orders 3–7 and checks every invariant (sorted keys, balanced leaves, fill limits, the leaf chain) after each one.
+- **Correctness first.** Each algorithm is a pure engine (`public/js/engines/`) that returns the full list of steps, and the UI only renders them. The engines are tested against the worked examples in Silberschatz's *Operating System Concepts* and *Database System Concepts*, Kurose & Ross's *Computer Networking* and Tanenbaum's *Computer Networks*, plus a property test that runs 12,000 random B+ tree inserts and deletes across orders 3–7 and checks every invariant (sorted keys, balanced leaves, fill limits, the leaf chain) after each one.
 - **Conventions are stated, not hidden.** Textbooks disagree on tie-breaking, Round Robin arrival order and B+ tree split points, so every page lists the rules it follows. Answers match what an examiner expects.
 - **One step player for everything.** Play, pause, step back and forward, scrub, change speed, use the keyboard. Every visualiser shares it.
 - **Shareable.** Every input is in the URL, so a student can send the exact question they're stuck on.
@@ -33,12 +39,12 @@
 - **Offline.** A service worker, versioned by a content hash at build time, precaches every tool; the site is installable as an app.
 - **Resilience.** Failed loads show a retry screen, unexpected errors show a reload prompt, and every route has a loading state.
 - **Security and caching.** Strict CSP, HSTS, `nosniff`, a locked-down Permissions-Policy; scripts revalidate on every load (so a deploy is never half-applied), icons cache for a week.
-- **Tests.** 71 tests: textbook examples, a fuzz suite running every engine on thousands of random inputs against invariants, and module checks that every file parses and every view loads. CI runs them plus the production build on every push.
+- **Tests.** 102 tests: textbook examples, a fuzz suite running every engine on thousands of random inputs against invariants, and module checks that every file parses and every view loads. CI runs them plus the production build on every push.
 
 ## Develop
 
 ```bash
-npm test          # 71 tests
+npm test          # 102 tests
 npm run dev       # http://localhost:8793 (serves public/)
 npm run preview   # build, then serve dist/ like production
 npm run deploy    # test, build, deploy to Cloudflare

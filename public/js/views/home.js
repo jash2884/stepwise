@@ -15,6 +15,12 @@ function art(kind) {
     case "join": return h("div", { class: "art join-art" }, h("i"), h("i", { class: "hot" }));
     case "schedule": return h("div", { class: "art fd-art" }, h("span", null, "R1(A) W2(A)"), h("span", null, "T1 → T2"), h("span", { class: "hot" }, "serialisable ✓"));
     case "hash": return h("div", { class: "art matrix-art hash-art" }, cells(10, [3, 4, 5]));
+    case "ip": return h("div", { class: "art fd-art" }, h("span", null, "192.168.10.77/26"), h("span", { class: "hot" }, "11000000…01|001101"), h("span", null, "→ .64 – .127"));
+    case "window": return h("div", { class: "art win-art" }, Array.from({ length: 8 }, (_, i) => h("i", { class: i < 2 ? "acked" : i < 5 ? "sent" : "" })));
+    case "routing": return h("div", { class: "art graph-art routing-art" }, h("span", { class: "p" }, "A"), h("span", { class: "p hot" }, "B"), h("span", { class: "p" }, "C"), h("span", { class: "p" }, "D"));
+    case "cwnd": return h("div", { class: "art disk-art" }, h("svg", { viewBox: "0 0 120 50", "aria-hidden": "true" }, h("polyline", { points: "6,46 18,42 30,32 42,14 54,11 66,8 78,5 84,46 96,40 108,28 116,20" })));
+    case "crc": return h("div", { class: "art fd-art" }, h("span", null, "1101011111 0000"), h("span", null, "÷ 10011"), h("span", { class: "hot" }, "remainder 0010"));
+    case "frag": return h("div", { class: "art frag-art" }, h("i", { style: "flex:37" }), h("i", { style: "flex:37" }), h("i", { style: "flex:26" }));
     default: return h("div", { class: "art fd-art" }, h("span", null, "AB → C"), h("span", null, "C → D"), h("span", { class: "hot" }, "AB⁺ = ABCD"));
   }
 }
@@ -29,9 +35,9 @@ export function render(root) {
   const sections = SUBJECTS.map((s) => h("section", { class: "subject", "data-subject": s.id },
     h("h2", null, s.name, h("span", { class: "count" }, ` · ${TOOLS.filter((t) => t.subject === s.id).length} tools`)),
     h("div", { class: "tool-grid" }, TOOLS.filter((t) => t.subject === s.id).map(card))));
-  const empty = h("p", { class: "muted", hidden: true }, "No tool matches that yet. Try “deadlock”, “join” or “tree”.");
+  const empty = h("p", { class: "muted", hidden: true }, "No tool matches that yet. Try “deadlock”, “join”, “subnet” or “tree”.");
   const search = h("input", {
-    type: "search", class: "tool-search", placeholder: `Search ${TOOLS.length} tools: LRU, B+ tree, deadlock…`, "aria-label": "Search tools",
+    type: "search", class: "tool-search", placeholder: `Search ${TOOLS.length} tools: LRU, B+ tree, subnetting…`, "aria-label": "Search tools",
     oninput: (e) => {
       const q = e.target.value.trim().toLowerCase();
       let shown = 0;
@@ -42,9 +48,9 @@ export function render(root) {
   });
   root.replaceChildren(
     h("section", { class: "hero" },
-      h("p", { class: "eyebrow" }, "Interactive OS & DBMS visualisers"),
+      h("p", { class: "eyebrow" }, "Interactive OS, DBMS & networking visualisers"),
       h("h1", null, "See every step."),
-      h("p", { class: "lede" }, "The algorithms in your operating systems and database exams, animated one step at a time with the reasoning written out. Then practise on fresh questions that check every answer."),
+      h("p", { class: "lede" }, "The algorithms in your operating systems, databases and computer networks exams, animated one step at a time with the reasoning written out. Then practise on fresh questions that check every answer."),
       search),
     empty,
     ...sections,

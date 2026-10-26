@@ -5,6 +5,7 @@
 export const SUBJECTS = [
   { id: "os", name: "Operating systems", short: "OS" },
   { id: "dbms", name: "Databases", short: "DBMS" },
+  { id: "cn", name: "Computer networks", short: "CN" },
 ];
 
 export const TOOLS = [
@@ -52,6 +53,30 @@ export const TOOLS = [
     summary: "Chaining, linear, quadratic and double hashing, plus extendible hashing.",
     description: "Hashing visualiser: separate chaining, linear and quadratic probing, double hashing and extendible hashing with directory doubling and bucket splits.",
     load: () => import("./views/hashing.js") },
+  { slug: "subnetting", subject: "cn", title: "Subnetting & VLSM", art: "ip",
+    summary: "Network, broadcast and host range from any IPv4 address, in binary, plus a VLSM planner.",
+    description: "IPv4 subnet calculator with the binary working: network and broadcast address, usable hosts, masks, plus a VLSM planner and practice questions.",
+    load: () => import("./views/subnet.js") },
+  { slug: "sliding-window", subject: "cn", title: "Sliding window protocols", art: "window",
+    summary: "Stop-and-Wait, Go-Back-N and Selective Repeat on a timeline, with lost frames and ACKs.",
+    description: "Stop-and-Wait, Go-Back-N and Selective Repeat simulated on a sender/receiver timeline with lost frames and ACKs, plus an efficiency calculator.",
+    load: () => import("./views/sliding.js") },
+  { slug: "routing", subject: "cn", title: "Routing algorithms", art: "routing",
+    summary: "Dijkstra link-state and distance-vector routing, including count-to-infinity.",
+    description: "Dijkstra's link-state and distance-vector routing step by step: shortest-path trees, forwarding tables, count-to-infinity and poisoned reverse.",
+    load: () => import("./views/routing.js") },
+  { slug: "tcp-congestion-control", subject: "cn", title: "TCP congestion control", art: "cwnd",
+    summary: "Slow start, congestion avoidance, Tahoe and Reno, as the cwnd sawtooth round by round.",
+    description: "TCP congestion window round by round: slow start, congestion avoidance, timeouts and triple duplicate ACKs in TCP Tahoe and Reno.",
+    load: () => import("./views/congestion.js") },
+  { slug: "error-detection", subject: "cn", title: "Error detection & correction", art: "crc",
+    summary: "CRC long division, Hamming codes that fix a flipped bit, and the Internet checksum.",
+    description: "CRC long division, Hamming code encoding and single-bit error correction, and the Internet checksum, each worked step by step with practice.",
+    load: () => import("./views/errors.js") },
+  { slug: "ip-fragmentation", subject: "cn", title: "IP fragmentation", art: "frag",
+    summary: "Split a datagram for a smaller MTU: fragment sizes, offsets and the MF flag.",
+    description: "IPv4 fragmentation calculator: fragment sizes, 8-byte offsets and More Fragments flags for any datagram and MTU, with practice questions.",
+    load: () => import("./views/fragment.js") },
 ];
 
 export const SITE = { name: "Stepwise", url: "https://stepwise.jashparmar.com" };

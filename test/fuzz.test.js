@@ -164,3 +164,100 @@ test("semaphores: random interleavings never crash and keep the counting invaria
     }
   }
 });
+
+// --- Computer networks ---------------------------------------------------------
+import { simulate as congestion } from "../public/js/engines/congestion.js";
+import { crc, crcCheck, GENERATORS, hammingCheck, hammingEncode, randomBits } from "../public/js/engines/errors.js";
+import { fragment } from "../public/js/engines/fragment.js";
+import { dijkstra, distanceVector, parseNetwork, randomNetwork } from "../public/js/engines/routing.js";
+import { simulate as sliding } from "../public/js/engines/sliding.js";
+import { analyse as subnet, maskOf, randomAddress, vlsm } from "../public/js/engines/subnet.js";
+
+test("subnetting: the address sits inside its aligned block; VLSM blocks never overlap", () => {
+  for (let k = 0; k < N; k++) {
+    const { ip, prefix } = randomAddress(rand);
+    const r = subnet(ip, prefix);
+    assert.ok(r.network <= ip && ip <= r.broadcast);
+    assert.equal(((r.network & ~maskOf(prefix)) >>> 0), 0);
+    assert.equal(r.broadcast - r.network + 1, r.total);
+    const needs = Array.from({ length: 1 + Math.floor(rand() * 5) }, (_, i) => ({ name: `N${i}`, hosts: 1 + Math.floor(rand() * 60) }));
+    const v = vlsm(ip, 22, needs);
+    const blocks = v.rows.filter((x) => !x.failed).map((x) => [x.network, x.broadcast]).sort((a, b) => a[0] - b[0]);
+    blocks.forEach(([s, e], i) => {
+      assert.equal((s & ~maskOf(32 - Math.log2(e - s + 1))) >>> 0, 0, "aligned");
+      if (i) assert.ok(s > blocks[i - 1][1], "no overlap");
+    });
+    for (const row of v.rows.filter((x) => !x.failed)) assert.ok(row.usable >= row.hosts);
+  }
+});
+
+test("error detection: CRC catches every single-bit error; Hamming fixes it", () => {
+  for (let k = 0; k < N; k++) {
+    const data = randomBits(rand, 4 + Math.floor(rand() * 12)), gen = GENERATORS[Math.floor(rand() * GENERATORS.length)];
+    const c = crc(data, gen);
+    assert.equal(crcCheck(c.codeword, gen).ok, true);
+    const i = Math.floor(rand() * c.codeword.length);
+    const bad = c.codeword.slice(0, i) + (c.codeword[i] === "1" ? "0" : "1") + c.codeword.slice(i + 1);
+    assert.equal(crcCheck(bad, gen).ok, false);
+    const h = hammingEncode(data);
+    const j = Math.floor(rand() * h.n);
+    const flipped = h.codeword.slice(0, j) + (h.codeword[j] === "1" ? "0" : "1") + h.codeword.slice(j + 1);
+    assert.equal(hammingCheck(flipped).corrected, h.codeword);
+  }
+});
+
+test("fragmentation: fragments tile the data exactly, in 8-byte units", () => {
+  for (let k = 0; k < N; k++) {
+    const total = 100 + Math.floor(rand() * 9000), mtu = 68 + Math.floor(rand() * 1500);
+    const r = fragment(total, mtu);
+    assert.equal(r.fragments.reduce((s, f) => s + f.data, 0), total - 20);
+    r.fragments.forEach((f, i) => {
+      assert.ok(f.length <= Math.max(mtu, total <= mtu ? total : 0) || f.length <= mtu);
+      assert.equal(f.offset * 8, f.first);
+      if (i < r.fragments.length - 1) { assert.equal(f.data % 8, 0); assert.equal(f.mf, 1); } else assert.equal(f.mf, 0);
+    });
+  }
+});
+
+test("congestion control: slow start never overshoots ssthresh; losses halve it", () => {
+  for (let k = 0; k < N; k++) {
+    const events = [{ round: 4 + Math.floor(rand() * 10), type: rand() < 0.5 ? "timeout" : "dupack" }];
+    const r = congestion({ ssthresh: 2 + Math.floor(rand() * 30), rounds: 30, events, variant: rand() < 0.5 ? "tahoe" : "reno" });
+    r.series.forEach((p, i) => {
+      assert.ok(p.cwnd >= 1);
+      const prev = r.series[i - 1];
+      if (prev && !prev.event && prev.cwnd < prev.ssthresh) assert.ok(p.cwnd <= prev.ssthresh);
+      if (prev?.event) assert.equal(p.ssthresh, Math.max(Math.floor(prev.cwnd / 2), 2));
+    });
+  }
+});
+
+test("routing: Dijkstra distances are consistent and distance vector agrees", () => {
+  for (let k = 0; k < 80; k++) {
+    const g = parseNetwork(randomNetwork(rand));
+    const src = g.nodes[0];
+    const d = dijkstra(g, src).dist;
+    for (const l of g.links) assert.ok(Math.abs(d[l.a] - d[l.b]) <= l.cost);
+    const dv = distanceVector(g).rounds.at(-1).vectors;
+    for (const y of g.nodes) assert.equal(dv[src][y].cost, d[y]);
+  }
+});
+
+test("sliding window: every frame is delivered exactly once, in order, whatever is lost", () => {
+  for (let k = 0; k < N; k++) {
+    const frames = 2 + Math.floor(rand() * 9), protocol = ["sw", "gbn", "sr"][Math.floor(rand() * 3)];
+    const losses = new Set();
+    for (let i = 0; i < 3; i++) losses.add(`${rand() < 0.7 ? "F" : "A"}${Math.floor(rand() * frames)}#${1 + Math.floor(rand() * 2)}`);
+    const everyKth = rand() < 0.2 ? 4 : 0;
+    let r;
+    try {
+      r = sliding({ protocol, frames, window: 1 + Math.floor(rand() * 5), delay: 1 + Math.floor(rand() * 2), losses, everyKth });
+    } catch (e) {
+      // Only a periodic loss pattern can line up with retries forever; explicit losses always finish.
+      assert.ok(e.livelock && everyKth, e.message);
+      continue;
+    }
+    assert.deepEqual(r.delivered, Array.from({ length: frames }, (_, i) => i), `${protocol} ${[...losses]}`);
+    assert.ok(r.framesSent >= frames);
+  }
+});

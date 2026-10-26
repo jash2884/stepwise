@@ -1,8 +1,8 @@
 {
   "id": "/",
-  "name": "Stepwise: OS & DBMS visualisers",
+  "name": "Stepwise: OS, DBMS & networks visualisers",
   "short_name": "Stepwise",
-  "description": "Step-by-step visualisers and practice for operating systems and database algorithms.",
+  "description": "Step-by-step visualisers and practice for operating systems, database and networking algorithms.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
