@@ -21,6 +21,19 @@ function art(kind) {
     case "cwnd": return h("div", { class: "art disk-art" }, h("svg", { viewBox: "0 0 120 50", "aria-hidden": "true" }, h("polyline", { points: "6,46 18,42 30,32 42,14 54,11 66,8 78,5 84,46 96,40 108,28 116,20" })));
     case "crc": return h("div", { class: "art fd-art" }, h("span", null, "1101011111 0000"), h("span", null, "÷ 10011"), h("span", { class: "hot" }, "remainder 0010"));
     case "frag": return h("div", { class: "art frag-art" }, h("i", { style: "flex:37" }), h("i", { style: "flex:37" }), h("i", { style: "flex:26" }));
+    case "states": return h("div", { class: "art states-art" }, h("svg", { viewBox: "0 0 150 54", "aria-hidden": "true" },
+      h("path", { d: "M2,27 L14,27", class: "a" }), h("path", { d: "M44,27 L60,27", class: "a" }), h("path", { d: "M90,27 L106,27", class: "a" }), h("path", { d: "M117,13 C108,-6 140,-6 131,13", class: "a" }),
+      h("circle", { cx: 29, cy: 27, r: 14 }), h("circle", { cx: 75, cy: 27, r: 14, class: "on" }), h("circle", { cx: 124, cy: 27, r: 14 }), h("circle", { cx: 124, cy: 27, r: 10 })));
+    case "subset": return h("div", { class: "art fd-art" }, h("span", null, "ε-closure({0}) = A"), h("span", null, "move(A, a) = {3, 8}"), h("span", { class: "hot" }, "→ new state B"));
+    case "partition": return h("div", { class: "art part-art" }, ["A C", "B", "D", "E"].map((x, i) => h("span", { style: `--c:var(--series-${i + 1})` }, x)));
+    case "thompson": return h("div", { class: "art fd-art" }, h("span", null, "(a|b)*abb"), h("span", null, "postfix ab|*a·b·b·"), h("span", { class: "hot" }, "→ 11-state ε-NFA"));
+    case "cyk": return h("div", { class: "art cyk-art" }, [1, 2, 3].map((n) => h("div", null, Array.from({ length: n }, (_, i) => h("i", { class: n === 1 ? "hot" : "" })))));
+    case "tape": return h("div", { class: "art tape-art" }, [..."XaYb_"].map((c, i) => h("i", { class: i === 2 ? "hot" : "" }, c)));
+    case "rewrite": return h("div", { class: "art fd-art" }, h("span", null, "E → E + T | T"), h("span", { class: "hot" }, "E → T E′"), h("span", { class: "hot" }, "E′ → + T E′ | ε"));
+    case "first": return h("div", { class: "art fd-art" }, h("span", null, "FIRST(E) = { (, id }"), h("span", null, "FOLLOW(E) = { ), $ }"), h("span", { class: "hot" }, "FOLLOW(T) += { + }"));
+    case "ll1": return h("div", { class: "art matrix-art" }, cells(15, [4, 6, 13]));
+    case "lr": return h("div", { class: "art fd-art" }, h("span", null, "I0 —id→ I5"), h("span", null, "s5  r6  acc"), h("span", { class: "hot" }, "shift/reduce on ="));
+    case "dag": return h("div", { class: "art fd-art" }, h("span", null, "t1 = minus c"), h("span", null, "t2 = b * t1"), h("span", { class: "hot" }, "t3 = t2 + t2  ← shared"));
     default: return h("div", { class: "art fd-art" }, h("span", null, "AB → C"), h("span", null, "C → D"), h("span", { class: "hot" }, "AB⁺ = ABCD"));
   }
 }
@@ -35,9 +48,9 @@ export function render(root) {
   const sections = SUBJECTS.map((s) => h("section", { class: "subject", "data-subject": s.id },
     h("h2", null, s.name, h("span", { class: "count" }, ` · ${TOOLS.filter((t) => t.subject === s.id).length} tools`)),
     h("div", { class: "tool-grid" }, TOOLS.filter((t) => t.subject === s.id).map(card))));
-  const empty = h("p", { class: "muted", hidden: true }, "No tool matches that yet. Try “deadlock”, “join”, “subnet” or “tree”.");
+  const empty = h("p", { class: "muted", hidden: true }, "No tool matches that yet. Try “deadlock”, “join”, “subnet”, “DFA” or “parsing”.");
   const search = h("input", {
-    type: "search", class: "tool-search", placeholder: `Search ${TOOLS.length} tools: LRU, B+ tree, subnetting…`, "aria-label": "Search tools",
+    type: "search", class: "tool-search", placeholder: `Search ${TOOLS.length} tools: LRU, B+ tree, subnetting, LALR…`, "aria-label": "Search tools",
     oninput: (e) => {
       const q = e.target.value.trim().toLowerCase();
       let shown = 0;
@@ -48,9 +61,9 @@ export function render(root) {
   });
   root.replaceChildren(
     h("section", { class: "hero" },
-      h("p", { class: "eyebrow" }, "Interactive OS, DBMS & networking visualisers"),
+      h("p", { class: "eyebrow" }, "Interactive CS visualisers: OS, DBMS, networks, theory, compilers"),
       h("h1", null, "See every step."),
-      h("p", { class: "lede" }, "The algorithms in your operating systems, databases and computer networks exams, animated one step at a time with the reasoning written out. Then practise on fresh questions that check every answer."),
+      h("p", { class: "lede" }, "The algorithms in your operating systems, databases, networks, theory of computation and compiler design exams, animated one step at a time with the reasoning written out. Then practise on fresh questions that check every answer."),
       search),
     empty,
     ...sections,

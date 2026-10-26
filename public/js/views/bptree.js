@@ -1,5 +1,5 @@
 import { BPlusTree, parseKeys } from "../engines/bptree.js";
-import { copyLink, h, notice, page, readParams, rng, stepper, tabs, writeParams } from "../ui.js";
+import { copyLink, h, morph, notice, page, readParams, rng, stepper, tabs, writeParams } from "../ui.js";
 
 const CELL = 34, NODE_H = 32, GAP_X = 18, GAP_Y = 64, PAD = 16;
 
@@ -36,13 +36,13 @@ export function treeSvg(snap, order) {
     const p = pos.get(n.id), nw = width(n);
     n.children.forEach((c, i) => {
       const cp = pos.get(c);
-      edges.push(h("line", { x1: p.x + i * CELL, y1: p.y + NODE_H, x2: cp.x + width(byId.get(c)) / 2, y2: cp.y, class: "edge" }));
+      edges.push(h("line", { x1: p.x + i * CELL, y1: p.y + NODE_H, x2: cp.x + width(byId.get(c)) / 2, y2: cp.y, class: "edge", "data-k": `e:${n.id}>${c}`, "data-ends": `${n.id}|${c}` }));
     });
     if (n.leaf && n.next && pos.has(n.next)) {
       const np = pos.get(n.next);
-      links.push(h("line", { x1: p.x + nw, y1: p.y + NODE_H / 2, x2: np.x - 2, y2: np.y + NODE_H / 2, class: "leaf-link", "marker-end": "url(#arrow)" }));
+      links.push(h("line", { x1: p.x + nw, y1: p.y + NODE_H / 2, x2: np.x - 2, y2: np.y + NODE_H / 2, class: "leaf-link", "marker-end": "url(#arrow)", "data-k": `l:${n.id}`, "data-ends": `${n.id}|${n.next}` }));
     }
-    nodes.push(h("g", { class: `node${n.leaf ? " leaf" : ""}${lit.has(n.id) ? ` lit ${kind}` : ""}` },
+    nodes.push(h("g", { class: `node${n.leaf ? " leaf" : ""}${lit.has(n.id) ? ` lit ${kind}` : ""}`, "data-k": `n:${n.id}`, "data-x": p.x, "data-y": p.y },
       h("title", null, `${n.leaf ? "Leaf" : "Internal node"}: ${n.keys.join(", ") || "empty"}`),
       h("rect", { x: p.x, y: p.y, width: nw, height: NODE_H, rx: 6 }),
       Array.from({ length: Math.max(order - 1, n.keys.length, 1) }, (_, i) => [
@@ -105,7 +105,7 @@ export function render(root) {
     const stage = h("div", { class: "tree-wrap" }), note = h("p", { class: "step-note", "aria-live": "polite" });
     player = stepper({
       count: frames.length, label: "Step", interval: 1300, start: 0,
-      render: (i) => { stage.replaceChildren(treeSvg(frames[i], state.order)); note.textContent = frames[i].note; },
+      render: (i) => { morph(stage, treeSvg(frames[i], state.order)); note.textContent = frames[i].note; },
     });
     const facts = tree.facts();
     out.replaceChildren(h("section", { class: "card" }, player.el, stage, note,
@@ -191,7 +191,7 @@ export function render(root) {
           const replay = new BPlusTree(order), frames = [];
           keys.forEach((k) => replay.insert(k).forEach((x, j) => frames.push(j === 0 ? { ...x, note: `[Insert ${k}] ${x.note}` } : x)));
           const stage = h("div", { class: "tree-wrap" }), note = h("p", { class: "step-note" });
-          const p = stepper({ count: frames.length, label: "Step", interval: 1200, render: (i) => { stage.replaceChildren(treeSvg(frames[i], order)); note.textContent = frames[i].note; } });
+          const p = stepper({ count: frames.length, label: "Step", interval: 1200, render: (i) => { morph(stage, treeSvg(frames[i], order)); note.textContent = frames[i].note; } });
           solution.replaceChildren(h("section", { class: "card" }, h("h2", null, "Solution"), p.el, stage, note));
         } }, "Show solution")),
       feedback), solution);

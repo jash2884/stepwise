@@ -2,7 +2,7 @@
 // visualiser, tabs, and helpers for shareable URLs.
 
 export function h(tag, props, ...kids) {
-  const svg = ["svg", "g", "rect", "line", "path", "text", "polyline", "circle", "defs", "marker", "pattern", "title", "tspan", "clipPath"].includes(tag);
+  const svg = ["svg", "g", "rect", "line", "path", "text", "polyline", "circle", "defs", "marker", "pattern", "title", "tspan", "clipPath", "animateMotion", "ellipse"].includes(tag);
   const el = svg ? document.createElementNS("http://www.w3.org/2000/svg", tag) : document.createElement(tag);
   for (const [k, v] of Object.entries(props ?? {})) {
     if (v == null || v === false) continue;
@@ -60,6 +60,39 @@ export function stepper({ count, render, label = "Step", interval = 900, start =
   }
   go(i);
   return { el: bar, go, pause, destroy: pause, get index() { return i; } };
+}
+
+// Swap in a redrawn diagram, gliding every keyed node (data-k with data-x/y)
+// from where it was to where it is now. New nodes pop in, and edges whose
+// endpoints moved fade in once the nodes have arrived.
+export function morph(holder, next) {
+  const prev = holder.firstElementChild;
+  const old = new Map();
+  if (prev && prev.tagName === next.tagName && !reducedMotion()) {
+    for (const el of prev.querySelectorAll("[data-k]")) old.set(el.dataset.k, { x: Number(el.dataset.x), y: Number(el.dataset.y), ends: el.dataset.ends, sig: el.getAttribute("d") ?? el.getAttribute("x1") ?? el.getAttribute("x") });
+  }
+  holder.replaceChildren(next);
+  if (reducedMotion()) return next;
+  const moved = new Set();
+  for (const el of next.querySelectorAll("[data-x]")) {
+    const o = old.get(el.dataset.k);
+    if (!old.size) continue;
+    if (!o) { el.classList.add("enter"); continue; }
+    const dx = o.x - Number(el.dataset.x), dy = o.y - Number(el.dataset.y);
+    if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5) continue;
+    moved.add(el.dataset.k.slice(2));
+    el.style.transform = `translate(${dx}px, ${dy}px)`;
+    el.getBoundingClientRect();
+    el.classList.add("glide");
+    requestAnimationFrame(() => { el.style.transform = ""; });
+  }
+  if (old.size) for (const el of next.querySelectorAll("[data-ends]")) {
+    const o = old.get(el.dataset.k), [a, b] = el.dataset.ends.split("|");
+    const sig = el.getAttribute("d") ?? el.getAttribute("x1") ?? el.getAttribute("x");
+    if (!o || moved.has(a) || moved.has(b) || o.sig !== sig) el.classList.add("enter-late");
+  }
+  for (const a of next.querySelectorAll("animateMotion")) a.beginElement?.();
+  return next;
 }
 
 export function tabs(items, onChange) {
