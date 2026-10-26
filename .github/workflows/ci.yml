@@ -10,4 +10,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-      - run: npm test
+      - name: Unit, fuzz and module tests
+        run: npm test
+      - name: Production build (fails on registry/file mismatches)
+        run: npm run build

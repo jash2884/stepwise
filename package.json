@@ -6,8 +6,12 @@
   "description": "Step-by-step visualisers and practice for OS and DBMS algorithms.",
   "scripts": {
     "test": "node --test test/*.test.js",
+    "build": "node scripts/build.js",
     "dev": "node scripts/static.js",
-    "deploy": "npx --yes wrangler@4 deploy"
+    "preview": "node scripts/build.js && DIR=dist node scripts/static.js",
+    "deploy": "npm test && node scripts/build.js && npx --yes wrangler@4 deploy"
   },
-  "engines": { "node": ">=24" }
+  "engines": {
+    "node": ">=24"
+  }
 }

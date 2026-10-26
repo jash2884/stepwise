@@ -2,7 +2,7 @@
 // visualiser, tabs, and helpers for shareable URLs.
 
 export function h(tag, props, ...kids) {
-  const svg = ["svg", "g", "rect", "line", "path", "text", "polyline", "circle", "defs", "marker", "pattern", "title", "tspan"].includes(tag);
+  const svg = ["svg", "g", "rect", "line", "path", "text", "polyline", "circle", "defs", "marker", "pattern", "title", "tspan", "clipPath"].includes(tag);
   const el = svg ? document.createElementNS("http://www.w3.org/2000/svg", tag) : document.createElement(tag);
   for (const [k, v] of Object.entries(props ?? {})) {
     if (v == null || v === false) continue;
@@ -72,15 +72,13 @@ export function tabs(items, onChange) {
   return { el: list, select };
 }
 
-// Shareable state lives in the hash: #/cpu?algo=rr&q=2
+// Shareable state lives in the query string: /cpu-scheduling?algo=rr&q=2
 export function readParams() {
-  const q = location.hash.split("?")[1] ?? "";
-  return new URLSearchParams(q);
+  return new URLSearchParams(location.search);
 }
 export function writeParams(params) {
-  const base = location.hash.split("?")[0] || "#/";
   const q = new URLSearchParams(params).toString();
-  history.replaceState(null, "", `${base}${q ? `?${q}` : ""}`);
+  history.replaceState(null, "", `${location.pathname}${q ? `?${q}` : ""}`);
 }
 
 export function copyLink(button) {
