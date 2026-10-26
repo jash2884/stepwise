@@ -1,0 +1,9 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "stepwise",
+  "compatibility_date": "2026-10-01",
+  // Pure static site: every algorithm runs in the browser.
+  "assets": { "directory": "./public", "not_found_handling": "single-page-application" },
+  "routes": [{ "pattern": "stepwise.jashparmar.com", "custom_domain": true }],
+  "workers_dev": false
+}

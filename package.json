@@ -1,0 +1,13 @@
+{
+  "name": "stepwise",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Step-by-step visualisers and practice for OS and DBMS algorithms.",
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "dev": "node scripts/static.js",
+    "deploy": "npx --yes wrangler@4 deploy"
+  },
+  "engines": { "node": ">=24" }
+}
