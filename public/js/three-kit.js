@@ -93,7 +93,7 @@ export async function scene3d(container, opts = {}) {
     el.addEventListener("pointerup", end);
     el.addEventListener("pointercancel", end);
     el.addEventListener("wheel", (e) => {
-      if (!e.ctrlKey && !el.matches(":hover")) return;
+      if (!e.ctrlKey && !e.metaKey) return; // plain scrolling scrolls the page; pinch (ctrl) or ⌘/Ctrl + wheel zooms
       e.preventDefault();
       sph.radius = Math.min(limits.max, Math.max(limits.min, sph.radius * (1 + Math.sign(e.deltaY) * 0.08)));
       place();
