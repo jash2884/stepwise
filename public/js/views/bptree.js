@@ -1,64 +1,51 @@
-import { BPlusTree, parseKeys } from "../engines/bptree.js";
-import { copyLink, h, morph, notice, page, readParams, rng, stepper, tabs, writeParams } from "../ui.js";
+import { BPlusTree, CODE, parseKeys } from "../engines/bptree.js";
+import { codePanel, traceLayout, varsPanel } from "../code.js";
+import { copyLink, h, morph, notice, page, readParams, rng, stepper, writeParams } from "../ui.js";
+import { choice, mountTabs } from "./kit.js";
+import { flyFrom, keyTreeSvg } from "./keytree.js";
 
-const CELL = 34, NODE_H = 32, GAP_X = 18, GAP_Y = 64, PAD = 16;
-
-// Lay the snapshot out: leaves left to right, each parent centred over its children.
-export function layout(snap, order) {
-  const byId = new Map(snap.nodes.map((n) => [n.id, n]));
-  // Overflowing nodes (mid-split snapshots) get an extra cell so every key shows.
-  const width = (n) => Math.max(order - 1, n.keys.length, 1) * CELL;
-  const pos = new Map();
-  let x = PAD;
-  const place = (id) => {
-    const n = byId.get(id);
-    if (n.leaf) {
-      pos.set(id, { x, y: PAD + n.depth * (NODE_H + GAP_Y) });
-      x += width(n) + GAP_X;
-    } else {
-      n.children.forEach(place);
-      const first = pos.get(n.children[0]), last = pos.get(n.children.at(-1));
-      const centre = (first.x + last.x + width(byId.get(n.children.at(-1)))) / 2;
-      pos.set(id, { x: centre - width(n) / 2, y: PAD + n.depth * (NODE_H + GAP_Y) });
-    }
+// Leaf keys and separator copies are different elements: L12 lives in a leaf,
+// I12 is the copy in an internal node (rarely two, mid-deletion).
+function bpKeyIds() {
+  const seen = new Map();
+  return (n, k) => {
+    if (n.leaf) return `L${k}`;
+    const c = (seen.get(k) ?? 0) + 1;
+    seen.set(k, c);
+    return c > 1 ? `I${k}#${c}` : `I${k}`;
   };
-  place(snap.root);
-  const depth = Math.max(...snap.nodes.map((n) => n.depth));
-  return { pos, byId, width, w: Math.max(x - GAP_X + PAD, 200), h: PAD * 2 + (depth + 1) * NODE_H + depth * GAP_Y };
 }
 
-export function treeSvg(snap, order) {
-  const { pos, byId, width, w, h: height } = layout(snap, order);
-  const lit = new Set(snap.highlight);
-  const kind = snap.kind ?? "path";
-  const edges = [], nodes = [], links = [];
-  for (const n of snap.nodes) {
-    const p = pos.get(n.id), nw = width(n);
-    n.children.forEach((c, i) => {
-      const cp = pos.get(c);
-      edges.push(h("line", { x1: p.x + i * CELL, y1: p.y + NODE_H, x2: cp.x + width(byId.get(c)) / 2, y2: cp.y, class: "edge", "data-k": `e:${n.id}>${c}`, "data-ends": `${n.id}|${c}` }));
-    });
-    if (n.leaf && n.next && pos.has(n.next)) {
-      const np = pos.get(n.next);
-      links.push(h("line", { x1: p.x + nw, y1: p.y + NODE_H / 2, x2: np.x - 2, y2: np.y + NODE_H / 2, class: "leaf-link", "marker-end": "url(#arrow)", "data-k": `l:${n.id}`, "data-ends": `${n.id}|${n.next}` }));
-    }
-    nodes.push(h("g", { class: `node${n.leaf ? " leaf" : ""}${lit.has(n.id) ? ` lit ${kind}` : ""}`, "data-k": `n:${n.id}`, "data-x": p.x, "data-y": p.y },
-      h("title", null, `${n.leaf ? "Leaf" : "Internal node"}: ${n.keys.join(", ") || "empty"}`),
-      h("rect", { x: p.x, y: p.y, width: nw, height: NODE_H, rx: 6 }),
-      Array.from({ length: Math.max(order - 1, n.keys.length, 1) }, (_, i) => [
-        i ? h("line", { x1: p.x + i * CELL, y1: p.y, x2: p.x + i * CELL, y2: p.y + NODE_H, class: "divider" }) : null,
-        n.keys[i] != null ? h("text", { x: p.x + i * CELL + CELL / 2, y: p.y + NODE_H / 2 + 5, "text-anchor": "middle" }, n.keys[i]) : null,
-      ])));
-  }
-  return h("svg", { viewBox: `0 0 ${w} ${height}`, width: w, height, class: "tree", role: "img", "aria-label": describe(snap) },
-    h("defs", null, h("marker", { id: "arrow", viewBox: "0 0 10 10", refX: 9, refY: 5, markerWidth: 6, markerHeight: 6, orient: "auto-start-reverse" }, h("path", { d: "M 0 0 L 10 5 L 0 10 z", class: "arrowhead" }))),
-    edges, links, nodes);
-}
+export const treeSvg = (snap, order) => keyTreeSvg(snap, { cells: order - 1, keyId: bpKeyIds(), leafLinks: true });
 
-function describe(snap) {
-  const levels = new Map();
-  for (const n of snap.nodes) levels.set(n.depth, [...(levels.get(n.depth) ?? []), `[${n.keys.join(", ")}]`]);
-  return [...levels].map(([d, ns]) => `Level ${d + 1}: ${ns.join(" ")}`).join(". ");
+const OPS = { search: "Search", insert: "Insert", delete: "Delete" };
+const LEGEND = [["Search path", 1], ["Changed / found", 3], ["Overflow / underflow", 8], ["Split", 4], ["Merge", 7]];
+
+// One stepper with the visual beside the pseudocode of whichever operation the
+// current frame belongs to, and its variables.
+function playFrames(frames, order, holder) {
+  const panels = Object.fromEntries(Object.keys(CODE).map((k) => [k, codePanel(CODE[k], { title: `${OPS[k]} (pseudocode)` })]));
+  const codeBox = h("div"), vars = varsPanel();
+  const stage = h("div", { class: "tree-wrap" }), note = h("p", { class: "step-note", "aria-live": "polite" });
+  let last = -1;
+  const p = stepper({
+    count: frames.length, label: "Step", interval: 1300,
+    render: (i) => {
+      const f = frames[i];
+      const svg = morph(stage, treeSvg(f, order));
+      if (f.fly != null && i === last + 1) flyFrom(svg, `I${f.fly}`, `L${f.fly}`);
+      last = i;
+      const panel = panels[f.op ?? "insert"];
+      if (codeBox.firstChild !== panel.el) codeBox.replaceChildren(panel.el);
+      panel.show(f.line);
+      vars.show(f.vars);
+      note.textContent = f.note;
+      note.className = `step-note${f.kind === "found" || f.kind === "changed" ? " good" : f.kind === "overflow" || f.kind === "missing" ? " bad" : ""}`;
+    },
+  });
+  holder.replaceChildren(p.el, note, traceLayout(h("div", null, stage,
+    h("div", { class: "legend-chips" }, LEGEND.map(([t, c]) => h("span", null, h("i", { style: `--c:var(--series-${c})` }), t)))), { el: codeBox }, vars));
+  return p;
 }
 
 export function render(root) {
@@ -102,17 +89,15 @@ export function render(root) {
 
   function show(frames) {
     player?.destroy();
-    const stage = h("div", { class: "tree-wrap" }), note = h("p", { class: "step-note", "aria-live": "polite" });
-    player = stepper({
-      count: frames.length, label: "Step", interval: 1300, start: 0,
-      render: (i) => { morph(stage, treeSvg(frames[i], state.order)); note.textContent = frames[i].note; },
-    });
+    const holder = h("div");
+    player = playFrames(frames, state.order, holder);
     const facts = tree.facts();
-    out.replaceChildren(h("section", { class: "card" }, player.el, stage, note,
+    out.replaceChildren(h("section", { class: "card" }, holder,
       h("div", { class: "stats-row" },
         h("div", { class: "stat" }, h("span", null, "Height"), h("b", null, facts.height)),
         h("div", { class: "stat" }, h("span", null, "Leaves"), h("b", null, facts.leafCount)),
-        h("div", { class: "stat" }, h("span", null, "Keys"), h("b", null, facts.leaves.flat().length)))));
+        h("div", { class: "stat" }, h("span", null, "Keys"), h("b", null, facts.leaves.flat().length)),
+        h("div", { class: "stat" }, h("span", null, "Keys per node"), h("b", null, `${tree.minLeafKeys}–${tree.maxKeys}`)))));
   }
 
   function act(kind) {
@@ -157,6 +142,7 @@ export function render(root) {
   const practice = h("div", { class: "panel-body" });
   function newQuestion() {
     const r = rng();
+    if (r() < 0.4) return deleteQuestion(r);
     const order = 3 + Math.floor(r() * 3);
     const keys = [];
     while (keys.length < 7 + Math.floor(r() * 4)) { const k = 1 + Math.floor(r() * 50); if (!keys.includes(k)) keys.push(k); }
@@ -190,20 +176,36 @@ export function render(root) {
         h("button", { type: "button", class: "btn ghost", onclick: () => {
           const replay = new BPlusTree(order), frames = [];
           keys.forEach((k) => replay.insert(k).forEach((x, j) => frames.push(j === 0 ? { ...x, note: `[Insert ${k}] ${x.note}` } : x)));
-          const stage = h("div", { class: "tree-wrap" }), note = h("p", { class: "step-note" });
-          const p = stepper({ count: frames.length, label: "Step", interval: 1200, render: (i) => { morph(stage, treeSvg(frames[i], order)); note.textContent = frames[i].note; } });
-          solution.replaceChildren(h("section", { class: "card" }, h("h2", null, "Solution"), p.el, stage, note));
+          const holder = h("div");
+          playFrames(frames, order, holder);
+          solution.replaceChildren(h("section", { class: "card" }, h("h2", null, "Solution"), holder));
         } }, "Show solution")),
       feedback), solution);
   }
 
-  const panels = h("div");
-  const tab = tabs([["visual", "Visualise"], ["practice", "Practice"]], (id) => {
-    panels.replaceChildren(id === "visual" ? visual : practice);
-    if (id === "practice" && !practice.childElementCount) newQuestion();
-  });
-  root.replaceChildren(head, tab.el, panels);
-  tab.select("visual");
+  // Delete one key: what does the tree have to do?
+  function deleteQuestion(r) {
+    const order = 3 + Math.floor(r() * 3);
+    const t = new BPlusTree(order), keys = new Set();
+    while (keys.size < 8 + Math.floor(r() * 4)) keys.add(1 + Math.floor(r() * 60));
+    keys.forEach((k) => t.insert(k));
+    const before = t.snapshot([], "");
+    const victim = [...keys][Math.floor(r() * keys.size)];
+    const frames = t.delete(victim);
+    const what = frames.some((f) => f.kind === "merge") ? "merge" : frames.some((f) => /Borrow|Rotate/.test(f.note)) ? "borrow" : "nothing";
+    const solution = h("div");
+    const labels = { nothing: "Just remove it (no underflow)", borrow: "Borrow from a sibling", merge: "Merge with a sibling" };
+    practice.replaceChildren(h("section", { class: "card" },
+      h("div", { class: "row" }, h("button", { type: "button", class: "btn ghost", onclick: newQuestion }, "New question")),
+      h("h2", null, `Order ${order}: what happens when you delete ${victim}?`),
+      h("p", { class: "muted" }, `Leaves need at least ⌈(${order}−1)/2⌉ = ${t.minLeafKeys} key${t.minLeafKeys === 1 ? "" : "s"}. Siblings are tried left first, then right.`),
+      h("div", { class: "tree-wrap" }, treeSvg(before, order)),
+      choice(Object.entries(labels).map(([k, label]) => ({ label, correct: k === what })), frames.map((f) => f.note).filter((n) => !n.startsWith("Search")).join(" ")),
+      h("div", { class: "row" }, h("button", { type: "button", class: "btn ghost", onclick: () => { const holder = h("div"); playFrames(frames, order, holder); solution.replaceChildren(h("section", { class: "card" }, h("h2", null, "Solution"), holder)); } }, "Watch it"))),
+    solution);
+  }
+
+  mountTabs(root, head, visual, practice, newQuestion);
   rebuild();
   return () => player?.destroy();
 }

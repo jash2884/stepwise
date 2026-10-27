@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { extendible, hashTable, largestPrimeBelow } from "../public/js/engines/hashing.js";
+import { CODE, extendible, hashTable, largestPrimeBelow, randomKeys, STRATEGIES } from "../public/js/engines/hashing.js";
 
 const keys = [89, 18, 49, 58, 69];
 const where = (strategy) => { const { table } = hashTable(keys, 10, strategy); return keys.map((k) => table.indexOf(k)); };
@@ -49,4 +49,26 @@ test("extendible hashing doubles the directory and splits buckets", () => {
 test("extendible hashing refuses impossible inputs instead of looping", () => {
   assert.throws(() => extendible([0, 64, 128], 1), /more than 64 entries/);
   assert.equal(extendible([0, 32], 1).global, 6, "differing only in bit 5 is still allowed");
+});
+
+test("probe-by-probe trace: one step per probe, valid pseudocode lines, ends in the final table", () => {
+  // Weiss figure 5.11: 58 probes 8, 9, 0 and lands in 1 under linear probing.
+  const r = hashTable(keys, 10, "linear");
+  const for58 = r.trace.filter((s) => s.key === 58);
+  assert.deepEqual(for58.at(-1).probes, [8, 9, 0, 1]);
+  assert.equal(for58.filter((s) => /a collision/.test(s.note)).length, 3);
+  let seed = 3;
+  const rand = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  for (let k = 0; k < 200; k++) {
+    const ks = randomKeys(rand), m = 5 + Math.floor(rand() * 10);
+    for (const st of Object.keys(STRATEGIES)) {
+      const res = hashTable(ks, m, st);
+      for (const s of res.trace) for (const l of [s.line].flat()) assert.ok(l >= 1 && l <= CODE[st].length, `${st} line ${l}`);
+      assert.deepEqual(res.trace.at(-1).table, res.table, `${st}: the last step shows the final table`);
+      if (st !== "chaining") assert.equal(res.trace.filter((s) => /a collision/.test(s.note)).length, res.collisions);
+    }
+    try {
+      for (const s of extendible(ks, 2).steps) for (const l of [s.line].flat()) assert.ok(l >= 1 && l <= CODE.extendible.length);
+    } catch (err) { assert.match(err.message, /more than 64 entries/); }
+  }
 });

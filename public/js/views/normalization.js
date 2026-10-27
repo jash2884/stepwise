@@ -1,5 +1,6 @@
-import { candidateKeys, closure, decomposeBCNF, fdText, minimalCover, normalForm, parseAttrs, parseFds, randomSchema, sameSet, synthesize3NF } from "../engines/fd.js";
-import { copyLink, h, notice, page, readParams, rng, tabs, writeParams } from "../ui.js";
+import { ALGOS, candidateKeys, closure, CODE, decomposeBCNF, fdText, minimalCover, normalForm, parseAttrs, parseFds, randomSchema, sameSet, synthesize3NF, trace } from "../engines/fd.js";
+import { codePanel, traceLayout, varsPanel } from "../code.js";
+import { copyLink, h, notice, page, readParams, rng, stepper, tabs, writeParams } from "../ui.js";
 
 const EXAMPLES = [
   ["Partial dependency (1NF)", "ABCD", "AB -> C\nA -> D"],
@@ -28,12 +29,13 @@ function steps(items, label = "Next step") {
 
 export function render(root) {
   const params = readParams();
-  const state = { attrs: params.get("r") ?? EXAMPLES[1][1], fds: params.get("fd")?.replace(/;/g, "\n") ?? EXAMPLES[1][2], x: params.get("x") ?? "" };
+  const state = { attrs: params.get("r") ?? EXAMPLES[1][1], fds: params.get("fd")?.replace(/;/g, "\n") ?? EXAMPLES[1][2], x: params.get("x") ?? "", algo: ALGOS[params.get("algo")] ? params.get("algo") : "keys" };
+  let player = null;
 
   const head = page({
     subject: "Databases",
     title: "Normalisation",
-    lede: "From functional dependencies to candidate keys, normal forms and decompositions, with every step of the reasoning shown.",
+    lede: "From functional dependencies to candidate keys, normal forms and decompositions. Step through each algorithm with its pseudocode, or read the full working below.",
     theory: h("div", null,
       h("p", null, "A ", h("b", null, "functional dependency"), " X → Y means equal X values always give equal Y values. The ", h("b", null, "closure"), " X⁺ is every attribute X determines. X is a ", h("b", null, "superkey"), " if X⁺ is the whole relation, and a ", h("b", null, "candidate key"), " if no smaller part of it is."),
       h("ul", null,
@@ -47,14 +49,44 @@ export function render(root) {
     h("option", { value: "" }, "Load an example…"), EXAMPLES.map(([name], i) => h("option", { value: i }, name)));
   const attrsIn = h("input", { type: "text", value: state.attrs, "aria-label": "Attributes", class: "mono", oninput: (e) => { state.attrs = e.target.value; update(); } });
   const fdsIn = h("textarea", { rows: 5, "aria-label": "Functional dependencies", class: "mono", oninput: (e) => { state.fds = e.target.value; update(); } }, state.fds);
-  const msg = h("div"), out = h("div", { class: "output grid-2" });
+  const msg = h("div"), out = h("div", { class: "output grid-2" }), traceOut = h("div", { class: "output" });
+  const algoSel = h("select", { "aria-label": "Algorithm to step through", onchange: (e) => { state.algo = e.target.value; update(); } }, Object.entries(ALGOS).map(([k, v]) => h("option", { value: k, selected: k === state.algo }, v)));
+
+  // One algorithm, step by step: the attributes it has reached, the dependencies
+  // it is looking at, and the relations it has built, beside its pseudocode.
+  function stepThrough(attrs, fds, x) {
+    player?.destroy();
+    const steps = trace(state.algo, attrs, fds, x);
+    const code = codePanel(CODE[state.algo]), vars = varsPanel();
+    const strip = h("div", { class: "nf-attrs", "aria-label": "Attributes" }), fdList = h("ol", { class: "nf-fds" }), rels = h("div", { class: "nf-rels" });
+    const note = h("p", { class: "step-note", "aria-live": "polite" });
+    player = stepper({
+      count: steps.length, label: "Step", interval: 1100,
+      render: (i) => {
+        const s = steps[i];
+        strip.replaceChildren(...[...attrs].map((a) => h("span", { class: [s.set.includes(a) && "in", s.added.includes(a) && "new"].filter(Boolean).join(" ") || null }, a)));
+        fdList.hidden = !s.fdState;
+        if (s.fdState) fdList.replaceChildren(...s.fdState.map((f) => h("li", { class: f.mark || null }, f.text)));
+        rels.hidden = !s.rels;
+        if (s.rels) rels.replaceChildren(...(s.rels.length ? s.rels.map((r) => h("span", { class: `rel mono ${r.mark}`.trim() }, `R(${r.attrs})`)) : [h("span", { class: "muted small" }, "no relations yet")]));
+        code.show(s.line);
+        vars.show(s.vars);
+        note.textContent = s.note;
+        note.className = `step-note${s.done ? " good" : ""}`;
+      },
+    });
+    traceOut.replaceChildren(h("section", { class: "card" },
+      h("div", { class: "row spread" }, h("h2", null, "Step through"), h("label", { class: "inline" }, "Algorithm ", algoSel)),
+      player.el, note,
+      traceLayout(h("div", { class: "nf-stage" }, h("div", { class: "panel-title" }, `R(${attrs})`), strip, fdList, rels), code, vars)));
+  }
 
   function update() {
     let attrs, fds;
-    try { attrs = parseAttrs(state.attrs); fds = parseFds(state.fds, attrs); } catch (e) { msg.replaceChildren(notice("error", e.message)); out.replaceChildren(); return; }
-    if (!fds.length) { msg.replaceChildren(notice("info", "Add at least one dependency.")); out.replaceChildren(); return; }
+    try { attrs = parseAttrs(state.attrs); fds = parseFds(state.fds, attrs); } catch (e) { msg.replaceChildren(notice("error", e.message)); out.replaceChildren(); traceOut.replaceChildren(); return; }
+    if (!fds.length) { msg.replaceChildren(notice("info", "Add at least one dependency.")); out.replaceChildren(); traceOut.replaceChildren(); return; }
     msg.replaceChildren();
-    writeParams({ r: attrs, fd: fds.map((f) => `${f.lhs}->${f.rhs}`).join(";"), x: state.x });
+    writeParams({ r: attrs, fd: fds.map((f) => `${f.lhs}->${f.rhs}`).join(";"), x: state.x, algo: state.algo });
 
     const keys = candidateKeys(attrs, fds);
     const nf = normalForm(attrs, fds);
@@ -74,8 +106,10 @@ export function render(root) {
       closureOut.replaceChildren(h("p", { class: "big-answer" }, `${[...new Set(x)].sort().join("")}⁺ = `, h("b", null, c.closure),
         c.closure === attrs ? h("span", { class: "badge" }, "superkey") : null), steps(c.steps.map((s) => s.note)));
     };
-    xIn.addEventListener("input", calc);
+    xIn.addEventListener("input", () => { calc(); if (state.algo === "closure") stepThrough(attrs, fds, closureX()); });
     calc();
+    const closureX = () => [...new Set(xIn.value.toUpperCase().replace(/[^A-Z]/g, ""))].filter((c) => attrs.includes(c)).join("") || keys.keys[0];
+    stepThrough(attrs, fds, closureX());
 
     const ladder = h("ol", { class: "ladder" }, LEVELS.map((lvl) => {
       const reached = LEVELS.indexOf(lvl) <= LEVELS.indexOf(nf.form);
@@ -108,7 +142,7 @@ export function render(root) {
       h("label", { class: "stack" }, "Relation attributes", attrsIn),
       h("label", { class: "stack" }, "Functional dependencies", fdsIn),
       msg),
-    out);
+    traceOut, out);
 
   // --- Practice: closure, keys and normal form for a random schema ----------
   const practice = h("div", { class: "panel-body" });
@@ -156,5 +190,5 @@ export function render(root) {
   root.replaceChildren(head, tab.el, panels);
   tab.select("visual");
   update();
-  return () => {};
+  return () => player?.destroy();
 }
