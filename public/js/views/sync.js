@@ -1,11 +1,15 @@
-import { canRun, initial, label, PRESETS, randomSequence, step } from "../engines/sync.js";
+import { codePanel, traceLayout, varsPanel } from "../code.js";
+import { canRun, initial, label, PRESETS, randomSequence, SEM_CODE, step } from "../engines/sync.js";
 import { h, notice, page, readParams, rng, tabs, writeParams } from "../ui.js";
 
 export function render(root) {
   const p = readParams();
   let presetId = PRESETS[p.get("preset")] ? p.get("preset") : "producer-consumer";
   let variantId = PRESETS[presetId].variants[p.get("v")] ? p.get("v") : Object.keys(PRESETS[presetId].variants)[0];
-  let history = [], log = [], timer = null;
+  let history = [], log = [], timer = null, ran = [], lines = [];
+  const code = codePanel(SEM_CODE, { title: "Inside wait and signal" }), vars = varsPanel({ title: "Live state" });
+  const lastNote = h("p", { class: "step-note", "aria-live": "polite" });
+  const strip = h("div", { class: "run-strip", "aria-label": "Order the processes ran in" });
 
   const head = page({
     subject: "Operating systems", title: "Semaphores & synchronisation",
@@ -14,7 +18,7 @@ export function render(root) {
       h("p", null, "A ", h("b", null, "semaphore"), " is a counter with two atomic operations. ", h("span", { class: "mono" }, "wait(S)"), " decrements it and blocks the caller if it drops below zero; ", h("span", { class: "mono" }, "signal(S)"), " increments it and wakes one blocked process if any are waiting."),
       h("p", null, "A semaphore that starts at 1 is a ", h("b", null, "mutex"), " (one process at a time). One that starts at n counts free resources, like empty buffer slots."),
       h("p", null, "Every preset has a correct version and buggy ones. Try to break the buggy ones: the page flags lost updates, mutual-exclusion violations and deadlocks the moment they happen.")),
-    conventions: ["Counting semaphores: a negative value −k means k processes are blocked on it.", "signal wakes the process that has waited longest (FIFO queue).", "Each process loops its program forever."],
+    conventions: ["Counting semaphores: a negative value −k means k processes are blocked on it.", "signal wakes the process that has waited longest (FIFO queue).", "Each process loops its program forever.", "The pseudocode panel shows what happens inside the last wait or signal that ran; the ▶ in each process card is the line it will run next."],
   });
 
   const presetSel = h("select", { "aria-label": "Problem", onchange: (e) => { presetId = e.target.value; variantId = Object.keys(PRESETS[presetId].variants)[0]; drawVariants(); reset(); } },
@@ -33,6 +37,9 @@ export function render(root) {
     state = initial(PRESETS[presetId].variants[variantId]);
     history = [];
     log = [];
+    ran = [];
+    lines = [];
+    vars.reset();
     writeParams({ preset: presetId, v: variantId });
     hint.textContent = `Hint: ${PRESETS[presetId].hint}`;
     draw();
@@ -44,6 +51,8 @@ export function render(root) {
     const r = step(state, i);
     state = r.state;
     log.unshift(r.note);
+    ran.push(i);
+    lines.push(r.line);
     draw();
     if (state.deadlock || state.violation) stopAuto();
   }
@@ -51,6 +60,8 @@ export function render(root) {
     if (!history.length) return;
     state = history.pop();
     log.shift();
+    ran.pop();
+    lines.pop();
     draw();
   }
   function randomStep() {
@@ -85,6 +96,19 @@ export function render(root) {
       state.violation ? notice("bad", `⚠️ ${state.violation}`) : null,
       state.deadlock ? notice("bad", "💀 Deadlock: every process is blocked and nobody can signal. Undo a step or reset.") : null);
     logList.replaceChildren(...log.slice(0, 14).map((n) => h("li", null, n)));
+    code.show(lines.at(-1) ?? []);
+    const last = ran.length ? state.procs[ran.at(-1)] : null;
+    vars.show({
+      time: state.time,
+      "last ran": last ? last.id : "–",
+      ...Object.fromEntries(Object.entries(state.sems).flatMap(([k, v]) => [[k, v.value], [`${k}.queue`, v.queue.length ? v.queue : "empty"]])),
+      ...state.vars,
+      ...(state.bufferSize ? { buffer: `${state.buffer.length}/${state.bufferSize}` } : {}),
+      blocked: state.procs.filter((x) => x.status === "blocked").map((x) => x.id),
+    });
+    lastNote.textContent = log[0] ?? "Pick a process to run its next line. Watch the semaphores: wait and signal are where processes block and wake.";
+    lastNote.className = `step-note${state.violation || state.deadlock ? " bad" : ""}`;
+    strip.replaceChildren(h("span", { class: "muted small" }, "Run order: "), ...(ran.length ? ran.slice(-40).map((i) => h("i", { style: `--c:var(--series-${(i % 8) + 1})`, title: state.procs[i].id }, state.procs[i].id)) : [h("span", { class: "muted small" }, "nothing yet")]));
   }
 
   const keys = (e) => {
@@ -103,7 +127,8 @@ export function render(root) {
         autoBtn,
         h("button", { type: "button", class: "btn ghost", onclick: reset }, "Reset")),
       hint, h("p", { class: "muted small" }, "Tip: press 1, 2, 3… to run that process; ⌘/Ctrl+Z to undo.")),
-    banner, board,
+    banner, lastNote, strip,
+    traceLayout(board, code, vars),
     h("section", { class: "card" }, h("h2", null, "What happened (newest first)"), logList));
 
   // --- Practice: trace a sequence of wait/signal calls ------------------------

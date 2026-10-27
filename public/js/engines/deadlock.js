@@ -46,6 +46,17 @@ export function matrices(graph) {
 const leq = (a, b) => a.every((x, j) => x <= b[j]);
 const vec = (v) => `(${v.join(", ")})`;
 
+export const DETECT_CODE = [
+  "Work ← Available",
+  "Finish[i] ← (Allocation[i] = 0)  // holds nothing, so it can't be deadlocked",
+  "repeat until a full pass finishes nobody",
+  "  for each Pi with Finish[i] = false",
+  "    if Request[i] ≤ Work then",
+  "      Work ← Work + Allocation[i]; Finish[i] ← true  // Pi can finish and release",
+  "    else Pi keeps waiting  // maybe someone else will release enough",
+  "deadlocked ← every Pi with Finish[i] = false",
+];
+
 // The detection algorithm: like the Banker's safety check, but with current
 // Requests instead of maximum Needs. Processes holding nothing can't deadlock.
 export function detect(graph) {
@@ -53,7 +64,9 @@ export function detect(graph) {
   const n = graph.processes.length;
   let work = [...available];
   const finish = allocation.map((row) => row.every((x) => x === 0));
-  const steps = [{ work: [...work], finish: [...finish], note: `Work = Available = ${vec(work)}. ${finish.some(Boolean) ? `${graph.processes.filter((_, i) => finish[i]).join(", ")} hold${finish.filter(Boolean).length === 1 ? "s" : ""} nothing, so ${finish.filter(Boolean).length === 1 ? "it can't be" : "they can't be"} deadlocked.` : ""}`.trim() }];
+  const names = () => graph.processes.filter((_, i) => finish[i]);
+  const vars = (i, extra = {}) => ({ Pi: i == null ? "–" : graph.processes[i], ...(i == null ? {} : { "Request[i]": request[i], "Allocation[i]": allocation[i] }), Work: [...work], finished: names(), ...extra });
+  const steps = [{ work: [...work], finish: [...finish], line: [1, 2], vars: vars(null), note: `Work = Available = ${vec(work)}. ${finish.some(Boolean) ? `${graph.processes.filter((_, i) => finish[i]).join(", ")} hold${finish.filter(Boolean).length === 1 ? "s" : ""} nothing, so ${finish.filter(Boolean).length === 1 ? "it can't be" : "they can't be"} deadlocked.` : ""}`.trim() }];
   for (let progress = true; progress;) {
     progress = false;
     for (let i = 0; i < n; i++) {
@@ -62,14 +75,16 @@ export function detect(graph) {
         work = work.map((x, j) => x + allocation[i][j]);
         finish[i] = true;
         progress = true;
-        steps.push({ work: [...work], finish: [...finish], checking: i, fits: true, note: `${graph.processes[i]}: Request ${vec(request[i])} ≤ Work, so it can finish and release ${vec(allocation[i])}. Work = ${vec(work)}.` });
+        steps.push({ work: [...work], finish: [...finish], checking: i, fits: true, line: [5, 6], vars: vars(i),
+          note: `${graph.processes[i]}: Request ${vec(request[i])} ≤ Work ${vec(work.map((x, j) => x - allocation[i][j]))}, so everything it is waiting for is free. Optimistically assume it gets it, finishes, and releases what it holds, ${vec(allocation[i])}. Work = ${vec(work)}.` });
       } else {
-        steps.push({ work: [...work], finish: [...finish], checking: i, fits: false, note: `${graph.processes[i]}: Request ${vec(request[i])} isn't ≤ Work ${vec(work)}; it waits.` });
+        steps.push({ work: [...work], finish: [...finish], checking: i, fits: false, line: [5, 7], vars: vars(i),
+          note: `${graph.processes[i]}: Request ${vec(request[i])} isn't ≤ Work ${vec(work)}: what it wants is held by processes that haven't finished. It waits; another pass may free enough.` });
       }
     }
   }
   const deadlocked = graph.processes.filter((_, i) => !finish[i]);
-  steps.push({ work: [...work], finish: [...finish], note: deadlocked.length ? `${deadlocked.join(", ")} can never finish: they are DEADLOCKED.` : "Every process can finish: no deadlock." });
+  steps.push({ work: [...work], finish: [...finish], line: 8, vars: vars(null, { deadlocked }), note: deadlocked.length ? `${deadlocked.join(", ")} can never finish: they are DEADLOCKED.` : "Every process can finish: no deadlock." });
   return { deadlocked, steps, allocation, request, available };
 }
 

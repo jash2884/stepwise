@@ -1,10 +1,12 @@
-import { analyse, EXAMPLES, parseGraph, randomGraph } from "../engines/deadlock.js";
+import { codePanel, traceLayout, varsPanel } from "../code.js";
+import { analyse, DETECT_CODE, EXAMPLES, parseGraph, randomGraph } from "../engines/deadlock.js";
 import { copyLink, h, notice, page, readParams, rng, stepper, tabs, writeParams } from "../ui.js";
 
 const vec = (v) => `(${v.join(", ")})`;
 
 // Processes across the top, resources across the bottom (with one dot per instance).
-export function ragSvg(graph, { deadlocked = [], cycle = null } = {}) {
+export function ragSvg(graph, { deadlocked = [], cycle = null, finished = [], checking = null, fits = null, justDone = null } = {}) {
+  const fin = new Set(finished);
   const W = 640, cols = Math.max(graph.processes.length, graph.resources.length);
   const gap = Math.min(150, (W - 80) / Math.max(cols - 1, 1));
   const px = (i, n) => W / 2 + (i - (n - 1) / 2) * gap;
@@ -16,18 +18,18 @@ export function ragSvg(graph, { deadlocked = [], cycle = null } = {}) {
   const edges = graph.edges.map((e) => {
     if (e.kind === "request") {
       const a = P.get(e.from), b = R.get(e.to);
-      return h("line", { x1: a.x, y1: a.y + 24, x2: b.x, y2: b.y - 26, class: "rag-edge request", "marker-end": "url(#rag-arrow)" }, h("title", null, `${e.from} requests ${e.to}`));
+      return h("line", { x1: a.x, y1: a.y + 24, x2: b.x, y2: b.y - 26, class: `rag-edge request${fin.has(e.from) ? " released" : ""}${e.from === justDone ? " just" : ""}${e.from === checking ? (fits ? " ok" : " blocked") : ""}`, "marker-end": "url(#rag-arrow)" }, h("title", null, `${e.from} requests ${e.to}`));
     }
     const r = R.get(e.from), p = P.get(e.to), k = used.get(e.from) ?? 0;
     used.set(e.from, k + 1);
     const n = graph.instances[e.from];
     const dotX = r.x + (k - (n - 1) / 2) * 14;
-    return h("line", { x1: dotX, y1: r.y - 6, x2: p.x, y2: p.y + 24, class: "rag-edge assign", "marker-end": "url(#rag-arrow)" }, h("title", null, `${e.from} is held by ${e.to}`));
+    return h("line", { x1: dotX, y1: r.y - 6, x2: p.x, y2: p.y + 24, class: `rag-edge assign${fin.has(e.to) ? " released" : ""}${e.to === justDone ? " just" : ""}`, "marker-end": "url(#rag-arrow)" }, h("title", null, `${e.from} is held by ${e.to}`));
   });
   return h("svg", { viewBox: `0 0 ${W} 270`, class: "rag", role: "img", "aria-label": `Resource-allocation graph. ${graph.edges.map((e) => (e.kind === "request" ? `${e.from} requests ${e.to}` : `${e.from} held by ${e.to}`)).join(". ")}.` },
     h("defs", null, h("marker", { id: "rag-arrow", viewBox: "0 0 10 10", refX: 9, refY: 5, markerWidth: 7, markerHeight: 7, orient: "auto-start-reverse" }, h("path", { d: "M 0 0 L 10 5 L 0 10 z", class: "arrowhead" }))),
     edges,
-    graph.processes.map((p) => { const { x, y } = P.get(p); return h("g", { class: `rag-node process${dead.has(p) ? " dead" : ""}${inCycle.has(p) ? " cycle" : ""}` }, h("circle", { cx: x, cy: y, r: 24 }), h("text", { x, y: y + 5, "text-anchor": "middle" }, p)); }),
+    graph.processes.map((p) => { const { x, y } = P.get(p); return h("g", { class: `rag-node process${dead.has(p) ? " dead" : ""}${inCycle.has(p) ? " cycle" : ""}${fin.has(p) ? " finished" : ""}${p === checking ? " checking" : ""}` }, h("circle", { cx: x, cy: y, r: 24 }), h("text", { x, y: y + 5, "text-anchor": "middle" }, p)); }),
     graph.resources.map((r) => {
       const { x, y } = R.get(r), n = graph.instances[r], w = Math.max(56, n * 14 + 22);
       return h("g", { class: "rag-node resource" }, h("rect", { x: x - w / 2, y: y - 24, width: w, height: 48, rx: 8 }),
@@ -74,24 +76,32 @@ export function render(root) {
     msg.replaceChildren();
     const result = analyse(graph);
     const stage = h("div"), note = h("p", { class: "step-note", "aria-live": "polite" }), work = h("div", { class: "row work" });
+    const live = h("div", { class: "chart-wrap" }), code = codePanel(DETECT_CODE), vars = varsPanel();
+    const wf = result.waitFor;
     player = stepper({
       count: result.steps.length, label: "Step", interval: 1100,
       render: (i) => {
-        const st = result.steps[i];
+        const st = result.steps[i], last = i === result.steps.length - 1;
+        const finished = graph.processes.filter((_, k) => st.finish[k]);
+        const justDone = st.fits ? graph.processes[st.checking] : null;
+        live.replaceChildren(ragSvg(graph, { finished, checking: st.checking == null ? null : graph.processes[st.checking], fits: st.fits, justDone, cycle: wf.cycle, deadlocked: last ? result.deadlocked : [] }));
+        code.show(st.line);
+        vars.show(st.vars);
         stage.replaceChildren(matrixTable(graph, result, st));
         work.replaceChildren(h("span", null, "Available"), h("b", { class: "vector" }, vec(result.available)), h("span", null, "Work"), h("b", { class: "vector" }, vec(st.work)));
         note.textContent = st.note;
         note.className = `step-note${i === result.steps.length - 1 ? (result.deadlocked.length ? " bad" : " good") : ""}`;
       },
     });
-    const wf = result.waitFor;
     out.replaceChildren(
-      h("section", { class: "card" }, h("h2", null, "Resource-allocation graph"),
-        h("div", { class: "chart-wrap" }, ragSvg(graph, { deadlocked: result.deadlocked, cycle: wf.cycle })),
-        h("p", { class: "legend muted small" }, h("span", { class: "key-req" }, "→ request (waiting)"), " · ", h("span", { class: "key-asg" }, "→ assignment (holding)"), " · dots are resource instances"),
-        notice(result.deadlocked.length ? "bad" : wf.cycle ? "info" : "good", result.verdict)),
-      h("div", { class: "grid-2" },
-        h("section", { class: "card" }, h("h2", null, "Detection algorithm"), player.el, work, stage, note),
+      h("section", { class: "card" }, h("h2", null, "Resource-allocation graph and the detection algorithm"),
+        notice(result.deadlocked.length ? "bad" : wf.cycle ? "info" : "good", result.verdict),
+        player.el, note,
+        traceLayout(h("div", null, live,
+          h("p", { class: "legend muted small" }, h("span", { class: "key-req" }, "→ request (waiting)"), " · ", h("span", { class: "key-asg" }, "→ assignment (holding)"), " · dots are resource instances · orange rings are in a cycle. When a process can finish, its edges fade: it has released everything it held."),
+          work), code, vars),
+        stage),
+      h("div", null,
         h("section", { class: "card" }, h("h2", null, "Wait-for graph"),
           h("p", { class: "muted" }, "Remove the resources: Pi → Pj means Pi is waiting for something Pj holds."),
           wf.edges.length ? h("ul", { class: "notes" }, wf.edges.map((e) => h("li", { class: wf.cycle?.includes(e.from) && wf.cycle?.includes(e.to) ? "cycle-edge" : null }, h("span", { class: "mono" }, `${e.from} → ${e.to}`), ` (waiting for ${e.via})`))) : h("p", null, "Nobody is waiting on anybody."),

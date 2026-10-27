@@ -1,5 +1,6 @@
+import { codePanel, traceLayout, varsPanel } from "../code.js";
 import { ALGORITHMS, EXAMPLE, parseRequests, randomQueue, schedule } from "../engines/disk.js";
-import { copyLink, fmt, h, notice, page, readParams, rng, stepper, tabs, writeParams } from "../ui.js";
+import { copyLink, fmt, h, morph, notice, page, readParams, rng, stepper, tabs, writeParams } from "../ui.js";
 
 // Classic textbook chart: cylinders across the top, time going down.
 function chart(result, cylinders, upto, requests, head) {
@@ -15,7 +16,7 @@ function chart(result, cylinders, upto, requests, head) {
   const segs = [];
   for (let i = 1; i < pts.length; i++) {
     const m = result.moves[i - 1];
-    segs.push(h("line", { x1: pts[i - 1][0], y1: pts[i - 1][1], x2: pts[i][0], y2: pts[i][1], class: `seek ${m.kind}${i === upto ? " current" : ""}` }));
+    segs.push(h("line", { x1: pts[i - 1][0], y1: pts[i - 1][1], x2: pts[i][0], y2: pts[i][1], class: `seek ${m.kind}${i === upto ? " current" : ""}`, pathLength: i === upto && m.kind !== "jump" ? 1 : null }));
   }
   return h("svg", { viewBox: `0 0 ${W} ${H}`, class: "disk-chart", role: "img", "aria-label": `Head path: ${result.path.slice(0, upto + 1).join(" → ")}` },
     h("line", { x1: L, y1: top - 12, x2: W - R, y2: top - 12, class: "axis" }),
@@ -25,8 +26,26 @@ function chart(result, cylinders, upto, requests, head) {
       h("title", null, i === 0 ? `Start at ${result.path[0]}` : result.moves[i - 1].note))));
 }
 
+// The platter seen from above as a strip of cylinders: pending requests,
+// served ones ticked off, and the head gliding to its next stop.
+function headStrip(result, cylinders, upto, requests) {
+  const W = 680, L = 28, R = 20, max = cylinders - 1;
+  const x = (c) => L + (c / max) * (W - L - R);
+  const pos = result.path[upto];
+  const servedSoFar = result.moves.slice(0, upto).filter((m) => m.kind === "serve" || m.served).map((m) => m.to);
+  const left = [...requests];
+  for (const r of servedSoFar) left.splice(left.indexOf(r), 1);
+  const isLeft = new Set(left);
+  return h("svg", { viewBox: `0 0 ${W} 58`, class: "disk-strip", role: "img", "aria-label": `Head at cylinder ${pos}. Pending: ${left.join(", ") || "none"}.` },
+    h("rect", { x: L, y: 26, width: W - L - R, height: 10, rx: 5, class: "ds-track" }),
+    [...new Set(requests)].map((c) => h("circle", { cx: x(c), cy: 31, r: 5, class: isLeft.has(c) ? "ds-req" : "ds-done" })),
+    h("g", { class: "ds-head", "data-k": "head", "data-x": x(pos), "data-y": 0 },
+      h("path", { d: `M${x(pos)},22 l-7,-12 h14 z` }),
+      h("text", { x: x(pos), y: 52, "text-anchor": "middle" }, pos)));
+}
+
 function compare(requests, head, opts) {
-  const rows = Object.entries(ALGORITHMS).map(([id, a]) => ({ id, name: a.name, total: schedule(requests, head, id, opts).total }));
+  const rows = Object.entries(ALGORITHMS).map(([id, a]) => ({ id, name: id === "nstep" ? `${a.name} (N = ${opts.n})` : a.name, total: schedule(requests, head, id, opts).total }));
   const best = Math.min(...rows.map((r) => r.total));
   return h("section", { class: "card" }, h("h2", null, "Same queue, every algorithm"),
     h("div", { class: "table-wrap" }, h("table", null,
@@ -45,6 +64,7 @@ export function render(root) {
     algo: ALGORITHMS[p.get("algo")] ? p.get("algo") : "sstf",
     direction: p.get("dir") === "down" ? "down" : "up",
     countJump: p.get("jump") !== "0",
+    n: Number(p.get("n")) || 4,
   };
   let player = null;
   const head = page({
@@ -56,37 +76,48 @@ export function render(root) {
         h("li", null, h("b", null, "FCFS"), " serves requests in arrival order. Fair, but it zig-zags."),
         h("li", null, h("b", null, "SSTF"), " always goes to the nearest request. Short seeks, but distant requests can starve."),
         h("li", null, h("b", null, "SCAN"), " sweeps to one end of the disk, then reverses, like a lift. ", h("b", null, "LOOK"), " reverses at the last request instead of the edge."),
-        h("li", null, h("b", null, "C-SCAN / C-LOOK"), " only serve in one direction, then jump back to the start for more uniform waiting times."))),
-    conventions: ["Cylinders are numbered 0 to (cylinders − 1).", "SSTF ties go to the request that arrived first.", "SCAN and C-SCAN go all the way to the edge; LOOK and C-LOOK turn at the last request.", "The C-SCAN/C-LOOK return jump counts as head movement unless you untick it (textbooks differ)."],
+        h("li", null, h("b", null, "C-SCAN / C-LOOK"), " only serve in one direction, then jump back to the start for more uniform waiting times."),
+        h("li", null, h("b", null, "N-step SCAN"), " splits the queue into batches of N requests and SCANs one batch at a time. New requests can't keep pulling the head back to the same busy area (\u201carm stickiness\u201d), because they wait for a later batch. ", h("b", null, "F-SCAN"), " is the two-batch version: everything already queued is one batch, and anything that arrives during the sweep waits for the next.")),
+      h("p", null, "Seek time is roughly proportional to the distance the arm travels, so every algorithm here is judged on ", h("b", null, "total head movement"), " in cylinders.")),
+    conventions: ["Cylinders are numbered 0 to (cylinders − 1).", "SSTF ties go to the request that arrived first.", "SCAN and C-SCAN go all the way to the edge; LOOK and C-LOOK turn at the last request.", "The C-SCAN/C-LOOK return jump counts as head movement unless you untick it (textbooks differ).", "N-step SCAN batches the queue in arrival order; within a batch it behaves like SCAN (to the edge before reversing)."],
   });
 
   const reqIn = h("input", { type: "text", class: "wide", value: state.requests, "aria-label": "Request queue", oninput: (e) => { state.requests = e.target.value; update(); } });
   const num = (key, label, min, max) => h("label", { class: "inline" }, `${label} `, h("input", { type: "number", min, max, value: state[key], "aria-label": label, onchange: (e) => { state[key] = Number(e.target.value); update(); } }));
   const algoSel = h("select", { "aria-label": "Algorithm", onchange: (e) => { state.algo = e.target.value; update(); } }, Object.entries(ALGORITHMS).map(([id, a]) => h("option", { value: id, selected: id === state.algo }, a.name)));
   const dirSel = h("label", { class: "inline" }, "Direction ", h("select", { onchange: (e) => { state.direction = e.target.value; update(); } }, h("option", { value: "up", selected: state.direction === "up" }, "towards higher"), h("option", { value: "down", selected: state.direction === "down" }, "towards 0")));
+  const nIn = num("n", "N", 1, 30);
   const jumpBox = h("label", { class: "inline" }, h("input", { type: "checkbox", checked: state.countJump, onchange: (e) => { state.countJump = e.target.checked; update(); } }), " count the return jump");
   const msg = h("div"), out = h("div", { class: "output" });
 
   function update() {
     player?.destroy();
-    writeParams({ r: state.requests, h: state.head, c: state.cylinders, algo: state.algo, dir: state.direction, jump: state.countJump ? 1 : 0 });
+    writeParams({ r: state.requests, h: state.head, c: state.cylinders, algo: state.algo, dir: state.direction, jump: state.countJump ? 1 : 0, n: state.n });
+    nIn.hidden = state.algo !== "nstep";
     dirSel.hidden = !ALGORITHMS[state.algo].direction;
     jumpBox.hidden = !ALGORITHMS[state.algo].circular;
     let requests, result;
-    const opts = { cylinders: state.cylinders, direction: state.direction, countJump: state.countJump };
+    const opts = { cylinders: state.cylinders, direction: state.direction, countJump: state.countJump, n: state.n };
     try { requests = parseRequests(state.requests); result = schedule(requests, state.head, state.algo, opts); } catch (e) { msg.replaceChildren(notice("error", e.message)); out.replaceChildren(); return; }
     msg.replaceChildren();
     const stage = h("div", { class: "chart-wrap" }), note = h("p", { class: "step-note", "aria-live": "polite" }), running = h("p", { class: "muted small" });
+    const strip = h("div", { class: "chart-wrap" });
+    const code = codePanel(ALGORITHMS[state.algo].code), vars = varsPanel();
     player = stepper({
       count: result.path.length, label: "Move", interval: 900,
       render: (i) => {
         stage.replaceChildren(chart(result, state.cylinders, i, requests, state.head));
-        note.textContent = i === 0 ? `The head starts at cylinder ${state.head}.` : result.moves[i - 1].note;
+        morph(strip, headStrip(result, state.cylinders, i, requests));
+        const st = i === 0 ? result.initial : result.moves[i - 1];
+        note.textContent = st.note;
+        code.show(st.line);
+        vars.show(st.vars);
         running.textContent = `Head movement so far: ${i ? result.moves[i - 1].total : 0} cylinders.`;
       },
     });
     out.replaceChildren(
-      h("section", { class: "card" }, h("h2", null, ALGORITHMS[state.algo].name), player.el, stage, note, running,
+      h("section", { class: "card" }, h("h2", null, ALGORITHMS[state.algo].name), player.el, note,
+        traceLayout(h("div", null, strip, stage, running), code, vars),
         h("div", { class: "stats-row" },
           h("div", { class: "stat" }, h("span", null, "Total head movement"), h("b", null, result.total)),
           h("div", { class: "stat" }, h("span", null, "Average seek"), h("b", null, fmt(result.average))),
@@ -97,12 +128,12 @@ export function render(root) {
   const visual = h("div", { class: "panel-body" },
     h("section", { class: "card inputs" },
       h("label", { class: "stack" }, "Request queue (cylinders, in arrival order)", reqIn),
-      h("div", { class: "row" }, num("head", "Head at", 0, 9999), num("cylinders", "Cylinders", 2, 10000), algoSel, dirSel, jumpBox),
+      h("div", { class: "row" }, num("head", "Head at", 0, 9999), num("cylinders", "Cylinders", 2, 10000), algoSel, dirSel, nIn, jumpBox),
       h("div", { class: "row" },
         h("button", { type: "button", class: "btn ghost", onclick: () => {
           const q = randomQueue(Math.random, state.cylinders);
           player?.destroy();
-          writeParams({ r: q.requests.join(" "), h: q.head, c: state.cylinders, algo: state.algo, dir: state.direction, jump: state.countJump ? 1 : 0 });
+          writeParams({ r: q.requests.join(" "), h: q.head, c: state.cylinders, algo: state.algo, dir: state.direction, jump: state.countJump ? 1 : 0, n: state.n });
           render(root);
         } }, "Random"),
         h("button", { type: "button", class: "btn ghost", onclick: () => { player?.destroy(); history.replaceState(null, "", location.pathname); render(root); } }, "Textbook example"),
@@ -113,7 +144,7 @@ export function render(root) {
   const practice = h("div", { class: "panel-body" });
   function newQuestion() {
     const r = rng();
-    const algo = Object.keys(ALGORITHMS)[Math.floor(r() * 6)];
+    const algo = Object.keys(ALGORITHMS)[Math.floor(r() * 6)]; // N-step SCAN is left to the visualiser
     const direction = r() < 0.5 ? "up" : "down";
     const q = randomQueue(r);
     const opts = { cylinders: 200, direction, countJump: true };

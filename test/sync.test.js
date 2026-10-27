@@ -83,3 +83,15 @@ test("practice sequences are internally consistent", () => {
     assert.deepEqual(v, q.final);
   }
 });
+
+test("wait and signal report the pseudocode lines they ran", async () => {
+  const { SEM_CODE } = await import("../public/js/engines/sync.js");
+  const s = initial(PRESETS["producer-consumer"].variants.correct);
+  let r = step(s, 2); // C1: wait(full) blocks
+  assert.deepEqual(r.line, [1, 2, 3, 4]);
+  r = step(r.state, 0); // P1: produce (no semaphore)
+  assert.deepEqual(r.line, []);
+  r = step(r.state, 0); // P1: wait(empty) continues
+  assert.deepEqual(r.line, [1, 2, 3]);
+  assert.equal(SEM_CODE.length, 8);
+});

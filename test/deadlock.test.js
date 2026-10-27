@@ -36,3 +36,13 @@ test("input validation", () => {
   assert.throws(() => parseGraph("R1:1", "P1 -> P2"), /process and a resource/);
   assert.throws(() => parseGraph("R1:1", "P1 -> R9"), /isn't in the resource list/);
 });
+
+test("detection steps carry pseudocode lines and variables", async () => {
+  const { DETECT_CODE } = await import("../public/js/engines/deadlock.js");
+  for (const key of Object.keys(EXAMPLES)) {
+    const r = analyse(graph(key));
+    for (const s of r.steps) for (const l of [s.line].flat()) assert.ok(l >= 1 && l <= DETECT_CODE.length, key);
+    assert.deepEqual(r.steps.at(-1).vars.deadlocked, r.deadlocked);
+  }
+  assert.match(analyse(graph("safe")).steps[1].note, /releases what it holds/);
+});
