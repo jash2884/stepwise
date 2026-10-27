@@ -30,3 +30,27 @@ test("edge cases: request at the head, nothing behind, validation", () => {
   assert.deepEqual(schedule([60, 70], 53, "scan").path, [53, 60, 70], "SCAN doesn't run to the edge if nothing is behind");
   assert.throws(() => schedule([300], 53, "fcfs"), /from 0 to 199/);
 });
+
+// --- N-step SCAN and the pseudocode trace -------------------------------------
+import { ALGORITHMS, randomQueue } from "../public/js/engines/disk.js";
+
+test("N-step SCAN: batches of N in arrival order, each swept with SCAN", () => {
+  const r = run("nstep", { n: 3 });
+  assert.deepEqual(r.path, [53, 98, 183, 199, 37, 14, 0, 122, 124, 199, 67, 65]);
+  assert.equal(r.total, 678);
+  assert.equal(run("nstep", { n: 8 }).total, run("scan").total, "one batch holding everything is plain SCAN");
+  assert.throws(() => run("nstep", { n: 0 }), /N must be/);
+});
+
+test("every move names a pseudocode line and explains itself", () => {
+  let seed = 5;
+  const rand = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  for (let k = 0; k < 200; k++) {
+    const q = randomQueue(rand);
+    for (const [algo, spec] of Object.entries(ALGORITHMS)) {
+      const r = schedule(q.requests, q.head, algo, { n: 1 + Math.floor(rand() * 5), direction: rand() < 0.5 ? "up" : "down" });
+      for (const m of [r.initial, ...r.moves]) assert.ok([m.line].flat().every((l) => l >= 1 && l <= spec.code.length) && m.note, algo);
+      assert.equal(r.moves.at(-1)?.vars.pending.length ?? 0, 0, "nothing left pending at the end");
+    }
+  }
+});

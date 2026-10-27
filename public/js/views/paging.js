@@ -1,5 +1,7 @@
-import { ALGORITHMS, beladyCheck, parseRefs, randomRefs, replace } from "../engines/paging.js";
-import { copyLink, h, notice, page, readParams, rng, stepper, tabs, writeParams } from "../ui.js";
+import { codePanel, traceLayout, varsPanel } from "../code.js";
+import { ALGORITHMS, beladyCheck, parseRefs, randomRefs, replace, workingSet } from "../engines/paging.js";
+import { copyLink, h, morph, notice, page, readParams, reducedMotion, rng, stepper, tabs, writeParams } from "../ui.js";
+import { stat } from "./kit.js";
 
 const BOOK = "7 0 1 2 0 3 0 4 2 3 0 3 2 1 2 0 1 7 0 1";
 
@@ -15,6 +17,102 @@ function grid(refs, steps, frameCount, upto, { current = upto } = {}) {
         return h("td", { class: [changed ? "loaded" : "", s.hit && s.slot === f ? "hitcell" : "", i === current ? "now" : ""].join(" ").trim() || null }, v ?? "");
       }))),
       h("tr", { class: "outcome" }, h("th", { scope: "row" }, ""), steps.map((s, i) => h("td", { class: i > upto ? "future" : s.hit ? "hit" : "miss" }, i > upto ? "" : s.hit ? "✓" : "F"))))));
+}
+
+// Which load ("residency") each frame holds at each step, so a page keeps the
+// same key while it stays in memory and the next reference can glide into its frame.
+function residency(steps, frameCount) {
+  const since = Array(frameCount).fill(null);
+  return steps.map((s, i) => {
+    const gone = s.hit ? null : since[s.slot];
+    if (!s.hit) since[s.slot] = i;
+    return { since: [...since], gone };
+  });
+}
+
+const pageTok = (key, pg, x, y, cls) => h("g", { class: `pf-tok${cls}`, "data-k": key, "data-x": x, "data-y": y },
+  h("rect", { x, y, width: 44, height: 36, rx: 8 }), h("text", { x: x + 22, y: y + 24, "text-anchor": "middle" }, pg));
+
+// Frames as boxes. The next reference waits above the frame it will land in,
+// then drops in; an evicted page slides down and out.
+function framesSvg(steps, res, i, frameCount) {
+  const BW = 58, GAP = 14, X0 = 16, FY = 78, W = Math.max(300, X0 * 2 + frameCount * (BW + GAP));
+  const s = steps[i], r = res[i], next = steps[i + 1];
+  const x = (k) => X0 + k * (BW + GAP);
+  const els = [h("text", { x: X0, y: 16, class: "pf-label" }, next ? `Next reference: page ${next.page}` : "End of the reference string")];
+  for (let k = 0; k < frameCount; k++) {
+    const cls = k === s.slot ? (s.hit ? " hit" : " loaded") : "";
+    els.push(h("rect", { x: x(k), y: FY, width: BW, height: 50, rx: 10, class: `pf-frame${cls}` }),
+      h("text", { x: x(k) + BW / 2, y: FY + 66, "text-anchor": "middle", class: "pf-label" }, `F${k + 1}`));
+    if (s.frames[k] !== null) els.push(pageTok(`r:${r.since[k]}`, s.frames[k], x(k) + 7, FY + 7, k === s.slot ? (s.hit ? " hit" : " new") : ""));
+  }
+  if (next) els.push(pageTok(`r:${i + 1}`, next.page, x(next.slot) + 7, 24, " incoming"));
+  if (s.victim != null) els.push(pageTok(`r:${r.gone}`, s.victim, x(s.slot) + 7, FY + 74, " evicted"), h("text", { x: x(s.slot) + 56, y: FY + 98, class: "pf-label" }, "out"));
+  return h("svg", { viewBox: `0 0 ${W} ${FY + 116}`, class: "pf-svg", role: "img", style: `max-width:${W * 1.4}px`, "aria-label": `Frames: ${s.frames.map((v) => v ?? "empty").join(", ")}` }, els);
+}
+
+// The clock: frames round a circle with their reference bits, and a hand that
+// turns forward through every frame it gives a second chance to.
+function clockView(steps, n) {
+  const C = 130, R = 92;
+  const pos = (k) => { const a = (k / n) * 2 * Math.PI - Math.PI / 2; return [C + R * Math.cos(a), C + R * Math.sin(a)]; };
+  const slots = Array.from({ length: n }, (_, k) => {
+    const [cx, cy] = pos(k);
+    const box = h("rect", { x: cx - 27, y: cy - 23, width: 54, height: 46, rx: 9, class: "ck-frame" });
+    const pg = h("text", { x: cx, y: cy + 2, "text-anchor": "middle", class: "ck-page" });
+    const bit = h("text", { x: cx, y: cy + 17, "text-anchor": "middle", class: "ck-bit" });
+    return { g: h("g", null, box, pg, bit, h("text", { x: cx, y: cy - 28, "text-anchor": "middle", class: "pf-label" }, `F${k + 1}`)), box, pg, bit };
+  });
+  const hand = h("g", { class: "ck-hand" }, h("line", { x1: C, y1: C, x2: C, y2: C - R + 32 }), h("path", { d: `M${C - 7},${C - R + 38} L${C},${C - R + 26} L${C + 7},${C - R + 38} z` }));
+  const svg = h("svg", { viewBox: `0 0 ${2 * C} ${2 * C}`, class: "ck-svg", role: "img" },
+    h("circle", { cx: C, cy: C, r: R, class: "ck-ring" }), hand, h("circle", { cx: C, cy: C, r: 6, class: "ck-hub" }), slots.map((x) => x.g));
+  // Cumulative hand moves, so the hand always turns clockwise (a full sweep is a full turn).
+  let prev = 0, total = 0;
+  const cum = steps.map((s) => {
+    const moved = s.sweep && s.sweep.length > n ? n + 1 : (((s.hand - prev) % n) + n) % n;
+    total += moved; prev = s.hand;
+    return total;
+  });
+  let shown = 0;
+  return {
+    el: svg,
+    show(i) {
+      const s = steps[i];
+      slots.forEach((x, k) => {
+        x.pg.textContent = s.frames[k] ?? "";
+        x.bit.textContent = s.frames[k] === null ? "empty" : `ref ${s.ref[k]}`;
+        x.box.setAttribute("class", `ck-frame${k === s.slot ? (s.hit ? " hit" : " loaded") : ""}${!s.hit && s.sweep?.includes(k) && k !== s.slot ? " swept" : ""}`);
+      });
+      const moves = Math.abs(cum[i] - shown);
+      hand.style.transitionDuration = reducedMotion() ? "0s" : `${Math.min(1.6, 0.3 + 0.22 * moves)}s`;
+      hand.style.transform = `rotate(${(cum[i] * 360) / n}deg)`;
+      shown = cum[i];
+      svg.setAttribute("aria-label", `Clock hand at frame ${s.hand + 1}. ${s.frames.map((v, k) => `Frame ${k + 1}: ${v ?? "empty"}, bit ${s.ref[k]}`).join(". ")}`);
+    },
+  };
+}
+
+function workingSetCard(refs) {
+  const deltaIn = h("input", { type: "number", min: 1, max: 20, value: 4, "aria-label": "Window size Δ", style: "max-width:80px" });
+  const body = h("div");
+  const draw = () => {
+    let ws;
+    try { ws = workingSet(refs, Number(deltaIn.value)); } catch (e) { body.replaceChildren(notice("error", e.message)); return; }
+    body.replaceChildren(
+      h("div", { class: "table-wrap" }, h("table", { class: "frames ws" },
+        h("thead", null, h("tr", null, h("th", { scope: "col" }, "t"), ws.rows.map((r) => h("th", { scope: "col" }, r.t + 1)))),
+        h("tbody", null,
+          h("tr", null, h("th", { scope: "row" }, "Ref"), ws.rows.map((r) => h("td", null, r.page))),
+          h("tr", null, h("th", { scope: "row" }, "WS"), ws.rows.map((r) => h("td", { class: "ws-set" }, r.set.join(" ")))),
+          h("tr", null, h("th", { scope: "row" }, "|WS|"), ws.rows.map((r) => h("td", { class: r.size === ws.max ? "ws-peak" : null }, r.size)))))),
+      h("div", { class: "stats-row" }, stat("Largest working set", ws.max), stat("Average size", ws.average.toFixed(2))),
+      h("p", { class: "muted small" }, `With Δ = ${deltaIn.value}, this process needs ${ws.max} frame${ws.max === 1 ? "" : "s"} at its busiest moment. If the working sets of all processes add up to more frames than exist, the OS should suspend a process rather than let the system thrash.`));
+  };
+  deltaIn.addEventListener("input", draw);
+  draw();
+  return h("section", { class: "card" }, h("h2", null, "Working set"),
+    h("p", { class: "muted" }, "WS(t, Δ) is the set of distinct pages used in the last Δ references. A process should keep its whole working set in memory; its size is how many frames it needs right now."),
+    h("label", { class: "inline" }, "Window Δ ", deltaIn), body);
 }
 
 function faultTable(refs) {
@@ -39,14 +137,17 @@ export function render(root) {
   const head = page({
     subject: "Operating systems",
     title: "Page replacement",
-    lede: "When memory is full and a new page is needed, which page gets thrown out? Step through FIFO, LRU and Optimal and count the faults.",
+    lede: "When memory is full and a new page is needed, which page gets thrown out? Step through FIFO, LRU, Optimal, LFU, MFU and the clock, and count the faults.",
     theory: h("div", null,
       h("p", null, "A program references pages in order (the ", h("b", null, "reference string"), "). If the page is already in a frame it's a ", h("b", null, "hit"), "; if not, it's a ", h("b", null, "page fault"), " and the page is loaded, evicting another page when all frames are full."),
       h("ul", null,
         h("li", null, h("b", null, "FIFO"), " evicts the page that has been in memory longest."),
         h("li", null, h("b", null, "LRU"), " evicts the page used least recently."),
-        h("li", null, h("b", null, "Optimal"), " evicts the page whose next use is furthest in the future. It needs to know the future, so it's a benchmark, not a real policy."))),
-    conventions: ["Empty frames are filled top to bottom.", "Optimal: if several pages are never used again, the one loaded earliest is evicted."],
+        h("li", null, h("b", null, "Optimal"), " evicts the page whose next use is furthest in the future. It needs to know the future, so it's a benchmark, not a real policy."),
+        h("li", null, h("b", null, "LFU / MFU"), " count how often each page in memory has been used and evict the least (or most) used one. Counting algorithms are rarely used in practice: they're expensive and don't approximate OPT well."),
+        h("li", null, h("b", null, "Second Chance (Clock)"), " approximates LRU cheaply. Each frame has a reference bit the hardware sets on every use. A hand sweeps round the frames: a page with bit 1 gets a second chance (the bit is cleared and the hand moves on); the first page with bit 0 is evicted.")),
+      h("p", null, "LRU and Optimal are ", h("b", null, "stack algorithms"), ": more frames never means more faults. FIFO isn't, which is why it can show ", h("b", null, "Belady's anomaly"), ".")),
+    conventions: ["Empty frames are filled top to bottom (F1 first).", "Optimal: if several pages are never used again, the one loaded earliest is evicted.", "LFU/MFU: counts only cover the time a page has been in memory (a reloaded page starts at 1); ties evict the page loaded earliest.", "Clock: a page's reference bit is 1 when it's loaded and after every hit. The hand starts at F1 and moves to the frame after each page it loads."],
   });
 
   const refsIn = h("input", { type: "text", value: state.refs, "aria-label": "Reference string", class: "wide", oninput: (e) => { state.refs = e.target.value; update(); } });
@@ -65,23 +166,38 @@ export function render(root) {
     } catch (e) { msg.replaceChildren(notice("error", e.message)); out.replaceChildren(); return; }
     msg.replaceChildren();
     const stage = h("div"), note = h("p", { class: "step-note", "aria-live": "polite" });
+    const spec = ALGORITHMS[state.algo], code = codePanel(spec.code), vars = varsPanel();
+    const res = residency(result.steps, state.frames);
+    const box = h("div", { class: "chart-wrap pf-wrap" });
+    const clock = state.algo === "clock" ? clockView(result.steps, state.frames) : null;
+    if (clock) box.replaceChildren(clock.el);
+    const running = h("div", { class: "stats-row" });
     player = stepper({
-      count: refs.length, label: "Reference", interval: 900, start: 0,
+      count: refs.length, label: "Reference", interval: 1000, start: 0,
       render: (i) => {
         stage.replaceChildren(grid(refs, result.steps, state.frames, i));
-        note.textContent = `Step ${i + 1}: ${result.steps[i].note}`;
+        if (clock) clock.show(i); else morph(box, framesSvg(result.steps, res, i, state.frames));
+        const st = result.steps[i];
+        note.textContent = `Step ${i + 1}: ${st.note}`;
+        note.className = `step-note${st.hit ? " good" : ""}`;
+        code.show(st.line);
+        vars.show(st.vars);
+        const f = result.steps.slice(0, i + 1).filter((x) => !x.hit).length;
+        running.replaceChildren(stat("Faults so far", f), stat("Hits so far", i + 1 - f));
       },
     });
     const belady = beladyCheck(refs, state.frames);
     out.replaceChildren(
-      h("section", { class: "card" }, h("h2", null, ALGORITHMS[state.algo].name), player.el, stage, note,
+      h("section", { class: "card" }, h("h2", null, spec.name), player.el, note,
+        traceLayout(h("div", null, box, running), code, vars),
+        stage,
         h("div", { class: "stats-row" },
-          h("div", { class: "stat" }, h("span", null, "Page faults"), h("b", null, result.faults)),
-          h("div", { class: "stat" }, h("span", null, "Hits"), h("b", null, result.hits)),
-          h("div", { class: "stat" }, h("span", null, "Hit ratio"), h("b", null, `${Math.round(result.hitRatio * 100)}%`)),
-          h("div", { class: "stat" }, h("span", null, "Fault ratio"), h("b", null, `${Math.round((1 - result.hitRatio) * 100)}%`))),
+          stat("Page faults", result.faults), stat("Hits", result.hits),
+          stat("Hit ratio", `${Math.round(result.hitRatio * 100)}%`), stat("Fault ratio", `${Math.round((1 - result.hitRatio) * 100)}%`)),
         belady.anomaly ? notice("info", `Belady's anomaly: FIFO has ${belady.faults} faults with ${belady.frames} frames but ${belady.moreFaults} with ${belady.moreFrames}.`) : null),
-      faultTable(refs));
+      faultTable(refs),
+      workingSetCard(refs));
+
   }
 
   const visual = h("div", { class: "panel-body" },

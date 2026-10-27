@@ -8,6 +8,18 @@
 
 const clone = (x) => structuredClone(x);
 
+// What wait and signal do inside, so the view can highlight the line that ran.
+export const SEM_CODE = [
+  "wait(S):",
+  "  S.value ← S.value − 1",
+  "  if S.value < 0 then",
+  "    add this process to S.queue; block()  // sleeps: no busy waiting",
+  "signal(S):",
+  "  S.value ← S.value + 1",
+  "  if S.value ≤ 0 then  // someone is still waiting",
+  "    remove P from the front of S.queue; wakeup(P)",
+];
+
 export function initial(preset) {
   return {
     procs: preset.procs.map((p) => ({ id: p.id, role: p.role ?? null, program: p.program, pc: 0, status: "ready", reg: 0, rounds: 0, blockedOn: null })),
@@ -53,7 +65,7 @@ export function step(prev, i) {
   if (p.status !== "ready") throw new Error(`${p.id} is blocked and can't run.`);
   const op = p.program[p.pc];
   s.time++;
-  let note;
+  let note, line = [];
   const advance = () => {
     p.pc++;
     if (p.pc === p.program.length) { p.pc = 0; p.rounds++; }
@@ -62,7 +74,7 @@ export function step(prev, i) {
   if (op.if && s.vars[op.if.v] !== op.if.eq) {
     note = `${p.id}: ${op.if.v} is ${s.vars[op.if.v]}, not ${op.if.eq}, so it skips ${label({ ...op, if: undefined })}.`;
     advance();
-    return finish(s, note);
+    return finish(s, note, line);
   }
 
   switch (op.op) {
@@ -70,13 +82,14 @@ export function step(prev, i) {
       const sem = s.sems[op.s];
       sem.value--;
       advance();
+      line = sem.value < 0 ? [1, 2, 3, 4] : [1, 2, 3];
       if (sem.value < 0) {
         p.status = "blocked";
         p.blockedOn = op.s;
         sem.queue.push(p.id);
-        note = `${p.id}: wait(${op.s}) → ${op.s} = ${sem.value} (< 0), so ${p.id} BLOCKS and joins ${op.s}'s queue.`;
+        note = `${p.id}: wait(${op.s}) → ${op.s} = ${sem.value} (< 0), so ${p.id} BLOCKS and joins ${op.s}'s queue. A negative value means ${-sem.value} process${sem.value === -1 ? " is" : "es are"} waiting on ${op.s}; it can't continue until someone signals.`;
       } else {
-        note = `${p.id}: wait(${op.s}) → ${op.s} = ${sem.value}, so ${p.id} continues.`;
+        note = `${p.id}: wait(${op.s}) → ${op.s} = ${sem.value}, still ≥ 0, so there was a unit free and ${p.id} continues.`;
       }
       break;
     }
@@ -84,14 +97,15 @@ export function step(prev, i) {
       const sem = s.sems[op.s];
       sem.value++;
       advance();
+      line = sem.value <= 0 && sem.queue.length ? [5, 6, 7, 8] : [5, 6, 7];
       if (sem.value <= 0 && sem.queue.length) {
         const next = sem.queue.shift();
         const woken = s.procs.find((x) => x.id === next);
         woken.status = "ready";
         woken.blockedOn = null;
-        note = `${p.id}: signal(${op.s}) → ${op.s} = ${sem.value} (≤ 0), so it wakes ${woken.id}.`;
+        note = `${p.id}: signal(${op.s}) → ${op.s} = ${sem.value} (≤ 0), which means someone was waiting, so it wakes ${woken.id}, the process that has waited longest.`;
       } else {
-        note = `${p.id}: signal(${op.s}) → ${op.s} = ${sem.value}.`;
+        note = `${p.id}: signal(${op.s}) → ${op.s} = ${sem.value}. Nobody was waiting, so the unit is simply banked for the next wait.`;
       }
       break;
     }
@@ -146,15 +160,15 @@ export function step(prev, i) {
       note = `${p.id}: ${label(op)}.`;
       advance();
   }
-  return finish(s, note);
+  return finish(s, note, line);
 }
 
-function finish(s, note) {
+function finish(s, note, line = []) {
   if (s.procs.every((p) => p.status === "blocked")) {
     s.deadlock = true;
     note += ` Every process is now blocked: DEADLOCK. ${s.procs.map((p) => `${p.id} waits on ${p.blockedOn}`).join(", ")}.`;
   }
-  return { state: s, note };
+  return { state: s, note, line };
 }
 
 const w = (s, extra) => ({ op: "wait", s, ...extra });

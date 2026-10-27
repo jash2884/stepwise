@@ -1,5 +1,6 @@
-import { EXAMPLE, isSafeSequence, need, randomState, request, safety, validate, vec } from "../engines/bankers.js";
-import { copyLink, h, notice, page, readParams, rng, stepper, tabs, writeParams } from "../ui.js";
+import { codePanel, traceLayout, varsPanel } from "../code.js";
+import { EXAMPLE, EXAMPLE_REQUESTS, isSafeSequence, need, parseRequests, randomState, REQUEST_CODE, requestTimeline, SAFETY_CODE, safety, validate, vec } from "../engines/bankers.js";
+import { copyLink, h, morph, notice, page, readParams, rng, stepper, tabs, writeParams } from "../ui.js";
 
 const R = (j) => String.fromCharCode(65 + j);
 const clone = (s) => ({ allocation: s.allocation.map((r) => [...r]), max: s.max.map((r) => [...r]), available: [...s.available] });
@@ -8,6 +9,21 @@ function decode(text) {
   const [a, m, av] = text.split("~");
   const rows = (t) => t.split("_").map((r) => r.split(".").map(Number));
   return { allocation: rows(a), max: rows(m), available: av.split(".").map(Number) };
+}
+
+// Work as rows of unit blocks, one row per resource type. Units released by a
+// finishing process pop in at the end of the row, in that process's colour.
+function workBars(steps, i, m) {
+  const st = steps[i], U = 16, G = 3, L = 34;
+  const owner = Array.from({ length: m }, () => []);
+  steps[0].work.forEach((v, j) => { for (let k = 0; k < v; k++) owner[j].push(null); });
+  for (const s of steps.slice(1, i + 1)) if (s.released) s.released.forEach((v, j) => { for (let k = 0; k < v; k++) owner[j].push(s.checking); });
+  const widest = Math.max(...owner.map((o) => o.length), 1);
+  const W = Math.max(260, L + widest * (U + G) + 10);
+  return h("svg", { viewBox: `0 0 ${W} ${m * 26 + 6}`, class: "work-bars", role: "img", style: `max-width:${W * 1.3}px`, "aria-label": `Work = ${vec(st.work)}` },
+    owner.map((o, j) => [h("text", { x: 4, y: j * 26 + 20, class: "wb-label" }, R(j)),
+      o.map((pid, k) => h("rect", { x: L + k * (U + G), y: j * 26 + 6, width: U, height: 18, rx: 4, class: `wb-unit${pid == null ? "" : " back"}`, style: pid == null ? null : `--c:var(--series-${(pid % 8) + 1})`, "data-k": `u:${j}:${k}`, "data-x": L + k * (U + G), "data-y": j * 26 + 6 },
+        h("title", null, pid == null ? "free at the start" : `released by P${pid}`)))]));
 }
 
 // Matrices for one step: the row being checked is highlighted, finished rows dimmed.
@@ -41,7 +57,7 @@ export function render(root) {
       h("p", null, "Each process declares the most it will ever need (", h("b", null, "Max"), "). The system tracks what it holds (", h("b", null, "Allocation"), ") and what is free (", h("b", null, "Available"), "). ", h("b", null, "Need"), " = Max − Allocation."),
       h("p", null, "The ", h("b", null, "safety check"), " pretends to run processes one at a time: any process whose Need fits in the free resources (", h("b", null, "Work"), ") can finish and give back its allocation. If everyone can finish, the state is ", h("b", null, "safe"), "."),
       h("p", null, "A ", h("b", null, "request"), " is granted only if it's within the process's Need, fits in Available, and the state after granting it is still safe.")),
-    conventions: ["The safety check scans P0, P1, … in order and repeats until a full pass finishes nobody.", "Other safe sequences may exist; practice mode accepts any valid one."],
+    conventions: ["The safety check scans P0, P1, … in order and repeats until a full pass finishes nobody.", "Other safe sequences may exist; practice mode accepts any valid one.", "Request timeline: requests are handled in the order given; a refused request isn't retried later."],
   });
 
   const msg = h("div"), editor = h("div"), out = h("div", { class: "output" });
@@ -74,29 +90,36 @@ export function render(root) {
 
   function update(redraw = true) {
     player?.destroy();
+    timelinePlayer?.destroy();
     if (redraw) drawEditor();
-    writeParams({ s: encode(state) });
+    writeParams({ s: encode(state), req: requestText });
     const error = validate(state);
     if (error) { msg.replaceChildren(notice("error", error)); out.replaceChildren(); return; }
     msg.replaceChildren();
     const result = safety(state);
-    const stage = h("div"), note = h("p", { class: "step-note", "aria-live": "polite" });
+    const stage = h("div"), note = h("p", { class: "step-note", "aria-live": "polite" }), bars = h("div", { class: "chart-wrap" }), seq = h("div", { class: "row work" });
+    const code = codePanel(SAFETY_CODE), vars = varsPanel();
     player = stepper({
       count: result.steps.length, label: "Step", interval: 1100,
       render: (i) => {
         const step = result.steps[i];
         const sequenceSoFar = result.sequence.slice(0, step.finish.filter(Boolean).length);
-        stage.replaceChildren(
-          matrices(state, step),
-          h("div", { class: "row work" }, h("span", null, "Work"), h("b", { class: "vector" }, vec(step.work)),
-            h("span", null, "Safe sequence so far"), h("span", { class: "chips" }, sequenceSoFar.length ? sequenceSoFar.map((p) => h("span", { class: "chip" }, `P${p}`)) : h("span", { class: "muted" }, "—"))));
+        stage.replaceChildren(matrices(state, step));
+        morph(bars, workBars(result.steps, i, state.available.length));
+        seq.replaceChildren(h("span", null, "Work"), h("b", { class: "vector" }, vec(step.work)),
+          h("span", null, "Safe sequence so far"), h("span", { class: "chips" }, sequenceSoFar.length ? sequenceSoFar.map((p) => h("span", { class: "chip chip-in" }, `P${p}`)) : h("span", { class: "muted" }, "—")));
         note.textContent = step.note;
-        note.className = `step-note${i === result.steps.length - 1 ? (result.safe ? " good" : " bad") : ""}`;
+        note.className = `step-note${i === result.steps.length - 1 ? (result.safe ? " good" : " bad") : step.checking != null ? (step.fits ? " good" : " warn") : ""}`;
+        code.show(step.line);
+        vars.show(step.vars);
       },
     });
     out.replaceChildren(
-      h("section", { class: "card" }, h("h2", null, "Safety check"), player.el, stage, note),
-      requestPanel());
+      h("section", { class: "card" }, h("h2", null, "Safety check"), player.el, note,
+        traceLayout(h("div", null, seq, bars, h("p", { class: "muted small" }, "Work, one block per free unit. When a process finishes, the units it gives back pop in at the end in its colour.")), code, vars),
+        stage),
+      requestPanel(),
+      timelinePanel());
   }
 
   function requestPanel() {
@@ -113,6 +136,45 @@ export function render(root) {
             r.granted ? h("button", { type: "button", class: "btn ghost", onclick: () => { state = r.state; update(); } }, "Apply it and re-check") : null);
         } }, "Request")),
       result);
+  }
+
+  // A run of requests, each walked through the request algorithm.
+  let timelinePlayer = null;
+  let requestText = params.get("req") ?? EXAMPLE_REQUESTS;
+  function timelinePanel() {
+    const box = h("div");
+    const input = h("input", { type: "text", class: "wide mono", value: requestText, "aria-label": "Requests, in order", oninput: (e) => { requestText = e.target.value; draw(); } });
+    const draw = () => {
+      timelinePlayer?.destroy();
+      writeParams({ s: encode(state), req: requestText });
+      let tl;
+      try { tl = requestTimeline(state, parseRequests(requestText, state.available.length)); } catch (e) { box.replaceChildren(notice("error", e.message)); return; }
+      if (!tl.steps.length) { box.replaceChildren(notice("info", "Add a request, e.g. P1 1 0 2.")); return; }
+      const code = codePanel(REQUEST_CODE, { title: "Resource-request algorithm" }), vars = varsPanel();
+      const note = h("p", { class: "step-note", "aria-live": "polite" }), stage = h("div"), chips = h("div", { class: "chips req-chips" });
+      timelinePlayer = stepper({
+        count: tl.steps.length, label: "Check", interval: 1300,
+        render: (i) => {
+          const st = tl.steps[i];
+          stage.replaceChildren(matrices(st.state, { checking: st.pid, fits: st.outcome !== "unsafe" && st.outcome !== "wait" && st.outcome !== "error", finish: st.state.allocation.map(() => false) }),
+            h("div", { class: "row work" }, h("span", null, st.pretend ? "Available (pretend)" : "Available"), h("b", { class: "vector" }, vec(st.state.available))));
+          chips.replaceChildren(...tl.outcomes.map((o, k) => {
+            const seen = k < st.k || k === st.k && st.outcome;
+            return h("span", { class: `chip req ${seen ? o.outcome : k === st.k ? "now" : "later"}` }, `P${o.pid} ${vec(o.req)}`, seen ? h("small", null, ` ${{ granted: "✓ granted", wait: "waits", unsafe: "unsafe: waits", error: "error" }[o.outcome]}`) : null);
+          }));
+          note.textContent = st.note;
+          note.className = `step-note${st.outcome === "granted" ? " good" : st.outcome ? " bad" : ""}`;
+          code.show(st.line);
+          vars.show(st.vars);
+        },
+      });
+      box.replaceChildren(timelinePlayer.el, chips, note, traceLayout(stage, code, vars),
+        h("div", { class: "row" }, h("button", { type: "button", class: "btn ghost", onclick: () => { state = tl.final; update(); } }, "Continue from the final state")));
+    };
+    draw();
+    return h("section", { class: "card" }, h("h2", null, "Request timeline"),
+      h("p", { class: "muted" }, "A sequence of requests, handled one after another. Granted requests change the state for the next one; refused ones leave it alone."),
+      h("label", { class: "stack" }, "Requests in order (e.g. P1 1 0 2; P4 3 3 0)", input), box);
   }
 
   const visual = h("div", { class: "panel-body" }, h("section", { class: "card inputs" }, editor, msg), out);
@@ -179,5 +241,5 @@ export function render(root) {
   root.replaceChildren(head, tab.el, panels);
   tab.select("visual");
   update();
-  return () => player?.destroy();
+  return () => { player?.destroy(); timelinePlayer?.destroy(); };
 }

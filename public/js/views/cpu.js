@@ -1,5 +1,7 @@
-import { ALGORITHMS, randomProcesses, schedule, validate } from "../engines/scheduling.js";
-import { copyLink, fmt, h, notice, page, readParams, rng, stepper, tabs, writeParams } from "../ui.js";
+import { codePanel, traceLayout, varsPanel } from "../code.js";
+import { ALGORITHMS, EXAMPLES, randomProcesses, schedule, validate } from "../engines/scheduling.js";
+import { copyLink, fmt, h, morph, notice, page, readParams, reducedMotion, rng, stepper, tabs, writeParams } from "../ui.js";
+import { exampleSelect, stat } from "./kit.js";
 
 const EXAMPLE = [
   { id: "P1", arrival: 0, burst: 8, priority: 3 },
@@ -18,37 +20,89 @@ function decode(s) {
   });
 }
 
-// The animated simulation: Gantt chart, CPU, ready queue, notes and results.
+// Processes as tokens: in the CPU, in a ready queue (one row per level for
+// MLQ/MLFQ) or finished. Tokens are keyed so morph() glides them between places.
+function queueSvg(f, result, order) {
+  const TW = 40, TH = 34, GAP = 6, ROW = 64, n = order.size;
+  const W = Math.max(520, 150 + n * (TW + GAP));
+  const levels = result.levels;
+  const H = 84 + levels.length * ROW;
+  const els = [];
+  const token = (id, x, y, extra = "") => h("g", { class: `tok${extra}`, "data-k": `p:${id}`, "data-x": x, "data-y": y, style: `--c:var(--series-${(order.get(id) % 8) + 1})` },
+    h("rect", { x, y, width: TW, height: TH, rx: 8 }),
+    h("text", { x: x + TW / 2, y: y + 15, "text-anchor": "middle", class: "tok-id" }, id),
+    h("text", { x: x + TW / 2, y: y + 28, "text-anchor": "middle", class: "tok-rem" }, f.remaining[id] ? `${f.remaining[id]} left` : "done"));
+  // CPU box and finished area.
+  els.push(h("rect", { x: 8, y: 22, width: 64, height: 50, rx: 10, class: `q-cpu${f.running ? " busy" : ""}` }),
+    h("text", { x: 40, y: 16, "text-anchor": "middle", class: "q-label" }, `CPU · t = ${f.t}`),
+    h("text", { x: 96, y: 16, class: "q-label" }, "Finished"));
+  if (f.running) els.push(token(f.running, 20, 30, " on-cpu"));
+  else els.push(h("text", { x: 40, y: 52, "text-anchor": "middle", class: "q-idle" }, "idle"));
+  f.done.forEach((id, i) => els.push(token(id, 96 + i * (TW + GAP), 30, " fin")));
+  levels.forEach((name, k) => {
+    const y = 96 + k * ROW;
+    els.push(h("text", { x: 8, y: y - 6, class: "q-label" }, levels.length > 1 ? name : "Ready queue (front on the left)"),
+      h("rect", { x: 4, y: y - 2, width: W - 8, height: TH + 4, rx: 9, class: "q-lane" }));
+    f.queues[k].forEach((id, i) => els.push(token(id, 8 + i * (TW + GAP), y, "")));
+    if (!f.queues[k].length) els.push(h("text", { x: 14, y: y + 22, class: "q-idle" }, "empty"));
+  });
+  return h("svg", { viewBox: `0 0 ${W} ${H}`, class: "q-svg", role: "img", style: `min-width:${Math.min(W, 480)}px`,
+    "aria-label": `CPU: ${f.running ?? "idle"}. ${levels.map((name, k) => `${name}: ${f.queues[k].join(", ") || "empty"}`).join(". ")}. Finished: ${f.done.join(", ") || "none"}.` }, els);
+}
+
+// The animated simulation: growing Gantt chart, queues, pseudocode, variables, results.
 export function simulation(result, processes, { compact = false } = {}) {
   const order = new Map(processes.map((p, i) => [p.id, i]));
   const total = result.makespan;
-  const stage = h("div", { class: "stage" });
+  const spec = ALGORITHMS[result.algo];
+  const code = codePanel(spec.code), vars = varsPanel();
+  const track = h("div", { class: "gantt-track" }), axis = h("div", { class: "gantt-axis" });
+  const gantt = h("div", { class: "gantt", role: "img" }, track, axis);
+  const qbox = h("div", { class: "chart-wrap q-wrap" }), note = h("p", { class: "step-note", "aria-live": "polite" });
+  const counters = h("div", { class: "stats-row" }), table = h("div");
   const ends = result.frames.map((f, i) => (i < result.frames.length - 1 ? result.frames[i + 1].t : total));
+  const segEls = new Map();
 
   const draw = (i) => {
     const f = result.frames[i], now = ends[i];
-    const segments = result.timeline.filter((s) => s.start < now).map((s) => ({ ...s, end: Math.min(s.end, now) }));
+    const segments = result.timeline.map((s, k) => ({ ...s, k })).filter((s) => s.start < now).map((s) => ({ ...s, end: Math.min(s.end, now) }));
     // Skip axis labels that would collide; the final time always shows.
     const ticks = [...new Set(segments.flatMap((s) => [s.start, s.end]))].reduceRight((kept, t) => (kept.length && (kept[0] - t) / total < 0.045 ? kept : [t, ...kept]), []);
-    const done = new Set(f.done);
-    stage.replaceChildren(
-      h("div", { class: "gantt", role: "img", "aria-label": `Gantt chart up to time ${now}: ${segments.map((s) => `${s.id ?? "idle"} ${s.start}-${s.end}`).join(", ")}` },
-        h("div", { class: "gantt-track" }, segments.map((s) => h("div", {
-          class: `seg${s.id ? "" : " idle"}${s.end === now && f.running === s.id && s.id ? " live" : ""}${order.get(s.id) >= 8 ? " hatch" : ""}`,
-          style: `left:${(s.start / total) * 100}%;width:${((s.end - s.start) / total) * 100}%;${s.id ? `--c:${colour(order.get(s.id))}` : ""}`,
-          title: `${s.id ?? "Idle"}: ${s.start} → ${s.end}`,
-        }, s.end - s.start >= total / 40 ? s.id ?? "" : ""))),
-        h("div", { class: "gantt-axis" }, ticks.map((t) => h("span", { style: `left:${(t / total) * 100}%` }, t)))),
-      h("div", { class: "cpu-row" },
-        h("div", { class: "cpu" }, h("span", null, `t = ${f.t}`), h("b", { style: f.running ? `--c:${colour(order.get(f.running))}` : null, class: f.running ? "busy" : "" }, f.running ?? "idle"), h("small", null, "CPU")),
-        h("div", { class: "queue" }, h("small", null, "Ready queue →"), h("div", { class: "chips" }, f.ready.length ? f.ready.map((id) => h("span", { class: "chip", style: `--c:${colour(order.get(id))}` }, id, h("small", null, ` ${f.remaining[id]} left`))) : h("span", { class: "muted" }, "empty"))),
-        h("div", { class: "queue" }, h("small", null, "Finished"), h("div", { class: "chips" }, f.done.length ? f.done.map((id) => h("span", { class: "chip done", style: `--c:${colour(order.get(id))}` }, id)) : h("span", { class: "muted" }, "none yet")))),
-      h("ul", { class: "notes" }, (f.notes.length ? f.notes : [f.running ? `${f.running} keeps running: ${f.remaining[f.running]} unit${f.remaining[f.running] === 1 ? "" : "s"} left.` : "Waiting."]).map((n) => h("li", null, n))),
-      compact ? null : results(result, done, i === result.frames.length - 1));
+    gantt.setAttribute("aria-label", `Gantt chart up to time ${now}: ${segments.map((s) => `${s.id ?? "idle"} ${s.start}-${s.end}`).join(", ")}`);
+    // Segments persist between steps, so their width transition makes the bars grow.
+    for (const [k, el] of segEls) if (!segments.some((s) => s.k === k)) { el.remove(); segEls.delete(k); }
+    for (const s of segments) {
+      let el = segEls.get(s.k);
+      const fresh = !el;
+      if (fresh) {
+        el = h("div", { class: `seg${s.id ? "" : " idle"}${order.get(s.id) >= 8 ? " hatch" : ""}`, style: `left:${(s.start / total) * 100}%;width:0;${s.id ? `--c:${colour(order.get(s.id))}` : ""}` });
+        segEls.set(s.k, el);
+        track.append(el);
+      }
+      el.title = `${s.id ?? "Idle"}: ${s.start} → ${s.end}`;
+      el.textContent = s.end - s.start >= total / 40 ? s.id ?? "" : "";
+      el.classList.toggle("live", s.end === now && f.running === s.id && !!s.id);
+      const width = `${((s.end - s.start) / total) * 100}%`;
+      if (fresh && !reducedMotion()) { el.getBoundingClientRect(); requestAnimationFrame(() => { el.style.width = width; }); } else el.style.width = width;
+    }
+    axis.replaceChildren(...ticks.map((t) => h("span", { style: `left:${(t / total) * 100}%` }, t)));
+    morph(qbox, queueSvg(f, result, order));
+    code.show(f.line);
+    vars.show(f.vars);
+    const last = i === result.frames.length - 1;
+    note.textContent = f.note;
+    note.className = `step-note${last ? " good" : ""}`;
+    counters.replaceChildren(
+      stat("Context switches", last ? result.contextSwitches : `${f.vars.switches} so far`),
+      stat("Preemptions", spec.preemptive ? result.preemptions : "none"),
+      stat("CPU utilisation", last ? `${Math.round(result.utilisation * 100)}%` : "…"),
+      stat("Throughput", last ? `${fmt(result.throughput, 3)}/unit` : "…"));
+    table.replaceChildren(compact ? null : results(result, new Set(f.done), last));
   };
 
   const player = stepper({ count: result.frames.length, render: draw, label: "Step", interval: 800 });
-  return { el: h("div", { class: "sim" }, player.el, stage), player };
+  const visual = h("div", null, gantt, qbox, h("p", { class: "muted small" }, "Tokens show each process's remaining burst. They slide to the CPU when dispatched and back to a queue when preempted."));
+  return { el: h("div", { class: "sim" }, player.el, note, traceLayout(visual, code, vars), counters, table), player };
 }
 
 function results(result, done, finished) {
@@ -65,16 +119,16 @@ function results(result, done, finished) {
 function comparison(processes, opts, current) {
   const rows = Object.entries(ALGORITHMS).map(([id, spec]) => {
     const r = schedule(processes, id, opts);
-    return { id, name: spec.name, ...r.averages };
+    return { id, name: spec.name, ...r.averages, cs: r.contextSwitches };
   });
   const best = Math.min(...rows.map((r) => r.wt));
   return h("section", { class: "card" }, h("h2", null, "Same processes, every algorithm"),
     h("div", { class: "table-wrap" }, h("table", null,
-      h("thead", null, h("tr", null, ["Algorithm", "Avg waiting", "Avg turnaround", "Avg response"].map((t) => h("th", { scope: "col" }, t)))),
+      h("thead", null, h("tr", null, ["Algorithm", "Avg waiting", "Avg turnaround", "Avg response", "Context switches"].map((t) => h("th", { scope: "col" }, t)))),
       h("tbody", null, rows.map((r) => h("tr", { class: r.id === current ? "current" : null },
         h("th", { scope: "row" }, r.name, r.wt === best ? h("span", { class: "badge" }, "lowest wait") : null),
-        h("td", null, fmt(r.wt)), h("td", null, fmt(r.tat)), h("td", null, fmt(r.rt))))))),
-    h("p", { class: "muted small" }, "SRTF always gives the minimum average waiting time; Round Robin trades waiting time for responsiveness."));
+        h("td", null, fmt(r.wt)), h("td", null, fmt(r.tat)), h("td", null, fmt(r.rt)), h("td", null, r.cs)))))),
+    h("p", { class: "muted small" }, "SRTF always gives the minimum average waiting time; Round Robin and MLFQ trade waiting time for responsiveness, at the cost of more context switches. CPU utilisation is the same for every algorithm here, because none of them leaves the CPU idle while something is ready."));
 }
 
 export function render(root) {
@@ -93,12 +147,23 @@ export function render(root) {
     lede: "Watch the scheduler decide, tick by tick, who gets the CPU, and see where every waiting minute comes from.",
     theory: h("div", null,
       h("p", null, "When several processes are ready, the scheduler picks which one runs. ", h("b", null, "Non-preemptive"), " algorithms let a process run until it finishes; ", h("b", null, "preemptive"), " ones can take the CPU away when a better candidate arrives (SRTF, preemptive priority) or when a time slice runs out (Round Robin)."),
-      h("p", null, "For each process: ", h("b", null, "Turnaround"), " = completion − arrival, ", h("b", null, "Waiting"), " = turnaround − burst, ", h("b", null, "Response"), " = first time it runs − arrival.")),
+      h("ul", null,
+        h("li", null, h("b", null, "FCFS, SJF, LJF, Priority"), ": pick by arrival, shortest burst, longest burst or priority, then run to completion. SJF minimises average waiting time among non-preemptive schedules, but long jobs can starve."),
+        h("li", null, h("b", null, "HRRN"), " picks the highest response ratio (waiting + burst) / burst. A job's ratio grows while it waits, so short jobs go first but long ones can't starve."),
+        h("li", null, h("b", null, "SRTF / LRTF"), " are the preemptive versions of SJF / LJF: every time unit, the job with the least (most) remaining time runs."),
+        h("li", null, h("b", null, "Round Robin"), " gives each process a time slice (quantum) in turn. A small quantum means good response but many context switches."),
+        h("li", null, h("b", null, "Multilevel queue"), " puts each process in a fixed queue (say, system above interactive above batch). A higher queue always runs first; each queue has its own algorithm."),
+        h("li", null, h("b", null, "Multilevel feedback queue"), " lets processes move: everyone starts on top, and a process that uses its whole slice is demoted. I/O-bound, interactive jobs stay on top; CPU-bound ones sink to the FCFS queue at the bottom.")),
+      h("p", null, "For each process: ", h("b", null, "Turnaround"), " = completion − arrival, ", h("b", null, "Waiting"), " = turnaround − burst, ", h("b", null, "Response"), " = first time it runs − arrival. ", h("b", null, "CPU utilisation"), " = busy time ÷ total time, and every ", h("b", null, "context switch"), " (saving one process's state and loading another's) is pure overhead.")),
     conventions: [
       "Ties are broken by arrival time, then by order in the table.",
       "Preemptive algorithms only preempt for a strictly better process.",
       "Round Robin: a process arriving at the same moment a quantum expires joins the queue before the preempted process.",
       "Priority: by default a lower number means higher priority (you can flip it).",
+      "HRRN: response ratio = (waiting time + burst) / burst, worked out when the CPU becomes free.",
+      "Multilevel queue: the priority column is the queue number; upper queues use Round Robin, the lowest FCFS, and a higher queue preempts a lower one.",
+      "MLFQ: Q0 is RR with quantum q, Q1 RR with 2q, Q2 FCFS. A process that uses its whole slice drops a level; one preempted by a higher queue keeps its level.",
+      "A context switch is counted each time the CPU changes from one process to a different one; the first dispatch is free and idle gaps are skipped over.",
     ],
   });
 
@@ -148,11 +213,12 @@ export function render(root) {
     h("section", { class: "card inputs" },
       h("div", { class: "row" }, algoSel, quantumIn, prioSel),
       h("div", { class: "table-wrap" }, h("table", { class: "edit" },
-        h("thead", null, h("tr", null, ["Process", "Arrival", "Burst", "Priority", ""].map((t) => h("th", { scope: "col" }, t)))), tableBody)),
+        h("thead", null, h("tr", null, ["Process", "Arrival", "Burst", "Priority / queue", ""].map((t) => h("th", { scope: "col" }, t)))), tableBody)),
       h("div", { class: "row" },
         h("button", { type: "button", class: "btn ghost", onclick: () => { if (state.processes.length < 12) { state.processes.push({ id: "", arrival: 0, burst: 3, priority: 1 }); renumber(); update(); } } }, "+ Add process"),
         h("button", { type: "button", class: "btn ghost", onclick: () => { state.processes = randomProcesses(); update(); } }, "Random"),
         h("button", { type: "button", class: "btn ghost", onclick: () => { state.processes = EXAMPLE.map((p) => ({ ...p })); update(); } }, "Textbook example"),
+        exampleSelect(EXAMPLES, (ex, k) => { state.processes = ex.processes.map((p, i) => ({ ...p, id: `P${i + 1}` })); if (k === "mlq" || k === "mlfq" || k === "hrrn") state.algo = k; algoSel.value = state.algo; update(); }),
         linkBtn),
       msg),
     out);
@@ -162,7 +228,7 @@ export function render(root) {
   const practiceAlgo = h("select", { "aria-label": "Practice algorithm" }, h("option", { value: "any" }, "Any algorithm"), Object.entries(ALGORITHMS).map(([id, s]) => h("option", { value: id }, s.name)));
   function newQuestion() {
     const r = rng();
-    const algo = practiceAlgo.value === "any" ? Object.keys(ALGORITHMS)[Math.floor(r() * 6)] : practiceAlgo.value;
+    const algo = practiceAlgo.value === "any" ? Object.keys(ALGORITHMS)[Math.floor(r() * Object.keys(ALGORITHMS).length)] : practiceAlgo.value;
     const processes = randomProcesses(r);
     const quantum = 2 + Math.floor(r() * 2);
     const result = schedule(processes, algo, { quantum });

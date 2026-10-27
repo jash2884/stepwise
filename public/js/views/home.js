@@ -34,6 +34,8 @@ function art(kind) {
       h("ellipse", { cx: 40, cy: 29, rx: 34, ry: 25, class: "c1" }), h("ellipse", { cx: 112, cy: 29, rx: 32, ry: 23, class: "c2" }),
       [[24, 16, 56, 16], [56, 16, 40, 44], [40, 44, 24, 16], [56, 16, 98, 18], [98, 18, 126, 40], [126, 40, 98, 40], [98, 40, 98, 18]].map(([a, b, c, d]) => h("line", { x1: a, y1: b, x2: c, y2: d })),
       [[24, 16, 1], [56, 16, 1], [40, 44, 1], [98, 18, 2], [126, 40, 2], [98, 40, 2]].map(([x, y, k]) => h("circle", { cx: x, cy: y, r: 7, class: `c${k}` }))));
+    case "memory": return h("div", { class: "art mem-art" }, [["used", 3], ["", 2], ["used", 4], ["hot", 2], ["", 3], ["used", 2]].map(([c, w], i) => h("i", { class: c, style: `flex:${w};--c:var(--series-${i + 1})` })));
+    case "translate": return h("div", { class: "art translate-art" }, h("span", null, h("b", { class: "p" }, "0011"), h("b", { class: "d" }, "1010")), h("span", { class: "arrow" }, "→"), h("span", null, h("b", { class: "f" }, "0110"), h("b", { class: "d" }, "1010")));
     case "bars": return h("div", { class: "art bars-art" }, [5, 9, 3, 7, 2, 8, 4, 6].map((v, i) => h("i", { style: `height:${v * 10}%`, class: i === 2 || i === 3 ? "hot" : "" })));
     case "search": return h("div", { class: "art search-art" }, [3, 8, 12, 19, 23, 31, 40].map((v, i) => h("i", { class: i === 3 ? "hot" : i < 3 ? "out" : "" }, v)));
     case "stack": return h("div", { class: "art stack-art" }, h("div", null, ["7", "3", "5"].map((v, i) => h("i", { class: i === 0 ? "hot" : "" }, v))), h("span", null, "a b c * +"));
