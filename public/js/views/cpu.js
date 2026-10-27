@@ -2,6 +2,7 @@ import { codePanel, traceLayout, varsPanel } from "../code.js";
 import { ALGORITHMS, EXAMPLES, randomProcesses, schedule, validate } from "../engines/scheduling.js";
 import { copyLink, fmt, h, morph, notice, page, readParams, reducedMotion, rng, stepper, tabs, writeParams } from "../ui.js";
 import { exampleSelect, stat } from "./kit.js";
+import { viewToggle } from "../three-kit.js";
 
 const EXAMPLE = [
   { id: "P1", arrival: 0, burst: 8, priority: 3 },
@@ -51,7 +52,9 @@ function queueSvg(f, result, order) {
 }
 
 // The animated simulation: growing Gantt chart, queues, pseudocode, variables, results.
-export function simulation(result, processes, { compact = false } = {}) {
+// With a `toggle` (a viewToggle), the flat Gantt/queue view gets an optional 3D
+// twin beside or instead of it; the caller wires toggle changes to mount3d().
+export function simulation(result, processes, { compact = false, toggle = null } = {}) {
   const order = new Map(processes.map((p, i) => [p.id, i]));
   const total = result.makespan;
   const spec = ALGORITHMS[result.algo];
@@ -98,11 +101,35 @@ export function simulation(result, processes, { compact = false } = {}) {
       stat("CPU utilisation", last ? `${Math.round(result.utilisation * 100)}%` : "…"),
       stat("Throughput", last ? `${fmt(result.throughput, 3)}/unit` : "…"));
     table.replaceChildren(compact ? null : results(result, new Set(f.done), last));
+    d3?.show(i);
   };
+  // Optional 3D view: built only when chosen, disposed on 2D and on rebuild.
+  let d3 = null, gen = 0;
+  const host3d = h("div", { class: "d3-host", hidden: true });
+  const drop3d = () => { gen++; d3?.dispose(); d3 = null; };
 
   const player = stepper({ count: result.frames.length, render: draw, label: "Step", interval: 800 });
-  const visual = h("div", null, gantt, qbox, h("p", { class: "muted small" }, "Tokens show each process's remaining burst. They slide to the CPU when dispatched and back to a queue when preempted."));
-  return { el: h("div", { class: "sim" }, player.el, note, traceLayout(visual, code, vars), counters, table), player };
+  const flat = h("div", null, gantt, qbox);
+  const pair = h("div", { class: "view-pair" }, flat, host3d);
+  const visual = h("div", null, pair, h("p", { class: "muted small" }, "Tokens show each process's remaining burst. They slide to the CPU when dispatched and back to a queue when preempted."));
+  async function mount3d() {
+    drop3d();
+    if (!toggle) return;
+    const my = gen, mode = toggle.mode, on = mode !== "2d";
+    host3d.hidden = !on;
+    flat.hidden = mode === "3d";
+    pair.classList.toggle("both", mode === "both");
+    if (!on) { host3d.replaceChildren(); return; }
+    try {
+      const { cpuScene } = await import("./cpu-3d.js");
+      const sc = await cpuScene(host3d, { result, processes, height: matchMedia("(max-width: 600px)").matches ? 300 : 400 });
+      if (my !== gen) { sc.dispose(); return; }
+      d3 = sc;
+      d3.show(player.index, true);
+    } catch (e) { host3d.replaceChildren(notice("error", `3D view unavailable: ${e.message}`)); }
+  }
+  if (toggle && toggle.mode !== "2d") mount3d();
+  return { el: h("div", { class: "sim" }, player.el, note, traceLayout(visual, code, vars), counters, table), player, mount3d, drop3d };
 }
 
 function results(result, done, finished) {
@@ -140,6 +167,7 @@ export function render(root) {
     processes: params.get("p") ? decode(params.get("p")) : EXAMPLE.map((p) => ({ ...p })),
   };
   let sim = null;
+  const toggle = viewToggle("cpu-scheduling", () => sim?.mount3d());
 
   const head = page({
     subject: "Operating systems",
@@ -195,14 +223,15 @@ export function render(root) {
     if (redrawTable) drawTable();
     writeParams({ algo: state.algo, q: state.quantum, prio: state.lowerIsHigher ? "low" : "high", p: encode(state.processes) });
     sim?.player.destroy();
+    sim?.drop3d();
     const error = validate(state.processes);
     if (error) { msg.replaceChildren(notice("error", error)); out.replaceChildren(); return; }
     msg.replaceChildren();
     try {
       const opts = { quantum: state.quantum, lowerIsHigher: state.lowerIsHigher };
       const result = schedule(state.processes, state.algo, opts);
-      sim = simulation(result, state.processes);
-      out.replaceChildren(h("section", { class: "card" }, h("h2", null, spec.name), sim.el), comparison(state.processes, opts, state.algo));
+      sim = simulation(result, state.processes, { toggle });
+      out.replaceChildren(h("section", { class: "card" }, h("div", { class: "d3-head" }, h("h2", null, spec.name), toggle.el), sim.el), comparison(state.processes, opts, state.algo));
     } catch (e) {
       msg.replaceChildren(notice("error", e.message));
       out.replaceChildren();
@@ -274,5 +303,5 @@ export function render(root) {
   root.replaceChildren(head, tab.el, panels);
   tab.select("visual");
   update();
-  return () => sim?.player.destroy();
+  return () => { sim?.player.destroy(); sim?.drop3d(); };
 }

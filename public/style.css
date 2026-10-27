@@ -2104,3 +2104,18 @@ body { background:
 /* 2D | 3D | Both: side by side when there's room, stacked when not */
 .view-pair.both, .net3d-stage.both { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(330px, 100%), 1fr)); gap: 12px; align-items: start; }
 .view-pair.both > *, .net3d-stage.both > * { min-width: 0; margin: 0; }
+
+/* 3D: OS */
+.sync3d-run { margin: 6px 0 0; gap: 6px; }
+.sync3d-run[hidden] { display: none; }
+.view-pair .d3-host { margin-top: 6px; }
+.d3-legend .k.think::before { --c: var(--muted); border-radius: 50%; }
+.d3-legend .k.hungry::before { --c: var(--series-4); background: transparent; border: 2px solid var(--c); border-radius: 50%; width: 7px; height: 7px; }
+.d3-legend .k.eat::before { --c: var(--good); border-radius: 50%; box-shadow: 0 0 6px var(--good); }
+.d3-legend .k.cycle::before { --c: var(--bad); height: 3px; border-radius: 2px; }
+.d3-legend .k.item::before { --c: var(--series-1); }
+.d3-legend .k.height::before { --c: var(--muted); width: 5px; height: 11px; border-radius: 1px; }
+.d3-hud span, .d3-legend { max-width: 100%; }
+@media (max-width: 600px) { .sync3d-legend, .d3-legend:has(.k.height) { font-size: 10.5px; gap: 2px 8px; } }
+.d3-host > .d3-legend { position: static; justify-content: flex-start; max-width: none; margin: 6px 2px 0; }
+.d3-legend .k.fork::before { --c: var(--accent); width: 12px; height: 3px; border-radius: 2px; }

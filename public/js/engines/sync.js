@@ -246,3 +246,30 @@ export function randomSequence(r = Math.random) {
   }
   return { initial: sems, ops, final: values, blocked: procs.filter((p) => blocked.has(p)) };
 }
+
+// Dining philosophers as a table: who holds which fork, who waits for which,
+// and whether the waits form a cycle. Semaphores don't record their holders,
+// so this reads it off each philosopher's program counter:
+//   [think, wait(first), wait(second), eat, signal(first), signal(second)].
+// A wait that blocked has already advanced pc, so it holds nothing new yet.
+export function diningState(state) {
+  const n = state.procs.length;
+  const forkNo = (name) => Number(String(name).slice(1));
+  const forks = Array.from({ length: n }, () => ({ holder: null }));
+  const phils = state.procs.map((p, i) => {
+    const first = forkNo(p.program[1].s), second = forkNo(p.program[2].s);
+    const blocked = p.status === "blocked";
+    const holdsFirst = (p.pc === 2 && !blocked) || p.pc === 3 || p.pc === 4;
+    const holdsSecond = (p.pc === 3 && !blocked) || p.pc === 4 || p.pc === 5;
+    const holds = [...(holdsFirst ? [first] : []), ...(holdsSecond ? [second] : [])];
+    for (const f of holds) forks[f].holder = i;
+    // The fork it is stuck on, or about to reach for next.
+    const wants = blocked ? forkNo(p.blockedOn) : p.pc === 1 ? first : p.pc === 2 ? second : null;
+    const phase = holds.length === 2 ? "eating" : p.pc === 5 ? "done" : blocked || holds.length || p.pc === 1 ? "hungry" : "thinking";
+    return { id: p.id, first, second, holds, wants, blocked, phase };
+  });
+  // Circular wait: everyone holds exactly one fork and wants the one their
+  // neighbour holds. Nobody can ever finish, even before the last one blocks.
+  const circular = n > 1 && phils.every((p) => p.holds.length === 1 && p.wants != null && forks[p.wants].holder != null && forks[p.wants].holder !== phils.indexOf(p));
+  return { phils, forks, circular, deadlock: state.deadlock };
+}

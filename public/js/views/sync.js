@@ -1,6 +1,7 @@
 import { codePanel, traceLayout, varsPanel } from "../code.js";
 import { canRun, initial, label, PRESETS, randomSequence, SEM_CODE, step } from "../engines/sync.js";
 import { h, notice, page, readParams, rng, tabs, writeParams } from "../ui.js";
+import { viewToggle } from "../three-kit.js";
 
 export function render(root) {
   const p = readParams();
@@ -31,9 +32,35 @@ export function render(root) {
   const logList = h("ol", { class: "notes log", reversed: true });
   const autoBtn = h("button", { type: "button", class: "btn ghost", onclick: () => (timer ? stopAuto() : startAuto()) }, "▶ Auto-run");
 
+  // Optional 3D view: loaded only when chosen, rebuilt when the problem changes.
+  let d3 = null, gen = 0;
+  const host3d = h("div", { class: "d3-host", hidden: true });
+  const runBar = h("div", { class: "row sync3d-run", hidden: true, "aria-label": "Run a process" });
+  const flat = h("div", null, board);
+  const pair = h("div", { class: "view-pair" }, flat, h("div", null, runBar, host3d));
+  const drop3d = () => { gen++; d3?.dispose(); d3 = null; };
+  const toggle = viewToggle("semaphores", () => mount3d());
+  async function mount3d() {
+    drop3d();
+    const my = gen, mode = toggle.mode, on = mode !== "2d";
+    host3d.hidden = !on;
+    runBar.hidden = mode !== "3d";
+    flat.hidden = mode === "3d";
+    pair.classList.toggle("both", mode === "both");
+    if (!on) { host3d.replaceChildren(); return; }
+    try {
+      const { syncScene } = await import("./sync-3d.js");
+      const sc = await syncScene(host3d, { presetId, height: matchMedia("(max-width: 600px)").matches ? 300 : 400, onPick: (i) => run(i) });
+      if (my !== gen) { sc.dispose(); return; }
+      d3 = sc;
+      d3.show(state, { instant: true });
+    } catch (e) { host3d.replaceChildren(notice("error", `3D view unavailable: ${e.message}`)); }
+  }
+
   let state;
   function reset() {
     stopAuto();
+    drop3d();
     state = initial(PRESETS[presetId].variants[variantId]);
     history = [];
     log = [];
@@ -43,6 +70,7 @@ export function render(root) {
     writeParams({ preset: presetId, v: variantId });
     hint.textContent = `Hint: ${PRESETS[presetId].hint}`;
     draw();
+    if (toggle.mode !== "2d") mount3d();
   }
 
   function run(i) {
@@ -108,6 +136,8 @@ export function render(root) {
     });
     lastNote.textContent = log[0] ?? "Pick a process to run its next line. Watch the semaphores: wait and signal are where processes block and wake.";
     lastNote.className = `step-note${state.violation || state.deadlock ? " bad" : ""}`;
+    runBar.replaceChildren(...state.procs.map((pr, i) => h("button", { type: "button", class: "btn primary small", disabled: !canRun(state, i), onclick: () => run(i) }, `Run ${pr.id}`)));
+    d3?.show(state, { lastRan: ran.at(-1) ?? null });
     strip.replaceChildren(h("span", { class: "muted small" }, "Run order: "), ...(ran.length ? ran.slice(-40).map((i) => h("i", { style: `--c:var(--series-${(i % 8) + 1})`, title: state.procs[i].id }, state.procs[i].id)) : [h("span", { class: "muted small" }, "nothing yet")]));
   }
 
@@ -125,10 +155,11 @@ export function render(root) {
         h("button", { type: "button", class: "btn ghost", onclick: undo }, "↶ Undo"),
         h("button", { type: "button", class: "btn ghost", onclick: randomStep }, "Random step"),
         autoBtn,
-        h("button", { type: "button", class: "btn ghost", onclick: reset }, "Reset")),
+        h("button", { type: "button", class: "btn ghost", onclick: reset }, "Reset"),
+        toggle.el),
       hint, h("p", { class: "muted small" }, "Tip: press 1, 2, 3… to run that process; ⌘/Ctrl+Z to undo.")),
     banner, lastNote, strip,
-    traceLayout(board, code, vars),
+    traceLayout(pair, code, vars),
     h("section", { class: "card" }, h("h2", null, "What happened (newest first)"), logList));
 
   // --- Practice: trace a sequence of wait/signal calls ------------------------
@@ -169,5 +200,5 @@ export function render(root) {
   drawVariants();
   tab.select("visual");
   reset();
-  return () => { stopAuto(); document.removeEventListener("keydown", keys); };
+  return () => { stopAuto(); drop3d(); document.removeEventListener("keydown", keys); };
 }
