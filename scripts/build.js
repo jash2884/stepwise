@@ -64,10 +64,10 @@ function pageHtml({ title, description, path, body }) {
 const toolLinks = SUBJECTS.map((s) => `<h2>${esc(s.name)}</h2><ul>${TOOLS.filter((t) => t.subject === s.id).map((t) => `<li><a href="/${t.slug}">${esc(t.title)}</a>: ${esc(t.summary)}</li>`).join("")}</ul>`).join("");
 
 await writeFile(join(out, "index.html"), pageHtml({
-  title: `${SITE.name}: see every step of OS, DBMS, networks, theory & compiler algorithms`,
-  description: "Interactive, step-by-step visualisers for operating systems, databases, computer networks, theory of computation and compiler design, with practice questions that check your answers.",
+  title: `${SITE.name}: see every step of DSA, OS, DBMS, networks, theory & compiler algorithms`,
+  description: "Interactive, step-by-step visualisers with pseudocode for data structures and algorithms, operating systems, databases, networks, theory of computation and compiler design, with practice questions that check your answers.",
   path: "/",
-  body: `<section class="static-content"><h1>See every step.</h1><p class="lede">Interactive visualisers for the algorithms in operating systems, databases, computer networks, theory of computation and compiler design courses, with practice questions.</p>${toolLinks}</section>`,
+  body: `<section class="static-content"><h1>See every step.</h1><p class="lede">Interactive visualisers with pseudocode for the algorithms in data structures, operating systems, databases, computer networks, theory of computation and compiler design courses, with practice questions.</p>${toolLinks}</section>`,
 }));
 
 for (const t of TOOLS) {

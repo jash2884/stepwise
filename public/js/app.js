@@ -51,7 +51,7 @@ async function route() {
     if (!slug || slug === "index") {
       const home = await import("./views/home.js");
       if (id !== renderId) return;
-      setMeta(`${SITE.name}: see every step of OS, DBMS, networks, theory & compiler algorithms`, "Interactive, step-by-step visualisers for operating systems, databases, computer networks, theory of computation and compiler design, with practice questions that check your answers.", "/");
+      setMeta(`${SITE.name}: see every step of DSA, OS, DBMS, networks, theory & compiler algorithms`, "Interactive, step-by-step visualisers with pseudocode for data structures and algorithms, operating systems, databases, networks, theory of computation and compiler design, with practice questions that check your answers.", "/");
       cleanup = home.render(main) ?? null;
     } else if (!tool) {
       setMeta(`Page not found · ${SITE.name}`, "This page doesn't exist.", location.pathname);

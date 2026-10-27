@@ -110,9 +110,9 @@ export function render(root) {
   });
   root.replaceChildren(
     h("section", { class: "hero" },
-      h("p", { class: "eyebrow" }, "Interactive CS visualisers: OS, DBMS, networks, theory, compilers"),
+      h("p", { class: "eyebrow" }, `${TOOLS.length} CS visualisers: DSA, OS, DBMS, networks, theory, compilers`),
       h("h1", null, "See every step."),
-      h("p", { class: "lede" }, "The algorithms in your operating systems, databases, networks, theory of computation and compiler design exams, animated one step at a time with the reasoning written out. Then practise on fresh questions that check every answer."),
+      h("p", { class: "lede" }, "The algorithms in your data structures, operating systems, databases, networks, theory of computation and compiler design exams, animated one step at a time beside the pseudocode, with the line being run highlighted, the variables live and the reasoning written out. Then practise on fresh questions that check every answer."),
       search),
     empty,
     ...sections,
