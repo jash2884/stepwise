@@ -210,10 +210,10 @@ export function render(root) {
   async function mount3d() {
     drop3d();
     if (!live) return;
-    const my = gen, { host, flat } = live;
-    const on = toggle.mode === "3d";
+    const my = gen, { host, flat, pair } = live, mode = toggle.mode, on = mode !== "2d";
     host.hidden = !on;
-    flat.hidden = on;
+    flat.hidden = mode === "3d";
+    pair.classList.toggle("both", mode === "both");
     if (!on) { host.replaceChildren(); return; }
     try {
       const { translationScene } = await import("./translation-3d.js");
@@ -307,7 +307,9 @@ export function render(root) {
     msg.replaceChildren();
     const code = codePanel(MODES[m].code), vars = varsPanel();
     const host3d = h("div", { class: "d3-host", hidden: true });
-    const stage = h("div", { class: "chart-wrap xl-stage" }), note = h("p", { class: "step-note", "aria-live": "polite" }), counters = h("div", { class: "stats-row" });
+    const stage = h("div", { class: "chart-wrap xl-stage" });
+    const pair = h("div", { class: "view-pair" }, stage, host3d);
+    const note = h("p", { class: "step-note", "aria-live": "polite" }), counters = h("div", { class: "stats-row" });
     player = stepper({
       count: res.steps.length, label: "Step", interval: 1000,
       render: (i) => {
@@ -324,10 +326,10 @@ export function render(root) {
       },
     });
     out.replaceChildren(
-      h("section", { class: "card" }, h("div", { class: "d3-head" }, h("h2", null, MODES[m].name), toggle.el), player.el, note, traceLayout(h("div", null, host3d, stage), code, vars), counters),
+      h("section", { class: "card" }, h("div", { class: "d3-head" }, h("h2", null, MODES[m].name), toggle.el), player.el, note, traceLayout(h("div", null, pair), code, vars), counters),
       resultsCard(m, res, cfg));
-    live = { host: host3d, flat: stage, args: { mode: m, res, cfg } };
-    if (toggle.mode === "3d") mount3d();
+    live = { host: host3d, flat: stage, pair, args: { mode: m, res, cfg } };
+    if (toggle.mode !== "2d") mount3d();
   }
 
   function resultsCard(m, res, cfg) {

@@ -101,10 +101,10 @@ export function render(root) {
   async function mount3d() {
     drop3d();
     if (!live) return;
-    const my = gen, { host, flat } = live;
-    const on = toggle.mode === "3d";
+    const my = gen, { host, flat, pair } = live, mode = toggle.mode, on = mode !== "2d";
     host.hidden = !on;
-    for (const el of flat) el.hidden = on;
+    for (const el of flat) el.hidden = mode === "3d";
+    pair.classList.toggle("both", mode === "both");
     if (!on) { host.replaceChildren(); return; }
     try {
       const { diskScene } = await import("./disk-3d.js");
@@ -157,6 +157,7 @@ export function render(root) {
     const queues = timed ? h("div", { class: "chart-wrap fq-wrap" }) : null;
     const code = codePanel(ALGORITHMS[state.algo].code), vars = varsPanel();
     const host3d = h("div", { class: "d3-host", hidden: true });
+    const pair = h("div", { class: "view-pair" }, h("div", null, strip, stage), host3d);
     player = stepper({
       count: result.path.length, label: "Move", interval: 900,
       render: (i) => {
@@ -173,15 +174,15 @@ export function render(root) {
     });
     out.replaceChildren(
       h("section", { class: "card" }, h("div", { class: "d3-head" }, h("h2", null, ALGORITHMS[state.algo].name), toggle.el), player.el, note,
-        traceLayout(h("div", null, queues, host3d, strip, stage, running), code, vars),
+        traceLayout(h("div", null, queues, pair, running), code, vars),
         h("div", { class: "stats-row" },
           h("div", { class: "stat" }, h("span", null, "Total head movement"), h("b", null, result.total)),
           timed ? h("div", { class: "stat" }, h("span", null, "Sweeps"), h("b", null, result.sweeps)) : null,
           h("div", { class: "stat" }, h("span", null, "Average seek"), h("b", null, fmt(result.average))),
           h("div", { class: "stat wide-stat" }, h("span", null, "Service order"), h("b", { class: "mono order" }, result.order.join(" → "))))),
       compare(requests, state.head, opts));
-    live = { host: host3d, flat: [strip, stage], args: { result, requests, cylinders: state.cylinders, timed } };
-    if (toggle.mode === "3d") mount3d();
+    live = { host: host3d, flat: [strip, stage], pair, args: { result, requests, cylinders: state.cylinders, timed } };
+    if (toggle.mode !== "2d") mount3d();
   }
 
   const visual = h("div", { class: "panel-body" },

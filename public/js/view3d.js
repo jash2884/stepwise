@@ -21,8 +21,9 @@ export function view3d(key) {
     let scene = null, last = undefined, gen = 0, alive = true;
     async function apply(mode) {
       if (!alive) return;
-      if (mode !== "3d") { kill(); wrap.hidden = true; el2d.hidden = false; return; }
-      el2d.hidden = true; wrap.hidden = false;
+      el.classList.toggle("both", mode === "both");
+      if (mode === "2d") { kill(); wrap.hidden = true; el2d.hidden = false; return; }
+      el2d.hidden = mode === "3d"; wrap.hidden = false;
       if (scene) return;
       const my = ++gen;
       box.replaceChildren(h("p", { class: "muted small net3d-loading" }, "Loading 3D…"));

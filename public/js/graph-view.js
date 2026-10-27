@@ -316,6 +316,7 @@ export function graphTool(root, cfg) {
     const stage = h("div", { class: "chart-wrap g-stage" }), side = h("div", { class: "g-side" }), note = h("p", { class: "step-note", "aria-live": "polite" });
     const stats = h("div", { class: "stats-row" });
     const stage3 = h("div", { class: "g-stage3d", hidden: true });
+    const pair = h("div", { class: "view-pair" }, stage, stage3);
     let last = -1;
     // A 3D hiccup must never stop the 2D drawing or the stepper.
     const draw3d = (i, animate) => {
@@ -325,8 +326,9 @@ export function graphTool(root, cfg) {
     show3d = async (m) => {
       drop3d();
       const my = gen3;
-      stage.hidden = m === "3d"; stage3.hidden = m !== "3d";
-      if (m !== "3d") { stage3.replaceChildren(); return; }
+      stage.hidden = m === "3d"; stage3.hidden = m === "2d";
+      pair.classList.toggle("both", m === "both");
+      if (m === "2d") { stage3.replaceChildren(); return; }
       try {
         const { graph3d } = await import("./graph3d.js");
         if (my !== gen3) return;
@@ -358,11 +360,11 @@ export function graphTool(root, cfg) {
     });
     out.replaceChildren(
       h("section", { class: "card" }, h("h2", null, cfg.title ? cfg.title(ctx) : algo.name), player.el, note,
-        traceLayout(h("div", null, h("div", { class: "g-view-bar" }, toggle.el), stage, stage3, legend(cfg.legend(state.algo, g)), side), code, vars), stats),
+        traceLayout(h("div", null, h("div", { class: "g-view-bar" }, toggle.el), pair, legend(cfg.legend(state.algo, g)), side), code, vars), stats),
       ...[cfg.after?.(res, ctx)].flat().filter(Boolean),
       h("section", { class: "card" }, h("h2", null, "Complexity"), complexityCard(cfg.complexity, state.algo),
         h("p", { class: "muted small" }, "V is the number of vertices and E the number of edges.")));
-    if (toggle.mode === "3d") show3d("3d");
+    if (toggle.mode !== "2d") show3d(toggle.mode);
   }
 
   const visual = h("div", { class: "panel-body" },

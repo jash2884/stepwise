@@ -216,13 +216,16 @@ export async function scene3d(container, opts = {}) {
   };
 }
 
-// A "2D | 3D" switch for a tool. The choice is remembered per tool; 2D is the default.
+// A "2D | 3D | Both" switch for a tool. The choice is remembered per tool; 2D is
+// the default. "Both" shows the two views side by side, driven by the same step.
+export const has2d = (mode) => mode !== "3d";
+export const has3d = (mode) => mode !== "2d";
 export function viewToggle(key, onChange) {
   const store = `view3d:${key}`;
   let mode = "2d";
-  try { if (localStorage.getItem(store) === "3d" && webglAvailable()) mode = "3d"; } catch { /* private mode */ }
+  try { const saved = localStorage.getItem(store); if ((saved === "3d" || saved === "both") && webglAvailable()) mode = saved; } catch { /* private mode */ }
   const btn = (m, text) => h("button", { type: "button", class: "btn ghost toggle", "aria-pressed": String(mode === m), "data-m": m, onclick: () => set(m) }, text);
-  const el = h("div", { class: "view-toggle", role: "group", "aria-label": "View" }, btn("2d", "2D"), btn("3d", "3D"));
+  const el = h("div", { class: "view-toggle", role: "group", "aria-label": "View" }, btn("2d", "2D"), btn("3d", "3D"), btn("both", "Both"));
   if (!webglAvailable()) { el.hidden = true; }
   function set(m) {
     mode = m;
