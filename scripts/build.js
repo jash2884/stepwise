@@ -98,7 +98,7 @@ ${["", ...TOOLS.map((t) => t.slug)].map((s) => `  <url><loc>${SITE.url}/${s}</lo
 await writeFile(join(out, "robots.txt"), `User-agent: *\nAllow: /\nSitemap: ${SITE.url}/sitemap.xml\n`);
 
 // --- Service worker -----------------------------------------------------------------------
-const precache = ["/", ...TOOLS.map((t) => `/${t.slug}`), ...all.filter((f) => /\.(js|css|svg|webmanifest)$/.test(f) && !f.includes("/test/")).map((f) => `/${relative(out, f)}`)];
+const precache = ["/", ...TOOLS.map((t) => `/${t.slug}`), ...all.filter((f) => /\.(js|css|svg|webmanifest)$/.test(f) && !f.includes("/test/") && !f.includes("/vendor/")).map((f) => `/${relative(out, f)}`)];
 const sw = (await readFile(join(src, "sw.js"), "utf8")).replace("__VERSION__", version).replace("__PRECACHE__", JSON.stringify(precache, null, 2));
 await writeFile(join(out, "sw.js"), sw);
 

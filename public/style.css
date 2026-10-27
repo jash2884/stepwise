@@ -1975,3 +1975,11 @@ svg.nru-svg { max-width: 360px; margin-top: 6px; }
 .tutor-foot { margin: 0; padding: 2px 14px 10px; font-size: 11.5px; color: var(--muted); }
 @media (max-width: 560px) { .tutor-panel { right: 8px; left: 8px; bottom: 8px; width: auto; height: min(560px, calc(100vh - 80px)); } .tutor-fab { right: 12px; bottom: 12px; } }
 @media (prefers-reduced-motion: reduce) { .tutor-panel, .tutor-msg.thinking { animation: none; } }
+
+/* 3D views */
+.three-stage { position: relative; width: 100%; border-radius: 12px; overflow: hidden; background: radial-gradient(ellipse at 50% 30%, color-mix(in srgb, var(--accent) 10%, var(--surface-2)), var(--surface-2) 70%); cursor: grab; }
+.three-stage.dragging { cursor: grabbing; }
+.three-stage canvas { display: block; width: 100%; height: 100%; }
+.three-hint { position: absolute; left: 10px; bottom: 8px; font-size: 11.5px; color: var(--muted); pointer-events: none; }
+.view-toggle { display: inline-flex; gap: 0; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.view-toggle .btn { border: 0; border-radius: 0; padding: 6px 14px; }
