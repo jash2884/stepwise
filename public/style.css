@@ -1983,3 +1983,14 @@ svg.nru-svg { max-width: 360px; margin-top: 6px; }
 .three-hint { position: absolute; left: 10px; bottom: 8px; font-size: 11.5px; color: var(--muted); pointer-events: none; }
 .view-toggle { display: inline-flex; gap: 0; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
 .view-toggle .btn { border: 0; border-radius: 0; padding: 6px 14px; }
+
+/* 3D: networks */
+.net3d-stage { min-width: 0; }
+.net3d-wrap { position: relative; min-width: 0; max-width: 100%; }
+.net3d-wrap[hidden] { display: none; }
+.net3d-box { min-height: 300px; display: grid; }
+.net3d-box > .three-stage { min-width: 0; }
+.net3d-loading { place-self: center; margin: 0; }
+.net3d-wrap .three-hint { left: 12px; bottom: 8px; margin: 0; background: color-mix(in srgb, var(--surface) 75%, transparent); padding: 2px 8px; border-radius: 6px; }
+@media (min-width: 561px) { .net3d-box { min-height: 400px; } }
+@media (hover: none) { .net3d-wrap .three-hint { display: none; } }

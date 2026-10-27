@@ -3,6 +3,7 @@ import { codePanel, traceLayout, varsPanel } from "../code.js";
 import { copyLink, fmt, h, morph, notice, page, readParams, rng, stepper, writeParams } from "../ui.js";
 import { choice, mountTabs, numberQuestion, stat } from "./kit.js";
 import { seqDiagram } from "./net.js";
+import { view3d } from "../view3d.js";
 
 export function render(root) {
   const p = readParams();
@@ -11,6 +12,7 @@ export function render(root) {
     hmode: HTTP_MODES[p.get("hm")] ? p.get("hm") : "np-serial", objects: Number(p.get("n") ?? 3), rtt: Number(p.get("rtt") ?? 100), tx: Number(p.get("tx") ?? 0), parallel: Number(p.get("par") ?? 5), dns: p.get("dns") ?? "",
   };
   let dPlayer = null, hPlayer = null;
+  const v3 = view3d("dns-and-http");
   const head = page({
     subject: "Computer networks", title: "DNS & HTTP",
     lede: "Follow a DNS lookup from your laptop through the root, TLD and authoritative servers, iteratively or recursively, with caching. Then time an HTTP page load for every kind of connection.",
@@ -27,20 +29,23 @@ export function render(root) {
   const dnsMsg = h("div"), dnsOut = h("div");
   function save() { writeParams({ q: state.name, dm: state.dmode, c: state.cache, hm: state.hmode, n: state.objects, rtt: state.rtt, tx: state.tx, par: state.parallel, dns: state.dns }); }
   function dns() {
-    dPlayer?.destroy(); dPlayer = null; save();
+    dPlayer?.destroy(); dPlayer = null; v3.disposeAll(); save();
     let r;
     try { r = dnsLookup({ name: state.name, mode: state.dmode, cache: state.cache }); } catch (e) { dnsMsg.replaceChildren(notice("error", e.message)); dnsOut.replaceChildren(); return; }
     dnsMsg.replaceChildren();
     const lanes = DNS_LANES.filter((l) => r.msgs.some((m) => m.from === l.id || m.to === l.id));
     const code = codePanel(DNS_CODE[state.dmode]), vars = varsPanel();
     const stage = h("div", { class: "timeline-wrap" }), note = h("p", { class: "step-note", "aria-live": "polite" });
+    const name = state.name.trim().toLowerCase().replace(/\.$/, ""), cache = state.cache;
+    const st3 = v3.stage(stage, (box) => import("../net3d.js").then((m) => m.dnsScene(box, { r, name, cache })));
     dPlayer = stepper({ count: r.steps.length, label: "Message", interval: 1300, render: (i) => {
       morph(stage, seqDiagram({ lanes, msgs: r.msgs, current: i, tMax: r.tMax, laneGap: 125, margin: 62, rowH: 40, aria: `DNS lookup of ${state.name}` }));
+      st3.show(i);
       code.show(r.steps[i].line); vars.show(r.steps[i].vars);
       note.textContent = r.steps[i].note;
       note.className = `step-note${i === r.steps.length - 1 ? " good" : ""}`;
     } });
-    dnsOut.replaceChildren(dPlayer.el, note, traceLayout(stage, code, vars),
+    dnsOut.replaceChildren(dPlayer.el, note, traceLayout(st3.el, code, vars),
       h("div", { class: "stats-row" }, stat("Messages", r.messages), stat("Round trips", fmt(r.time / 2, 1)), stat("Answer", r.ip, true)));
   }
 
@@ -84,7 +89,7 @@ export function render(root) {
   const visual = h("div", { class: "panel-body" },
     h("section", { class: "card" }, h("h2", null, "DNS lookup"),
       h("div", { class: "row" }, h("label", { class: "inline" }, "Look up ", nameIn), sel("dmode", "Query style", [["iterative", "Iterative"], ["recursive", "Recursive"]], dns),
-        sel("cache", "Local DNS cache", [["none", "Cache empty"], ["tld", "TLD servers cached"], ["answer", "Answer cached"]], dns),
+        sel("cache", "Local DNS cache", [["none", "Cache empty"], ["tld", "TLD servers cached"], ["answer", "Answer cached"]], dns), v3.el,
         h("button", { type: "button", class: "btn ghost", onclick: (e) => copyLink(e.currentTarget) }, "Copy link")),
       dnsMsg, dnsOut),
     h("section", { class: "card" }, h("h2", null, "HTTP response time"),
@@ -118,5 +123,5 @@ export function render(root) {
 
   mountTabs(root, head, visual, practice, newQuestion);
   dns(); http();
-  return () => { dPlayer?.destroy(); hPlayer?.destroy(); };
+  return () => { dPlayer?.destroy(); hPlayer?.destroy(); v3.disposeAll(); };
 }

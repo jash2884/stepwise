@@ -2,6 +2,7 @@ import { efficiency, maxWindow, minSeqBits, parseLosses, PROTOCOLS, simulate } f
 import { codePanel, traceLayout, varsPanel } from "../code.js";
 import { copyLink, fmt, h, morph, notice, page, readParams, rng, stepper, tabs, writeParams } from "../ui.js";
 import { packet } from "./net.js";
+import { view3d } from "../view3d.js";
 
 // The textbook timeline: sender on the left, receiver on the right, time going down.
 function timeline(r, upto) {
@@ -66,6 +67,7 @@ export function render(root) {
     timeout: p.get("to") ? Number(p.get("to")) : null, losses: p.get("loss") ?? "F2", every: Number(p.get("k") ?? 0),
   };
   let player = null;
+  const v3 = view3d("sliding-window");
   const head = page({
     subject: "Computer networks", title: "Sliding window protocols",
     lede: "Stop-and-Wait, Go-Back-N and Selective Repeat on a timeline: lose a frame or an ACK and watch how each protocol recovers, and what it costs.",
@@ -88,6 +90,7 @@ export function render(root) {
 
   function update() {
     player?.destroy();
+    v3.disposeAll();
     writeParams({ p: state.protocol, n: state.frames, w: state.window, d: state.delay, ...(state.timeout ? { to: state.timeout } : {}), loss: state.losses, k: state.every });
     winBox.hidden = state.protocol === "sw";
     let r;
@@ -96,9 +99,11 @@ export function render(root) {
     msg.replaceChildren();
     const stage = h("div", { class: "timeline-wrap" }), win = h("div"), note = h("ul", { class: "notes", "aria-live": "polite" });
     const code = codePanel(PROTOCOLS[state.protocol].code), vars = varsPanel();
+    const st3 = v3.stage(stage, (box) => import("../net3d.js").then((m) => m.slidingScene(box, r)));
     player = stepper({ count: r.ticks.length, label: "Tick", interval: 800, render: (i) => {
       const tick = r.ticks[i];
       morph(stage, timeline(r, tick.t));
+      st3.show(i);
       code.show(tick.line);
       vars.show(tick.vars);
       win.replaceChildren(windows(r, tick));
@@ -110,7 +115,7 @@ export function render(root) {
     });
     out.replaceChildren(
       h("section", { class: "card" }, h("h2", null, `${PROTOCOLS[state.protocol].name}${state.protocol === "sw" ? "" : `, window ${r.W}`} · timeout ${r.T} ticks`), player.el,
-        traceLayout(h("div", null, stage, win), code, vars), note,
+        traceLayout(h("div", null, st3.el, win), code, vars), note,
         h("div", { class: "stats-row" },
           h("div", { class: "stat" }, h("span", null, "Frames sent"), h("b", null, r.framesSent)),
           h("div", { class: "stat" }, h("span", null, "Retransmissions"), h("b", null, r.retransmissions)),
@@ -151,7 +156,7 @@ export function render(root) {
     h("section", { class: "card inputs" },
       h("div", { class: "row" }, protoSel, num("frames", "Frames", 1, 16), winBox, num("delay", "Delay (ticks)", 1, 4), num("timeout", "Timeout", 2, 30)),
       h("div", { class: "row" }, h("label", { class: "inline" }, "Lose ", lossIn), everySel,
-        h("button", { type: "button", class: "btn ghost", onclick: (e) => copyLink(e.currentTarget) }, "Copy link")),
+        h("button", { type: "button", class: "btn ghost", onclick: (e) => copyLink(e.currentTarget) }, "Copy link"), v3.el),
       msg),
     out);
 
@@ -189,5 +194,5 @@ export function render(root) {
   root.replaceChildren(head, tab.el, panels);
   tab.select("visual");
   update();
-  return () => player?.destroy();
+  return () => { player?.destroy(); v3.disposeAll(); };
 }
