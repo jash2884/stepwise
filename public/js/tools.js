@@ -3,6 +3,7 @@
 // plus its view module.
 
 export const SUBJECTS = [
+  { id: "dsa", name: "Data structures & algorithms", short: "DSA" },
   { id: "os", name: "Operating systems", short: "OS" },
   { id: "dbms", name: "Databases", short: "DBMS" },
   { id: "cn", name: "Computer networks", short: "CN" },
@@ -11,6 +12,10 @@ export const SUBJECTS = [
 ];
 
 export const TOOLS = [
+  { slug: "sorting", subject: "dsa", title: "Sorting", art: "bars",
+    summary: "Bubble, insertion, merge, quick, heap, radix and more, with pseudocode and live variables.",
+    description: "Sorting visualiser with pseudocode: bubble, selection, insertion, shell, merge, quick, heap, counting and radix sort animated, with comparisons and practice.",
+    load: () => import("./views/sorting.js") },
   { slug: "cpu-scheduling", legacy: "cpu", subject: "os", title: "CPU scheduling", art: "gantt",
     summary: "FCFS, SJF, SRTF, Priority and Round Robin with a live Gantt chart and ready queue.",
     description: "Interactive CPU scheduling visualiser: FCFS, SJF, SRTF, Priority and Round Robin with an animated Gantt chart, waiting and turnaround times, and practice questions.",
