@@ -2,7 +2,7 @@ import { AVL, buildAvl, CODE, OPS, rotationCase } from "../engines/avl.js";
 import { buildBst, CODE as BST_CODE, countOf, heightOf, traversal } from "../engines/bst.js";
 import { copyLink, h, notice, page, readParams, rng, writeParams } from "../ui.js";
 import { choice, exampleSelect, mountTabs, numberQuestion, stat } from "./kit.js";
-import { bstSvg, legend, numbers, opsTable, parseOps, shuffle, stepCard } from "./dsa-kit.js";
+import { bstSvg, legend, numbers, opsTable, parseOps, shuffle, stepCard, tidyFrame } from "./dsa-kit.js";
 
 const EXAMPLES = {
   ll: { name: "LL case: 30 20 10", keys: [30, 20], then: 10 },
@@ -42,6 +42,7 @@ export function render(root) {
       "Duplicates are ignored.",
       "Delete with two children uses the in-order successor.",
       "On delete, a child with balance factor 0 is treated as the single-rotation case (LL or RR).",
+      "Nodes are drawn by the tree's shape (each parent centred over its children), so in a rotation the pivot visibly swings up and sideways while the old subtree root swings down to the other side.",
     ],
   });
 
@@ -95,10 +96,13 @@ export function render(root) {
   function show(t, steps, code) {
     player?.destroy();
     const rotations = steps.filter((s) => s.vars?.case).map((s) => s.vars.case);
+    // One frame for the whole run: the root's x and the canvas width stay put,
+    // so only real changes of shape (rotations, new leaves) move nodes.
+    const frame = tidyFrame(steps.map((s) => s.tree));
     const sc = stepCard(steps, {
       title: { insert: "Insert", delete: "Delete", search: "Search" }[code],
       code: code === "search" ? BST_CODE.search : CODE[code], interval: 1100,
-      draw: (s) => bstSvg(s, { badge, aria: "AVL tree" }),
+      draw: (s) => bstSvg(s, { badge, aria: "AVL tree", layout: "tidy", frame }),
       below: () => [legend(LEGEND), h("p", { class: "muted small" }, "The small number beside each node is its balance factor.")],
     });
     player = sc.player;
@@ -145,14 +149,14 @@ export function render(root) {
       }
       const t = buildAvl(keys);
       body = [h("h2", null, `This AVL tree was built from ${keys.join(", ")}. Inserting ${k} unbalances it. Which rotation case is it?`),
-        h("div", { class: "chart-wrap" }, bstSvg({ tree: t.snapTree(), lit: {} }, { badge })),
+        h("div", { class: "chart-wrap" }, bstSvg({ tree: t.snapTree(), lit: {} }, { badge, layout: "tidy" })),
         choice(["LL", "RR", "LR", "RL"].map((c) => ({ label: c, correct: c === kase })), `It's ${kase}: ${kase[0] === "L" ? "the lowest unbalanced node is left-heavy" : "the lowest unbalanced node is right-heavy"}, and ${k} went into its ${kase[0] === "L" ? "left" : "right"} child's ${kase[1] === "L" ? "left" : "right"} subtree.`)];
     } else if (kind === 1) {
       const keys = shuffle(Array.from({ length: 50 }, (_, i) => i + 1), r).slice(0, 6 + Math.floor(r() * 3));
       const t = buildAvl(keys);
       body = [h("h2", null, "Insert these keys into an empty AVL tree, in order. Which key ends up at the root?"), h("p", { class: "grammar-box" }, keys.join(", ")),
         numberQuestion(t.root.key, `After all the rotations the root is ${t.root.key}.`),
-        h("details", null, h("summary", null, "Show the tree"), h("div", { class: "chart-wrap" }, bstSvg({ tree: t.snapTree(), lit: {} }, { badge })))];
+        h("details", null, h("summary", null, "Show the tree"), h("div", { class: "chart-wrap" }, bstSvg({ tree: t.snapTree(), lit: {} }, { badge, layout: "tidy" })))];
     } else {
       const keys = Array.from({ length: 4 + Math.floor(r() * 9) }, (_, i) => i + 1);
       const t = buildAvl(keys);

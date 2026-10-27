@@ -7,7 +7,8 @@ import { h, morph, stepper } from "../ui.js";
 export const R = 17;
 
 // Binary trees: x is the in-order rank and y the depth, so a left-only child
-// really sits to the left, and a rotation slides every node sideways.
+// really sits to the left. A rotation keeps the in-order sequence, so under
+// this layout it only moves nodes up and down (see tidyLayout for AVL).
 export function binaryLayout(root, { gapX = 44, gapY = 64, pad = 32, top = pad } = {}) {
   const pos = new Map();
   let i = 0, depth = 0;
@@ -20,6 +21,72 @@ export function binaryLayout(root, { gapX = 44, gapY = 64, pad = 32, top = pad }
   };
   walk(root, 0);
   return { pos, W: pad * 2 + Math.max(0, i - 1) * gapX, H: top + pad + depth * gapY, count: i };
+}
+
+// Binary trees drawn by shape (a tidy, Reingold–Tilford style layout): each
+// parent sits centred over its two children, a lone child hangs off to its own
+// side, and sibling subtrees are pushed apart only as far as their facing
+// contours need. x follows the tree's shape rather than in-order rank, and the
+// root stays at a fixed x (pass the same frame for every step), so a rotation
+// visibly swings the pivot up and sideways and the old root down to the other side.
+const shapeCache = new WeakMap();
+function shape(root, gapX, lone) {
+  const off = new Map();
+  // The subtree's left and right contours: per depth, the x of its leftmost
+  // and rightmost node relative to the subtree root.
+  const place = (n) => {
+    const L = n.left ? place(n.left) : null, Rt = n.right ? place(n.right) : null;
+    if (!L && !Rt) return { l: [0], r: [0] };
+    let dl = -lone, dr = lone;
+    if (L && Rt) {
+      let sep = gapX;
+      for (let d = 0; d < Math.min(L.r.length, Rt.l.length); d++) sep = Math.max(sep, L.r[d] - Rt.l[d] + gapX);
+      dl = -sep / 2; dr = sep / 2;
+    }
+    if (L) off.set(n.left.id, dl);
+    if (Rt) off.set(n.right.id, dr);
+    const l = [0], r = [0];
+    for (let d = 0; d < Math.max(L?.l.length ?? 0, Rt?.l.length ?? 0); d++) {
+      const lo = [], hi = [];
+      if (L && d < L.l.length) { lo.push(L.l[d] + dl); hi.push(L.r[d] + dl); }
+      if (Rt && d < Rt.l.length) { lo.push(Rt.l[d] + dr); hi.push(Rt.r[d] + dr); }
+      l.push(Math.min(...lo)); r.push(Math.max(...hi));
+    }
+    return { l, r };
+  };
+  const rel = new Map();
+  let depth = 0;
+  const c = place(root);
+  const walk = (n, x, d) => {
+    rel.set(n.id, { x, d });
+    depth = Math.max(depth, d);
+    if (n.left) walk(n.left, x + off.get(n.left.id), d + 1);
+    if (n.right) walk(n.right, x + off.get(n.right.id), d + 1);
+  };
+  walk(root, 0, 0);
+  return { rel, depth, minX: Math.min(...c.l), maxX: Math.max(...c.r) };
+}
+const TIDY = { gapX: 60, lone: 36 };
+const tidyShape = (root) => {
+  if (!shapeCache.has(root)) shapeCache.set(root, shape(root, TIDY.gapX, TIDY.lone));
+  return shapeCache.get(root);
+};
+
+// The horizontal extent (relative to the root) that fits every tree in a run,
+// so the canvas and the root's x stay put from step to step.
+export function tidyFrame(trees) {
+  let lo = 0, hi = 0;
+  for (const t of trees) if (t) { const s = tidyShape(t); lo = Math.min(lo, s.minX); hi = Math.max(hi, s.maxX); }
+  return [lo, hi];
+}
+
+export function tidyLayout(root, { gapY = 64, pad = 32, top = pad, frame = null } = {}) {
+  const pos = new Map();
+  if (!root) return { pos, W: pad * 2, H: top + pad, count: 0 };
+  const s = tidyShape(root);
+  const [lo, hi] = frame ?? [s.minX, s.maxX];
+  for (const [id, p] of s.rel) pos.set(id, { x: pad + p.x - lo, y: top + p.d * gapY });
+  return { pos, W: pad * 2 + hi - lo, H: top + pad + s.depth * gapY, count: pos.size };
 }
 
 // Nodes and edges for a binary tree of { id, key, left, right }.
@@ -136,9 +203,11 @@ export function numbers(text, { min = 0, max = 999, most = 31 } = {}) {
 
 // A BST/AVL step: the tree, node states from step.lit, an optional badge per
 // node, and the key being inserted or searched floating beside the current node.
-export function bstSvg(step, { badge, aria = "Binary search tree" } = {}) {
+// layout: "inorder" (x = sorted rank) or "tidy" (x follows the tree's shape).
+// frame: tidyFrame() over every step of a run, so the root and canvas stay put.
+export function bstSvg(step, { badge, aria = "Binary search tree", layout = "inorder", frame = null } = {}) {
   if (!step.tree) return treeSvg({ nodes: [], W: 240, H: 90, aria: "Empty tree", extra: [h("text", { x: 120, y: 54, "text-anchor": "middle", class: "dt-empty" }, "Empty tree")] });
-  const { pos, W, H } = binaryLayout(step.tree, { top: 54 });
+  const { pos, W, H } = layout === "tidy" ? tidyLayout(step.tree, { top: 54, pad: 40, frame }) : binaryLayout(step.tree, { top: 54 });
   const { nodes, edges } = binaryParts(step.tree, pos, (n) => ({ cls: step.lit?.[n.id] ?? "", ...(badge ? badge(n, step) : {}) }));
   const cells = [];
   if (step.probe && pos.has(step.probe.at)) {

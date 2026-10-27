@@ -391,6 +391,10 @@ function lis({ a }) {
 function fibMemo({ n: nn }) {
   const n = int(nn, "n", 0, 12);
   const r = recorder(["memo"], Array.from({ length: n + 1 }, (_, i) => String(i))), memo = r.T[0];
+  // The base cases are answered by "if n ≤ 1" and never stored, but the memo
+  // row shows them pre-filled (marked "base") so every cell has its value.
+  const base = [0, 1].filter((k) => k <= n).map((k) => [0, k]);
+  for (const [, k] of base) { memo[k] = k; r.sub[0][k] = "base"; }
   const nodes = new Map();
   let calls = 0, hits = 0;
   const tree = () => {
@@ -404,10 +408,10 @@ function fibMemo({ n: nn }) {
     if (parent != null) nodes.get(parent).kids.push(id);
     calls++;
     const vars = { n: k, depth: stack.length, stack: [...stack, k].join(" → ") };
-    snap(1, `Call fib(${k}).`, { lit: [id], vars });
+    snap(1, stack.length ? `Call fib(${k}).` : `Call fib(${k}). The memo starts empty apart from the base cases F(0) = 0 and F(1) = 1, shown shaded: “if n ≤ 1” answers those without a lookup.`, { lit: [id], vars });
     if (k <= 1) {
       Object.assign(nodes.get(id), { state: "expanded", label: `fib(${k}) = ${k}` });
-      snap(2, `Base case: fib(${k}) = ${k}.`, { lit: [id], vars: { ...vars, return: k } });
+      snap(2, `Base case: fib(${k}) = ${k}, returned straight away (the shaded base cell; no lookup or recursion needed).`, { lit: [id], cur: [0, k], vars: { ...vars, return: k } });
       return k;
     }
     if (memo[k] != null) {
@@ -421,26 +425,26 @@ function fibMemo({ n: nn }) {
     const y = call(k - 2, id, [...stack, k]);
     memo[k] = x + y;
     Object.assign(nodes.get(id), { state: "expanded", label: `fib(${k}) = ${memo[k]}` });
-    snap([4, 5], `fib(${k}) = fib(${k - 1}) + fib(${k - 2}) = ${x} + ${y} = ${memo[k]}. Store it in memo[${k}].`, { lit: [id], cur: [0, k], deps: k - 2 >= 2 ? [[0, k - 1], [0, k - 2]] : k - 1 >= 2 ? [[0, k - 1]] : [], vars: { ...vars, return: memo[k] } });
+    snap([4, 5], `fib(${k}) = fib(${k - 1}) + fib(${k - 2}) = ${x} + ${y} = ${memo[k]}. Store it in memo[${k}].`, { lit: [id], cur: [0, k], deps: [[0, k - 1], [0, k - 2]], vars: { ...vars, return: memo[k] } });
     return memo[k];
   };
   const ans = call(n, null, []);
   const naive = 2 * fibNum(n + 1) - 1;
   r.snap(null, `fib(${n}) = ${ans} using ${calls} call${calls > 1 ? "s" : ""} (${hits} answered from the memo). Plain recursion would make ${naive} calls: it recomputes the same subproblems again and again.`, { done: true, tree: tree(), calls, hits, vars: { "fib(n)": ans, calls, "naive calls": naive } });
-  return { steps: r.steps, rowHeads: ["memo"], colHeads: r.T[0].map((_, i) => String(i)), answer: ans, detail: `${calls} calls vs ${naive}`, calls, naive, table: r.T };
+  return { steps: r.steps, rowHeads: ["memo"], colHeads: r.T[0].map((_, i) => String(i)), answer: ans, detail: `${calls} calls vs ${naive}`, calls, naive, table: r.T, base };
 }
 
 function fibTable({ n: nn }) {
   const n = int(nn, "n", 1, 30);
   const r = recorder(["F"], Array.from({ length: n + 1 }, (_, i) => String(i))), F = r.T[0];
-  F[0] = 0; F[1] = 1;
-  r.snap(1, "Fill the two base cases first.", { vars: { n } });
+  F[0] = 0; F[1] = 1; r.sub[0][0] = r.sub[0][1] = "base";
+  r.snap(1, "Fill the two base cases first: F[0] = 0 and F[1] = 1.", { vars: { n, "F[0]": 0, "F[1]": 1 } });
   for (let i = 2; i <= n; i++) {
     F[i] = F[i - 1] + F[i - 2];
     r.snap([2, 3], `F[${i}] = F[${i - 1}] + F[${i - 2}] = ${F[i - 1]} + ${F[i - 2]} = ${F[i]}. No recursion: both inputs are already in the table.`, { cur: [0, i], deps: [[0, i - 1], [0, i - 2]], best: [[0, i - 1], [0, i - 2]], vars: { i, "F[i−1]": F[i - 1], "F[i−2]": F[i - 2], "F[i]": F[i] } });
   }
   r.snap(4, `F[${n}] = ${F[n]}, after ${Math.max(0, n - 1)} additions.`, { cur: [0, n], done: true, vars: { "F[n]": F[n] } });
-  return { steps: r.steps, rowHeads: ["F"], colHeads: F.map((_, i) => String(i)), answer: F[n], detail: `${n - 1} additions`, table: r.T };
+  return { steps: r.steps, rowHeads: ["F"], colHeads: F.map((_, i) => String(i)), answer: F[n], detail: `${n - 1} additions`, table: r.T, base: [[0, 0], [0, 1]] };
 }
 
 export function fibNum(n) { let a = 0, b = 1; for (let i = 0; i < n; i++) [a, b] = [b, a + b]; return a; }

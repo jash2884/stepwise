@@ -1030,12 +1030,14 @@ svg.dp-svg { display: block; width: 100%; height: auto; }
 .dp-head { fill: var(--muted); font: 700 12.5px var(--mono); }
 .dp-cell { fill: var(--surface); stroke: var(--line); stroke-width: 1; transition: fill 0.3s; }
 .dp-cell.unused { fill: var(--surface-2); }
+.dp-cell.base { fill: color-mix(in srgb, var(--muted) 18%, var(--surface)); stroke: var(--muted); stroke-width: 1.4; stroke-dasharray: 4 3; }
 .dp-cell.dep { fill: color-mix(in srgb, var(--series-4) 26%, var(--surface)); }
 .dp-cell.best { fill: color-mix(in srgb, var(--series-2) 30%, var(--surface)); }
 .dp-cell.path { fill: var(--good-soft); }
 .dp-cell.take { fill: color-mix(in srgb, var(--good) 35%, var(--surface)); }
 .dp-val text { fill: var(--text); font: 700 13px var(--mono); }
 .dp-val .dp-sub { fill: var(--muted); font: 500 10px var(--mono); }
+.dp-val .dp-sub.base { font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; font-size: 8.5px; }
 .dp-cur { fill: none; stroke: var(--accent); stroke-width: 3; }
 .dp-arrow { fill: none; stroke: var(--series-4); stroke-width: 2; }
 .dp-arrow.best { stroke: var(--series-2); stroke-width: 2.6; }
