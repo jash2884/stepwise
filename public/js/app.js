@@ -53,6 +53,7 @@ async function route() {
       if (id !== renderId) return;
       setMeta(`${SITE.name}: see every step of DSA, OS, DBMS, networks, theory & compiler algorithms`, "Interactive, step-by-step visualisers with pseudocode for data structures and algorithms, operating systems, databases, networks, theory of computation and compiler design, with practice questions that check your answers.", "/");
       cleanup = home.render(main) ?? null;
+      import("./tutor.js").then(({ mountTutor }) => mountTutor(null)).catch(() => {});
     } else if (!tool) {
       setMeta(`Page not found · ${SITE.name}`, "This page doesn't exist.", location.pathname);
       main.replaceChildren(failure("Page not found", "There's no tool at this address. Pick one from the menu, or start from the home page."));
@@ -65,6 +66,7 @@ async function route() {
       const host = h("div");
       main.replaceChildren(host);
       cleanup = view.render(host) ?? null;
+      import("./tutor.js").then(({ mountTutor }) => { if (id === renderId) mountTutor(tool); }).catch(() => {});
       import("./elsewhere.js").then(({ practiceElsewhere }) => {
         const card = id === renderId ? practiceElsewhere(tool.slug) : null;
         if (card) main.append(card);

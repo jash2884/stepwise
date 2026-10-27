@@ -1,9 +1,16 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "stepwise",
+  "main": "src/worker.ts",
   "compatibility_date": "2026-10-01",
-  // Pure static site: every algorithm runs in the browser. `npm run build` writes dist/.
-  "assets": { "directory": "./dist", "not_found_handling": "404-page", "html_handling": "auto-trailing-slash" },
+  // Every algorithm runs in the browser; `npm run build` writes dist/. The Worker
+  // only handles /api/* (the tutor); every other path is served as a static asset.
+  "assets": { "directory": "./dist", "binding": "ASSETS", "not_found_handling": "404-page", "html_handling": "auto-trailing-slash", "run_worker_first": ["/api/*"] },
   "routes": [{ "pattern": "stepwise.jashparmar.com", "custom_domain": true }],
-  "workers_dev": false
+  "workers_dev": false,
+  // Workers AI answers by default; set GEMINI_API_KEY (wrangler secret) to try Gemini first.
+  "ai": { "binding": "AI" },
+  "vars": { "GEMINI_MODELS": "gemini-flash-lite-latest,gemini-flash-latest" },
+  "ratelimits": [{ "name": "ASK_LIMITER", "namespace_id": "4202", "simple": { "limit": 8, "period": 60 } }],
+  "observability": { "enabled": true }
 }

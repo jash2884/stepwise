@@ -75,8 +75,9 @@
 - **Conventions are stated, not hidden.** Textbooks disagree on tie-breaking, Round Robin arrival order and B+ tree split points, so every page lists the rules it follows. Answers match what an examiner expects.
 - **One step player for everything.** Play, pause, step back and forward, scrub, change speed, use the keyboard. Every visualiser shares it.
 - **Diagrams that move.** State diagrams, item-set automata, parse trees and DAGs are laid out automatically (layered, barycentre-ordered) and nodes glide between steps instead of redrawing.
+- **Ask about this step.** An AI tutor on every tool sees the step note, the highlighted pseudocode line, the variables and any practice question, and answers in context (hints, not answers, for practice). It runs on Cloudflare Workers AI by default, or Gemini if `GEMINI_API_KEY` is set; it is rate-limited and stores nothing.
 - **Shareable.** Every input is in the URL, so a student can send the exact question they're stuck on.
-- **No backend, no dependencies.** Plain ES modules served as static assets from Cloudflare's CDN, so it scales without servers. Each tool's code loads only when opened.
+- **Almost no backend, no dependencies.** Plain ES modules served as static assets from Cloudflare's CDN; the only server code is the tutor endpoint (`src/worker.ts`). Each tool's code loads only when opened.
 
 ## Production setup
 
