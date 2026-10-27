@@ -21,6 +21,19 @@ function art(kind) {
     case "cwnd": return h("div", { class: "art disk-art" }, h("svg", { viewBox: "0 0 120 50", "aria-hidden": "true" }, h("polyline", { points: "6,46 18,42 30,32 42,14 54,11 66,8 78,5 84,46 96,40 108,28 116,20" })));
     case "crc": return h("div", { class: "art fd-art" }, h("span", null, "1101011111 0000"), h("span", null, "÷ 10011"), h("span", { class: "hot" }, "remainder 0010"));
     case "frag": return h("div", { class: "art frag-art" }, h("i", { style: "flex:37" }), h("i", { style: "flex:37" }), h("i", { style: "flex:26" }));
+    case "bfs": return h("div", { class: "art gart" }, h("svg", { viewBox: "0 0 150 58", "aria-hidden": "true" },
+      [[20, 29, 60, 12], [20, 29, 60, 46], [60, 12, 100, 6], [60, 12, 100, 29], [60, 46, 100, 52], [100, 29, 136, 29]].map(([a, b, c, d], i) => h("line", { x1: a, y1: b, x2: c, y2: d, class: i < 2 ? "on" : "" })),
+      [[20, 29, "done"], [60, 12, "on"], [60, 46, "on"], [100, 6, ""], [100, 29, ""], [100, 52, ""], [136, 29, ""]].map(([x, y, c]) => h("circle", { cx: x, cy: y, r: 7, class: c }))));
+    case "mst": return h("div", { class: "art gart" }, h("svg", { viewBox: "0 0 150 58", "aria-hidden": "true" },
+      [[16, 30, 54, 8, 1], [16, 30, 54, 50, 0], [54, 8, 96, 8, 1], [54, 8, 54, 50, 1], [54, 50, 96, 50, 0], [96, 8, 96, 50, 1], [96, 8, 134, 30, 1], [96, 50, 134, 30, 0]].map(([a, b, c, d, on]) => h("line", { x1: a, y1: b, x2: c, y2: d, class: on ? "good" : "faint" })),
+      [[16, 30], [54, 8], [54, 50], [96, 8], [96, 50], [134, 30]].map(([x, y]) => h("circle", { cx: x, cy: y, r: 7 }))));
+    case "paths": return h("div", { class: "art gart" }, h("svg", { viewBox: "0 0 150 58", "aria-hidden": "true" },
+      [[14, 30, 52, 10, 1], [14, 30, 52, 48, 0], [52, 10, 96, 22, 1], [52, 48, 96, 22, 0], [96, 22, 136, 40, 1], [52, 48, 136, 40, 0]].map(([a, b, c, d, on]) => h("line", { x1: a, y1: b, x2: c, y2: d, class: on ? "path" : "" })),
+      [[14, 30, "0"], [52, 10, "4"], [52, 48, "7"], [96, 22, "6"], [136, 40, "9"]].map(([x, y, t]) => h("g", null, h("circle", { cx: x, cy: y, r: 8, class: t === "0" ? "on" : "" }), h("text", { x, y: y + 3.5, "text-anchor": "middle" }, t)))));
+    case "scc": return h("div", { class: "art gart" }, h("svg", { viewBox: "0 0 150 58", "aria-hidden": "true" },
+      h("ellipse", { cx: 40, cy: 29, rx: 34, ry: 25, class: "c1" }), h("ellipse", { cx: 112, cy: 29, rx: 32, ry: 23, class: "c2" }),
+      [[24, 16, 56, 16], [56, 16, 40, 44], [40, 44, 24, 16], [56, 16, 98, 18], [98, 18, 126, 40], [126, 40, 98, 40], [98, 40, 98, 18]].map(([a, b, c, d]) => h("line", { x1: a, y1: b, x2: c, y2: d })),
+      [[24, 16, 1], [56, 16, 1], [40, 44, 1], [98, 18, 2], [126, 40, 2], [98, 40, 2]].map(([x, y, k]) => h("circle", { cx: x, cy: y, r: 7, class: `c${k}` }))));
     case "bars": return h("div", { class: "art bars-art" }, [5, 9, 3, 7, 2, 8, 4, 6].map((v, i) => h("i", { style: `height:${v * 10}%`, class: i === 2 || i === 3 ? "hot" : "" })));
     case "states": return h("div", { class: "art states-art" }, h("svg", { viewBox: "0 0 150 54", "aria-hidden": "true" },
       h("path", { d: "M2,27 L14,27", class: "a" }), h("path", { d: "M44,27 L60,27", class: "a" }), h("path", { d: "M90,27 L106,27", class: "a" }), h("path", { d: "M117,13 C108,-6 140,-6 131,13", class: "a" }),
