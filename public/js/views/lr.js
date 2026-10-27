@@ -1,4 +1,6 @@
-import { EXAMPLES, LR_KINDS, lrAutomaton, lrParse, lrTable, parseGrammar, showProd, tokenize } from "../engines/grammar.js";
+import { CODE, EXAMPLES, LR_KINDS, lrAutomaton, lrParse, lrTable, parseGrammar, showProd, tokenize } from "../engines/grammar.js";
+import { codePanel, traceLayout, varsPanel } from "../code.js";
+import { stackChips } from "./stackchips.js";
 import { stateDiagram, treeDiagram } from "../diagram.js";
 import { copyLink, h, morph, notice, page, readParams, rng, stepper, writeParams } from "../ui.js";
 import { choice, exampleSelect, mountTabs, series, stat } from "./kit.js";
@@ -93,6 +95,7 @@ export function render(root) {
         h("p", { class: "step-note" }, merges.length ? `${auto.lr1Count} CLR(1) states merge into ${auto.states.length}: ${merges.map((m) => `I${m.join(" + I")}`).join(", ")} share the same items and differ only in lookaheads.` : "No two CLR(1) states share a core, so LALR(1) is the same as CLR(1) here."));
     } else {
       const builds = auto.build;
+      const bCode = codePanel(CODE.lrBuild, { title: "Pseudocode (canonical collection)" }), bVars = varsPanel();
       const pl = stepper({
         count: builds.length, label: "Step", interval: 900, start: builds.length - 1,
         render: (i) => {
@@ -100,24 +103,29 @@ export function render(root) {
           morph(autoBox, automatonDiagram(auto, { step: i, fresh: b.state, lit: b.from != null ? { from: `${b.from}`, to: `${b.state}` } : null, conflictStates: i === builds.length - 1 ? conflictStates : new Set() }));
           autoNote.textContent = b.note.replace(/I(\d+)/g, (m, n) => `I${auto.names[n] ?? n}`);
           autoNote.className = `step-note${i === builds.length - 1 ? " good" : ""}`;
+          bCode.show(b.line);
+          bVars.show(b.vars);
         },
       });
       players.push(pl);
-      autoSection = h("section", { class: "card" }, h("h2", null, `${LR_KINDS[state.kind]} automaton (${auto.kind === "clr" ? "LR(1)" : "LR(0)"} items)`), pl.el, autoNote, autoBox,
+      autoSection = h("section", { class: "card" }, h("h2", null, `${LR_KINDS[state.kind]} automaton (${auto.kind === "clr" ? "LR(1)" : "LR(0)"} items)`), pl.el, autoNote, traceLayout(autoBox, bCode, bVars),
         h("p", { class: "muted small" }, "Red boxes have a conflict. Drag the slider back to watch the states get discovered."));
     }
 
     // Parse.
     const tokens = tokenize(state.w, g);
     const res = lrParse(auto, t, tokens);
-    const tableBox = h("div"), stackBox = h("p", { class: "grammar-box" }), inputBox = h("div", { class: "input-chars" }), treeBox = h("div", { class: "chart-wrap" });
+    const code = codePanel(CODE.lrParse, { title: "Pseudocode (LR driver)" }), vars = varsPanel();
+    const tableBox = h("div"), stackBox = h("div", { class: "ll-stack lr-stack" }), inputBox = h("div", { class: "input-chars" }), treeBox = h("div", { class: "chart-wrap" });
     const note = h("p", { class: "step-note", "aria-live": "polite" });
     const pp = stepper({
       count: res.steps.length, label: "Move", interval: 900,
       render: (i) => {
         const st = res.steps[i];
         tableBox.replaceChildren(actionTable(auto, t, { hot: st.cell ?? null, focus: st.states.at(-1) }));
-        stackBox.textContent = st.stack;
+        stackBox.replaceChildren(...stackChips(st.stack.split(" "), i ? res.steps[i - 1].stack.split(" ") : null, { classOf: (s, k) => (k % 2 ? (auto.g.isNT(s) ? "nt" : null) : "st") }));
+        code.show(st.line);
+        vars.show(st.vars);
         inputBox.replaceChildren(...st.input.map((s, k) => h("span", { class: k < st.pos ? "done" : k === st.pos ? "now" : null }, s)));
         if (st.forest.length) morph(treeBox, treeDiagram(st.forest, { align: "bottom", aria: "Parse forest on the stack" }));
         else treeBox.replaceChildren(h("p", { class: "muted" }, "Nothing on the stack yet."));
@@ -127,9 +135,10 @@ export function render(root) {
     });
     players.push(pp);
     out.replaceChildren(compare, autoSection,
-      h("section", { class: "card" }, h("h2", null, `${LR_KINDS[state.kind]} parse`), pp.el,
-        h("div", { class: "ll-row" }, h("div", null, h("h3", { class: "small muted" }, "Stack (states and symbols)"), stackBox), h("div", null, h("h3", { class: "small muted" }, "Input"), inputBox)),
-        note, h("h3", { class: "small muted" }, "Subtrees on the stack: reductions join them"), treeBox,
+      h("section", { class: "card" }, h("h2", null, `${LR_KINDS[state.kind]} parse`), pp.el, note,
+        traceLayout(h("div", null,
+          h("div", { class: "ll-row" }, h("div", null, h("h3", { class: "small muted" }, "Stack (bottom on the left; states in grey)"), stackBox), h("div", null, h("h3", { class: "small muted" }, "Input"), inputBox)),
+          h("h3", { class: "small muted tcd-sub" }, "Subtrees on the stack: reductions join them"), treeBox), code, vars),
         h("div", { class: "stats-row" }, stat("Tokens", tokens.length), stat("Moves", res.steps.length - 1), stat("Result", res.accepted ? "Accepted" : "Error"))),
       h("section", { class: "card" }, h("h2", null, "Parsing table"), tableBox,
         h("h3", { class: "small muted" }, "Rules"), h("ul", { class: "prod-list" }, auto.g.prods.map((pr) => h("li", null, h("b", null, pr.i), showProd(pr))))));

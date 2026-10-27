@@ -1,4 +1,5 @@
-import { cyk, EXAMPLES, parseGrammar, showProd, tokenize } from "../engines/grammar.js";
+import { CODE, cyk, EXAMPLES, parseGrammar, showProd, tokenize } from "../engines/grammar.js";
+import { codePanel, traceLayout, varsPanel } from "../code.js";
 import { treeDiagram } from "../diagram.js";
 import { copyLink, h, morph, notice, page, readParams, rng, stepper, writeParams } from "../ui.js";
 import { choice, exampleSelect, mountTabs, randomString, stat } from "./kit.js";
@@ -32,7 +33,7 @@ export function render(root) {
       h("p", null, "CYK needs a grammar in ", h("b", null, "Chomsky normal form"), ": every rule is A → B C (two non-terminals) or A → a (one terminal). Every context-free grammar can be converted to CNF."),
       h("p", null, "The bottom row holds, for each symbol, the non-terminals that produce it. A cell higher up covers a longer substring: for each way to split it into a left part and a right part, if B derives the left part, C derives the right part and A → B C is a rule, then A goes in the cell."),
       h("p", null, "The string is in the language if the start symbol is in the top cell. With n symbols and |G| rules this takes O(n³·|G|) time.")),
-    conventions: ["Bottom row = single symbols; the top cell is the whole string.", "Blue = left part, orange = right part of a split that produced something.", "Separate symbols with spaces, or type them together if each is one character."],
+    conventions: ["Bottom row = single symbols; the top cell is the whole string.", "Each step is one split (len, i, k). Blue = the left part T[i, k], orange = the right part T[k+1, j]; the outlined cell is T[i, j].", "Positions in the pseudocode count from 1.", "Separate symbols with spaces, or type them together if each is one character."],
   });
 
   const gIn = h("textarea", { rows: 6, class: "mono", "aria-label": "Grammar in CNF", oninput: (e) => { state.g = e.target.value; update(); } }, state.g);
@@ -48,23 +49,27 @@ export function render(root) {
     const n = tokens.length;
     const tableBox = h("div", { class: "table-wrap" }), note = h("p", { class: "step-note", "aria-live": "polite" }), treeBox = h("div", { class: "chart-wrap" });
     const order = res.steps.map((s) => [s.len, s.i]);
+    const code = codePanel(CODE.cyk), vars = varsPanel();
     player = stepper({
-      count: res.steps.length, label: "Cell", interval: 1200,
+      count: res.steps.length, label: "Step", interval: 900,
       render: (k) => {
         const st = res.steps[k];
         const doneUpTo = new Set(order.slice(0, k + 1).map(([l, i]) => `${l}.${i}`));
-        const useful = st.splits.filter((s) => s.found.length);
         const last = k === res.steps.length - 1;
+        // The split being tried right now: its left part blue, its right part orange.
+        const cur = st.split ? [st.split] : [];
         tableBox.replaceChildren(
-          pyramid(st.table, n, { hot: [st.len, st.i], left: useful.map((s) => s.left), right: useful.map((s) => s.right), verdict: last ? (res.accepted ? "win" : "lose") : null, filled: (l, i) => doneUpTo.has(`${l}.${i}`) }),
-          h("div", { class: "cyk-word" }, tokens.map((t) => h("span", null, t))));
+          pyramid(st.table, n, { hot: [st.len, st.i], left: cur.map((s) => s.left), right: cur.map((s) => s.right), verdict: last ? (res.accepted ? "win" : "lose") : null, filled: (l, i) => doneUpTo.has(`${l}.${i}`) }),
+          h("div", { class: "cyk-word" }, tokens.map((t, j) => h("span", { class: j >= st.i && j < st.i + st.len ? (st.split ? (j < st.i + st.split.k ? "l" : "r") : "on") : null }, t))));
+        code.show(st.line);
+        vars.show(st.vars);
         note.textContent = st.note + (last ? (res.accepted ? ` ${g.start} is in the top cell: the string IS in the language.` : ` ${g.start} isn't in the top cell: the string is NOT in the language.`) : "");
         note.className = `step-note${last ? (res.accepted ? " good" : " bad") : ""}`;
       },
     });
     if (res.tree) morph(treeBox, treeDiagram(res.tree, { aria: "Parse tree from the CYK table" }));
     out.replaceChildren(
-      h("section", { class: "card" }, h("h2", null, "CYK table"), player.el, tableBox, note,
+      h("section", { class: "card" }, h("h2", null, "CYK table"), player.el, note, traceLayout(tableBox, code, vars),
         h("div", { class: "stats-row" }, stat("Symbols", n), stat("Cells", (n * (n + 1)) / 2), stat("Rules", g.prods.length), stat("Result", res.accepted ? "In the language" : "Not in it"))),
       h("div", { class: "grid-2" },
         h("section", { class: "card" }, h("h2", null, "Grammar"), h("ul", { class: "prod-list" }, g.prods.map((pr) => h("li", null, showProd(pr))))),

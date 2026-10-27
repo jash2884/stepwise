@@ -1,4 +1,5 @@
-import { EXAMPLES, leftFactor, parseGrammar, removeLeftRecursion, toText } from "../engines/grammar.js";
+import { CODE, EXAMPLES, leftFactor, parseGrammar, removeLeftRecursion, toText } from "../engines/grammar.js";
+import { codePanel, traceLayout, varsPanel } from "../code.js";
 import { copyLink, h, notice, page, readParams, rng, stepper, writeParams } from "../ui.js";
 import { choice, exampleSelect, mountTabs } from "./kit.js";
 
@@ -12,8 +13,9 @@ function grammarBox(text, before) {
   return h("pre", { class: "grammar-box" }, text.split("\n").map((line, i) => [i ? "\n" : "", before != null && !old.has(line) ? h("span", { class: "new" }, line) : line]));
 }
 
-function section(title, original, result, empty) {
+function section(title, original, result, empty, lines) {
   const box = h("div"), note = h("p", { class: "step-note", "aria-live": "polite" });
+  const code = codePanel(lines), vars = varsPanel();
   const versions = [toText(original), ...result.steps.map((s) => s.grammar)];
   if (!result.steps.length) return { el: h("section", { class: "card" }, h("h2", null, title), notice("good", empty)), destroy: () => {} };
   const player = stepper({
@@ -21,10 +23,12 @@ function section(title, original, result, empty) {
     render: (i) => {
       box.replaceChildren(grammarBox(versions[i], i ? versions[i - 1] : null));
       note.textContent = i ? result.steps[i - 1].note : "The grammar as given.";
+      code.show(i ? result.steps[i - 1].line : null);
+      vars.show(i ? result.steps[i - 1].vars : { rules: original.prods.length, "non-terminals": original.nonterminals });
       note.className = `step-note${i === versions.length - 1 ? " good" : ""}`;
     },
   });
-  return { el: h("section", { class: "card" }, h("h2", null, title), player.el, box, note,
+  return { el: h("section", { class: "card" }, h("h2", null, title), player.el, note, traceLayout(box, code, vars),
     result.warnings?.length ? h("div", null, result.warnings.map((w) => notice("info", w))) : null), destroy: player.destroy };
 }
 
@@ -52,8 +56,8 @@ export function render(root) {
     msg.replaceChildren();
     const lr = removeLeftRecursion(g), lf = leftFactor(lr.grammar);
     parts = [
-      section("1. Remove left recursion", g, lr, "No left recursion: nothing to do."),
-      section("2. Left factor", lr.grammar, lf, "No two alternatives share a prefix: nothing to factor."),
+      section("1. Remove left recursion", g, lr, "No left recursion: nothing to do.", CODE.leftRecursion),
+      section("2. Left factor", lr.grammar, lf, "No two alternatives share a prefix: nothing to factor.", CODE.leftFactor),
     ];
     const final = toText(lf.grammar);
     out.replaceChildren(...parts.map((x) => x.el),

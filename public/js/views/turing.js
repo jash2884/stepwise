@@ -1,4 +1,5 @@
-import { BLANK, MACHINES, parseTM, runTM } from "../engines/turing.js";
+import { BLANK, CODE, MACHINES, parseTM, runTM } from "../engines/turing.js";
+import { codePanel, traceLayout, varsPanel } from "../code.js";
 import { stateDiagram } from "../diagram.js";
 import { copyLink, h, morph, notice, page, readParams, rng, stepper, writeParams } from "../ui.js";
 import { choice, exampleSelect, mountTabs, randomString, stat } from "./kit.js";
@@ -38,6 +39,7 @@ export function render(root) {
     tapeWrap.append(headTag, tape);
     const box = h("div", { class: "chart-wrap" }), note = h("p", { class: "step-note", "aria-live": "polite" }), rules = h("div", { class: "table-wrap" });
     const edges = tmEdges(tm);
+    const code = codePanel(CODE), vars = varsPanel();
     const lo = Math.min(...res.steps.map((s) => s.lo)), hi = Math.max(...res.steps.map((s) => s.lo + s.cells.length - 1));
     const PADC = 8, first = lo - PADC, total = hi - lo + 1 + PADC * 2;
     const cells = Array.from({ length: total }, () => h("span"));
@@ -61,12 +63,14 @@ export function render(root) {
         rules.replaceChildren(h("table", { class: "parse" },
           h("thead", null, h("tr", null, ["State", "Read", "Write", "Move", "Next"].map((x) => h("th", { scope: "col" }, x)))),
           h("tbody", null, tm.rules.map((r) => h("tr", { class: r === st.rule ? "hot" : null }, [r.q, r.read, r.write, r.move, r.next].map((x) => h("td", null, x)))))));
+        code.show(st.line);
+        vars.show(st.vars);
         note.textContent = st.note;
         note.className = `step-note${st.halt ? (st.halt === "accept" ? " good" : " bad") : ""}`;
       },
     });
     out.replaceChildren(
-      h("section", { class: "card" }, h("h2", null, "Run"), player.el, tapeWrap, note, box,
+      h("section", { class: "card" }, h("h2", null, "Run"), player.el, tapeWrap, note, traceLayout(box, code, vars),
         h("div", { class: "stats-row" }, stat("Moves", res.moves), stat("Result", res.result === "accept" ? "Accepted" : res.result === "reject" ? "Rejected" : "Still running"), stat("Tape at the end", res.output || "blank", true), stat("States", tm.states.length))),
       h("section", { class: "card" }, h("h2", null, "Rules"), rules, h("p", { class: "muted small" }, "In the diagram each arrow reads a → b, M: read a, write b, move M.")));
     requestAnimationFrame(() => player.go(player.index));

@@ -1,4 +1,5 @@
-import { END, EPS, EXAMPLES, firstFollow, parseGrammar, showProd } from "../engines/grammar.js";
+import { CODE, END, EPS, EXAMPLES, firstFollow, parseGrammar, showProd } from "../engines/grammar.js";
+import { codePanel, traceLayout, varsPanel } from "../code.js";
 import { copyLink, h, notice, page, readParams, rng, stepper, writeParams } from "../ui.js";
 import { exampleSelect, mountTabs, stat } from "./kit.js";
 
@@ -25,6 +26,7 @@ export function render(root) {
     try { g = parseGrammar(state.g); res = firstFollow(g); } catch (e) { msg.replaceChildren(notice("error", e.message)); out.replaceChildren(); return; }
     msg.replaceChildren();
     const tableBox = h("div", { class: "table-wrap" }), prodBox = h("div"), note = h("p", { class: "step-note", "aria-live": "polite" });
+    const code = codePanel(CODE.firstFollow), vars = varsPanel();
     player = stepper({
       count: res.steps.length, label: "Step", interval: 1100,
       render: (i) => {
@@ -36,17 +38,18 @@ export function render(root) {
           h("tbody", null, g.nonterminals.map((A) => h("tr", { class: st.target === A ? "hot" : null },
             h("th", { scope: "row" }, A), cell("first", A, st.first[A]), cell("follow", A, st.follow[A]))))));
         prodBox.replaceChildren(h("ul", { class: "prod-list" }, g.prods.map((pr) => h("li", { class: pr.i === st.prod ? "hot" : null }, h("b", null, pr.i + 1), showProd(pr)))));
+        code.show(st.line);
+        vars.show(st.vars);
         note.textContent = st.note;
         note.className = `step-note${st.phase === "done" ? " good" : ""}`;
       },
     });
     const nullable = res.nullable;
     out.replaceChildren(
-      h("div", { class: "grid-2" },
-        h("section", { class: "card" }, h("h2", null, "Sets"), player.el, tableBox, note),
-        h("section", { class: "card" }, h("h2", null, "Rules"), prodBox,
-          h("div", { class: "stats-row" }, stat("Non-terminals", g.nonterminals.length), stat("Terminals", g.terminals.length), stat("Nullable", nullable.length ? nullable.join(", ") : "none", true)),
-          h("p", null, h("a", { href: `/ll1-parsing?g=${encodeURIComponent(state.g)}` }, "Build the LL(1) table →"), " · ", h("a", { href: `/lr-parsing?g=${encodeURIComponent(state.g)}&kind=slr` }, "SLR(1) uses FOLLOW too →")))));
+      h("section", { class: "card" }, h("h2", null, "FIRST and FOLLOW, pass by pass"), player.el, note,
+        traceLayout(h("div", null, tableBox, h("h3", { class: "small muted tcd-sub" }, "Rules (the one being used is highlighted)"), prodBox), code, vars),
+        h("div", { class: "stats-row" }, stat("Non-terminals", g.nonterminals.length), stat("Terminals", g.terminals.length), stat("Nullable", nullable.length ? nullable.join(", ") : "none", true)),
+        h("p", null, h("a", { href: `/ll1-parsing?g=${encodeURIComponent(state.g)}` }, "Build the LL(1) table →"), " · ", h("a", { href: `/lr-parsing?g=${encodeURIComponent(state.g)}&kind=slr` }, "SLR(1) uses FOLLOW too →"))));
   }
 
   const visual = h("div", { class: "panel-body" },

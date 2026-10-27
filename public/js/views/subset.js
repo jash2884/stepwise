@@ -1,4 +1,5 @@
-import { EXAMPLES, parseAutomaton, subsetConstruction, toText } from "../engines/automata.js";
+import { CODE, EXAMPLES, parseAutomaton, subsetConstruction, toText } from "../engines/automata.js";
+import { codePanel, traceLayout, varsPanel } from "../code.js";
 import { stateDiagram } from "../diagram.js";
 import { copyLink, h, morph, notice, page, readParams, rng, stepper, writeParams } from "../ui.js";
 import { exampleSelect, faEdges, mountTabs, numberQuestion, stat } from "./kit.js";
@@ -19,7 +20,7 @@ export function render(root) {
       h("p", null, "Start with the ", h("b", null, "ε-closure"), " of the NFA's start state: every state reachable by ε-moves alone. That set is the DFA's start state."),
       h("p", null, "For each new set S and each symbol a, collect every state an NFA state in S can reach on a (", h("i", null, "move"), "), then take the ε-closure. If that set is new, it becomes a new DFA state. Stop when no new sets appear."),
       h("p", null, "A DFA state is accepting if its set contains any accepting NFA state. In the worst case the DFA needs 2", h("sup", null, "n"), " states, which is why the \"third symbol from the end\" NFA blows up.")),
-    conventions: ["DFA states are named A, B, C… in the order they are discovered.", "∅ is the dead state (the empty set): every move from it stays there.", "Write NFAs one transition per line, e.g. q0 a q0 q1."],
+    conventions: ["Unmarked DFA states (the worklist) are processed in the order they were found, symbols in alphabetical order.", "DFA states are named A, B, C… in the order they are discovered.", "∅ is the dead state (the empty set): every move from it stays there.", "Write NFAs one transition per line, e.g. q0 a q0 q1."],
   });
 
   const faIn = h("textarea", { rows: 8, class: "mono", "aria-label": "NFA", oninput: (e) => { state.fa = e.target.value; update(); } }, state.fa);
@@ -35,6 +36,7 @@ export function render(root) {
     const { dfa, sets, steps } = res;
     const nfaBox = h("div", { class: "chart-wrap" }), dfaBox = h("div", { class: "chart-wrap" }), tableBox = h("div", { class: "table-wrap" });
     const note = h("p", { class: "step-note", "aria-live": "polite" });
+    const code = codePanel(CODE.subset), vars = varsPanel({ title: "Variables and worklist" });
     const nfaEdges = faEdges(nfa);
     // Which DFA states and moves exist after step i.
     const seen = (i) => {
@@ -60,6 +62,8 @@ export function render(root) {
             h("th", { scope: "row" }, `${q === "A" ? "→ " : ""}${dfa.accept.includes(q) ? "* " : ""}${q}`),
             h("td", { class: "left" }, `{${sets[q].join(", ")}}`),
             dfa.alphabet.map((a) => { const e = edges.find((x) => x.from === q && x.label === a); return h("td", { class: e && from === q && st.sym === a ? "added" : null }, e ? e.to : ""); }))))));
+        code.show(st.line);
+        vars.show(st.vars);
         note.textContent = st.note;
         note.className = `step-note${i === steps.length - 1 ? " good" : ""}`;
         if (i === steps.length - 1) note.textContent += ` Done: ${dfa.states.length} DFA states from ${nfa.states.length} NFA states.`;
@@ -67,9 +71,9 @@ export function render(root) {
     });
     out.replaceChildren(
       h("section", { class: "card" }, h("h2", null, "Subset construction"), player.el, note,
-        h("div", { class: "grid-2 tight" },
-          h("div", null, h("h3", { class: "small muted" }, `NFA (${nfa.states.length} states) · current set highlighted`), nfaBox),
-          h("div", null, h("h3", { class: "small muted" }, "DFA so far"), dfaBox)),
+        traceLayout(h("div", { class: "tcd-stack" },
+          h("div", null, h("h3", { class: "small muted" }, `NFA (${nfa.states.length} states) · the set U highlighted, T dashed`), nfaBox),
+          h("div", null, h("h3", { class: "small muted" }, "DFA so far"), dfaBox)), code, vars),
         h("div", { class: "stats-row" }, stat("NFA states", nfa.states.length), stat("DFA states", dfa.states.length), stat("Worst case 2ⁿ", 2 ** nfa.states.length > 1e6 ? "> 10⁶" : 2 ** nfa.states.length))),
       h("section", { class: "card" }, h("h2", null, "DFA transition table"), tableBox,
         h("p", null, h("a", { href: `/dfa-minimization?fa=${encodeURIComponent(toText(dfa))}` }, "Minimise this DFA →"), " · ", h("a", { href: `/finite-automata?fa=${encodeURIComponent(toText(dfa))}&w=` }, "Run it →"))));

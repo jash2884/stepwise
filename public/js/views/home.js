@@ -70,6 +70,15 @@ function art(kind) {
     case "locks": return h("div", { class: "art locks-art" }, h("div", null, h("b", null, "A"), h("i", { class: "x" }, "T1 X"), h("i", { class: "q" }, "T2 S")), h("div", null, h("b", null, "B"), h("i", null, "T2 S"), h("i", null, "T3 S")));
     case "algebra": return h("div", { class: "art fd-art algebra-art" }, h("span", null, "π σ (R × S × T)"), h("span", null, "→ σ(R) ⋈ S ⋈ T"), h("span", { class: "hot" }, "2.4 × 10⁹ → 1,777 tuples"));
     case "log": return h("div", { class: "art fd-art log-art" }, h("span", null, "<T2, A, 500, 400>"), h("span", { class: "hot" }, "⚡ crash"), h("span", null, "undo T2 → A = 500"));
+    case "cnf": return h("div", { class: "art cnf-art" }, h("span", null, "S → A S A | a B"), h("span", { class: "gone" }, "B → ε"), h("span", { class: "hot" }, "S → A X1 | Ta B | a"));
+    case "opt": return h("div", { class: "art fd-art opt-art" }, h("span", null, "t7 = 4 * i"), h("span", { class: "hot" }, "t7 = t6   ← CSE"), h("span", { class: "gone" }, "t10 = t8"));
+    case "elim": return h("div", { class: "art fd-art" }, h("span", null, "1 —a→ 2 —b*→ 2 —a→ 3"), h("span", null, "eliminate 2"), h("span", { class: "hot" }, "1 —ab*a→ 3"));
+    case "lexer": return h("div", { class: "art fd-art" }, h("span", null, "if x <= 10"), h("span", null, "<=> → <= | >"), h("span", { class: "hot" }, "⟨if⟩ ⟨id,1⟩ ⟨relop,LE⟩"));
+    case "opprec": return h("div", { class: "art fd-art" }, h("span", null, "+ ⋖ *    * ⋗ +"), h("span", null, "$ ⋖ id ⋗ $"), h("span", { class: "hot" }, "reduce id * id"));
+    case "pump": return h("div", { class: "art pump-art" }, h("i", { class: "x" }, "aa"), h("i", { class: "y" }, "a"), h("i", { class: "y" }, "a"), h("i", { class: "z" }, "abbb"));
+    case "stack": return h("div", { class: "art pda-art" }, h("span", null, "a, A/AA"), h("div", { class: "stk" }, h("i", { class: "hot" }), h("i"), h("i"), h("i")));
+    case "colour": return h("div", { class: "art graph-art ra-art" }, ["a", "b", "c", "N"].map((v, i) => h("span", { class: "p", style: `--c:var(--series-${[1, 1, 2, 3][i]})` }, v)));
+    case "sdt": return h("div", { class: "art fd-art" }, h("span", null, "E.val = E₁.val + T.val"), h("span", null, "T′.inh = F.val  ↓"), h("span", { class: "hot" }, "L.val = 19"));
     default: return h("div", { class: "art fd-art" }, h("span", null, "AB → C"), h("span", null, "C → D"), h("span", { class: "hot" }, "AB⁺ = ABCD"));
   }
 }

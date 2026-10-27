@@ -14,6 +14,86 @@ export const END = "$";
 const EPS_WORDS = new Set(["ε", "eps", "epsilon", "λ", "lambda"]);
 const LIMIT = 60;
 
+// Pseudocode for each algorithm; steps name the 1-based line being run.
+export const CODE = {
+  leftRecursion: [
+    "order the non-terminals A1, A2, …, An",
+    "for i ← 1 … n",
+    "  for j ← 1 … i − 1",
+    "    replace each Ai → Aj γ by Ai → δ1 γ | … | δk γ  // Aj → δ1 | … | δk",
+    "  remove Ai's immediate left recursion:",
+    "    Ai → Ai α | β  becomes  Ai → β Ai′,  Ai′ → α Ai′ | ε",
+  ],
+  leftFactor: [
+    "repeat",
+    "  for each non-terminal A",
+    "    α ← longest prefix shared by two or more A-bodies",
+    "    if α ≠ ε then",
+    "      A → α β1 | … | α βn | γ  becomes  A → α A′ | γ",
+    "      A′ → β1 | … | βn",
+    "until no two bodies of any non-terminal share a prefix",
+  ],
+  firstFollow: [
+    "FIRST(A) ← ∅ and FOLLOW(A) ← ∅ for every non-terminal A",
+    "repeat",
+    "  for each rule A → X1 X2 … Xn",
+    "    add FIRST(X1 … Xn) to FIRST(A)  // past nullable Xi; ε if all vanish",
+    "until no FIRST set changes",
+    "FOLLOW(S) ← { $ }",
+    "repeat",
+    "  for each rule A → α B β, B a non-terminal",
+    "    add FIRST(β) − { ε } to FOLLOW(B)",
+    "    if β ⇒* ε then add FOLLOW(A) to FOLLOW(B)",
+    "until no FOLLOW set changes",
+  ],
+  ll1Parse: [
+    "push $, then the start symbol S",
+    "a ← first input token",
+    "loop",
+    "  X ← symbol on top of the stack",
+    "  if X = $ and a = $ then accept",
+    "  else if X is a terminal or $",
+    "    if X = a then pop X; a ← next token  // match",
+    "    else error  // expected X",
+    "  else if M[X, a] = X → Y1 Y2 … Yk",
+    "    pop X; push Yk, …, Y2, Y1  // Y1 ends up on top",
+    "  else error  // empty table cell",
+  ],
+  lrBuild: [
+    "C ← { closure({ S′ → •S }) }",
+    "repeat",
+    "  for each item set I in C",
+    "    for each symbol X right after a dot in I",
+    "      J ← closure(items of I with the dot moved past X)  // goto(I, X)",
+    "      if J is not in C then add J to C",
+    "      record the move I —X→ J",
+    "until no new sets are added",
+  ],
+  lrParse: [
+    "push state 0; a ← first input token",
+    "loop",
+    "  s ← state on top of the stack",
+    "  if ACTION[s, a] = shift t then",
+    "    push a, then t; a ← next token",
+    "  else if ACTION[s, a] = reduce A → β then",
+    "    pop 2·|β| entries; t ← state now on top",
+    "    push A, then GOTO[t, A]",
+    "  else if ACTION[s, a] = accept then accept",
+    "  else error",
+  ],
+  cyk: [
+    "for i ← 1 … n",
+    "  T[i, i] ← { A | A → wᵢ is a rule }",
+    "for len ← 2 … n  // span length",
+    "  for i ← 1 … n − len + 1",
+    "    j ← i + len − 1; T[i, j] ← ∅",
+    "    for k ← i … j − 1  // split after position k",
+    "      for each rule A → B C with B ∈ T[i, k] and C ∈ T[k+1, j]",
+    "        T[i, j] ← T[i, j] ∪ { A }",
+    "accept iff S ∈ T[1, n]",
+  ],
+};
+
 function splitBody(body, nts) {
   const names = [...nts].sort((a, b) => b.length - a.length);
   const greedy = (s) => {
@@ -94,7 +174,7 @@ export function removeLeftRecursion(g0) {
         } else next.push(p);
       }
       g = make(g.nonterminals, dedupe(next), g.start);
-      steps.push({ kind: "substitute", nt: Ai, note: `${Ai} starts with ${Aj}, which comes earlier in the order. Substitute ${Aj}'s bodies into those ${Ai} rules.`, grammar: toText(g) });
+      steps.push({ kind: "substitute", nt: Ai, line: [2, 3, 4], vars: { i: i + 1, j: j + 1, Ai, Aj, "Aj bodies": g.prods.filter((x) => x.lhs === Aj).map((x) => x.rhs.join(" ") || EPS) }, note: `${Ai} starts with ${Aj}, which comes earlier in the order. Substitute ${Aj}'s bodies into those ${Ai} rules, so any hidden cycle through ${Aj} becomes immediate left recursion we can see.`, grammar: toText(g) });
     }
     const own = g.prods.filter((p) => p.lhs === Ai);
     const rec = own.filter((p) => p.rhs[0] === Ai), rest = own.filter((p) => p.rhs[0] !== Ai);
@@ -118,7 +198,8 @@ export function removeLeftRecursion(g0) {
     nts.splice(nts.indexOf(Ai) + 1, 0, A2);
     g = make(nts, dedupe(next), g.start);
     steps.push({
-      kind: "direct", nt: Ai,
+      kind: "direct", nt: Ai, line: [5, 6],
+      vars: { i: i + 1, Ai, "α (after Ai)": recs.map((p) => p.rhs.slice(1).join(" ")), "β (other bodies)": rest.map((p) => p.rhs.join(" ") || EPS), "Ai′": A2 },
       note: `${Ai} is directly left-recursive: ${recs.map(showProd).join(", ")}. Rewrite A → Aα | β as A → β A' and A' → α A' | ε, with A' = ${A2}.`,
       grammar: toText(g),
     });
@@ -153,7 +234,7 @@ export function leftFactor(g0) {
       const nts = [...g.nonterminals];
       nts.splice(nts.indexOf(A) + 1, 0, A2);
       g = make(nts, dedupe(next), g.start);
-      steps.push({ nt: A, note: `${group.map(showProd).join(" and ")} all start with "${prefix.join(" ")}". Factor it out: ${A} → ${prefix.join(" ")} ${A2}, and ${A2} chooses what follows.`, grammar: toText(g) });
+      steps.push({ nt: A, line: [2, 3, 4, 5, 6], vars: { pass: steps.length + 1, A, α: prefix.join(" "), "A′": A2, "β bodies": group.map((p) => p.rhs.slice(n).join(" ") || EPS) }, note: `${group.map(showProd).join(" and ")} all start with "${prefix.join(" ")}". With one token of lookahead a parser can't pick between them, so factor it out: ${A} → ${prefix.join(" ")} ${A2}, and ${A2} chooses what follows once the prefix has been read.`, grammar: toText(g) });
       done = false;
       break;
     }
@@ -199,11 +280,11 @@ export function firstFollow(g) {
       const why = !p.rhs.length ? "it can derive ε directly"
         : !g.isNT(p.rhs[0]) ? `the body starts with the terminal ${p.rhs[0]}`
         : `the body starts with ${p.rhs[0]}${f.has(EPS) || p.rhs.length > 1 && first.get(p.rhs[0])?.has(EPS) ? " (looking past nullable symbols)" : ""}`;
-      steps.push({ phase: "first", round, prod: p.i, target: p.lhs, added: order(added, g), note: `FIRST pass ${round}, ${showProd(p)}: add {${order(added, g).join(", ")}} to FIRST(${p.lhs}), because ${why}.`, ...snap() });
+      steps.push({ phase: "first", round, prod: p.i, target: p.lhs, added: order(added, g), line: [2, 3, 4], vars: { pass: round, rule: showProd(p), A: p.lhs, "FIRST(body)": order([...f], g), added: order(added, g) }, note: `FIRST pass ${round}, ${showProd(p)}: add {${order(added, g).join(", ")}} to FIRST(${p.lhs}), because ${why}.`, ...snap() });
     }
   }
   follow.get(g.start).add(END);
-  steps.push({ phase: "follow", round: 0, target: g.start, added: [END], note: `FOLLOW(${g.start}) gets $: the start symbol is followed by the end of input.`, ...snap() });
+  steps.push({ phase: "follow", round: 0, target: g.start, added: [END], line: [5, 6], vars: { pass: 0, B: g.start, added: [END] }, note: `FOLLOW(${g.start}) gets $: the start symbol is followed by the end of input.`, ...snap() });
   for (let round = 1, changed = true; changed; round++) {
     changed = false;
     for (const p of g.prods) p.rhs.forEach((B, k) => {
@@ -218,10 +299,10 @@ export function firstFollow(g) {
       const parts = [];
       if (fromFirst.length) parts.push(`FIRST(${beta.join(" ")}) gives {${order(fromFirst, g).join(", ")}}`);
       if (fromFollow.length) parts.push(`${beta.length ? `${beta.join(" ")} can vanish, so` : `${B} is at the end, so`} FOLLOW(${p.lhs}) gives {${order(fromFollow, g).join(", ")}}`);
-      steps.push({ phase: "follow", round, prod: p.i, target: B, added: order([...fromFirst, ...fromFollow], g), note: `FOLLOW pass ${round}, ${showProd(p)}: ${parts.join("; ")}.`, ...snap() });
+      steps.push({ phase: "follow", round, prod: p.i, target: B, added: order([...fromFirst, ...fromFollow], g), line: [7, 8, ...(fromFirst.length ? [9] : []), ...(fromFollow.length ? [10] : [])], vars: { pass: round, rule: showProd(p), A: p.lhs, B, β: beta.join(" ") || EPS, "FIRST(β)": order([...fb], g), added: order([...fromFirst, ...fromFollow], g) }, note: `FOLLOW pass ${round}, ${showProd(p)}: ${parts.join("; ")}.`, ...snap() });
     });
   }
-  steps.push({ phase: "done", note: "Nothing changed in a full pass, so every set is final.", ...snap() });
+  steps.push({ phase: "done", line: 11, vars: { nullable: g.nonterminals.filter((A) => first.get(A).has(EPS)) }, note: "Nothing changed in a full pass, so every set is final. (Each pass can only add symbols and the sets are finite, so this always stops.)", ...snap() });
   return { first, follow, steps, nullable: g.nonterminals.filter((A) => first.get(A).has(EPS)) };
 }
 
@@ -275,21 +356,21 @@ export function ll1Parse(g, table, tokens, { limit = 400 } = {}) {
   const stack = [{ sym: END }, { sym: g.start, node: root }];
   const steps = [];
   let pos = 0, result = null;
-  const push = (action, extra = {}) => steps.push({ stack: stack.map((x) => x.sym), pos, input, action, tree: clone(root), ...extra });
-  push("Start: push $ and the start symbol.");
+  const push = (action, extra = {}) => steps.push({ stack: stack.map((x) => x.sym), pos, input, action, tree: clone(root), ...extra, vars: { X: stack.at(-1)?.sym ?? "–", a: input[pos] ?? END, ...(extra.vars ?? {}), depth: stack.length } });
+  push("Start: push $ and the start symbol, and look at the first token.", { line: [1, 2] });
   while (!result) {
-    if (steps.length > limit) { result = "limit"; push(`Stopped after ${limit} steps.`, { bad: true }); break; }
+    if (steps.length > limit) { result = "limit"; push(`Stopped after ${limit} steps.`, { bad: true, line: 3 }); break; }
     const top = stack.at(-1), a = input[pos];
-    if (top.sym === END && a === END) { result = "accept"; push("Stack and input both reached $: ACCEPT.", { good: true }); break; }
+    if (top.sym === END && a === END) { result = "accept"; push("Stack and input both reached $: ACCEPT. Every token was matched by a terminal some rule predicted.", { good: true, line: [4, 5], vars: { X: END, a: END } }); break; }
     if (top.sym === END || !g.isNT(top.sym)) {
       if (top.sym === a) {
         stack.pop(); pos++;
         top.node.state = "matched";
-        push(`Match ${a}: pop it and advance the input.`, { match: a });
+        push(`Match ${a}: the terminal on top of the stack is the next token, so pop it and advance the input.`, { match: a, line: [4, 6, 7], vars: { X: a, a } });
       } else {
         result = "error";
         if (top.node) top.node.state = "error";
-        push(`Error: expected ${top.sym === END ? "the end of input" : top.sym} but the next token is ${a === END ? "the end of input" : a}.`, { bad: true });
+        push(`Error: expected ${top.sym === END ? "the end of input" : top.sym} but the next token is ${a === END ? "the end of input" : a}.`, { bad: true, line: [4, 6, 8], vars: { X: top.sym, a } });
       }
       continue;
     }
@@ -297,7 +378,7 @@ export function ll1Parse(g, table, tokens, { limit = 400 } = {}) {
     if (!cell.length) {
       result = "error";
       top.node.state = "error";
-      push(`Error: M[${top.sym}, ${a}] is empty, so no rule can start with ${a === END ? "$" : a} here.`, { bad: true });
+      push(`Error: M[${top.sym}, ${a}] is empty, so no rule for ${top.sym} can start with ${a === END ? "$" : a} here.`, { bad: true, line: [4, 11], vars: { X: top.sym, a, "M[X, a]": "empty" } });
       continue;
     }
     const p = g.prods[cell[0]];
@@ -306,7 +387,7 @@ export function ll1Parse(g, table, tokens, { limit = 400 } = {}) {
     const kids = p.rhs.length ? p.rhs.map((s) => node(s)) : [node(EPS, "matched")];
     top.node.kids = kids;
     for (let k = p.rhs.length - 1; k >= 0; k--) stack.push({ sym: p.rhs[k], node: kids[k] });
-    push(`M[${top.sym}, ${a}] = ${showProd(p)}${cell.length > 1 ? ` (conflict: ${cell.length} rules in this cell, using the first)` : ""}: pop ${top.sym}, push ${p.rhs.length ? [...p.rhs].reverse().join(" ") : "nothing"}.`, { prod: p.i, nt: top.sym, t: a });
+    push(`M[${top.sym}, ${a}] = ${showProd(p)}${cell.length > 1 ? ` (conflict: ${cell.length} rules in this cell, using the first)` : ""}: pop ${top.sym}, push ${p.rhs.length ? [...p.rhs].reverse().join(" ") : "nothing"}${p.rhs.length > 1 ? `, so ${p.rhs[0]} is on top` : ""}. In the tree, the body's symbols become children of ${top.sym}.`, { prod: p.i, nt: top.sym, t: a, line: [4, 9, 10], vars: { X: top.sym, a, "M[X, a]": showProd(p) } });
   }
   return { steps, accepted: result === "accept" };
 }
@@ -341,7 +422,7 @@ export function lrAutomaton(g0, kind = "slr") {
   const setKey = (items) => items.map(itemKey).sort().join("|");
   const states = [closure([{ p: 0, d: 0, la: END }])];
   const keys = [setKey(states[0])];
-  const edges = [], build = [{ state: 0, note: `I0 = closure({${g.prods[0].lhs} → •${g.start}${lr1 ? ", $" : ""}}).` }];
+  const edges = [], build = [{ state: 0, line: 1, vars: { I: "–", X: "–", J: "I0", "|C|": 1 }, note: `I0 = closure({${g.prods[0].lhs} → •${g.start}${lr1 ? ", $" : ""}}): the start item, plus an item B → •γ for every B that appears right after a dot.` }];
   for (let i = 0; i < states.length; i++) {
     const syms = [];
     for (const it of states[i]) { const X = g.prods[it.p].rhs[it.d]; if (X && !syms.includes(X)) syms.push(X); }
@@ -352,7 +433,7 @@ export function lrAutomaton(g0, kind = "slr") {
       const isNew = j === -1;
       if (isNew) { states.push(target); keys.push(k); j = states.length - 1; }
       edges.push({ from: i, sym: X, to: j });
-      build.push({ state: j, from: i, sym: X, fresh: isNew, note: `goto(I${i}, ${X}) ${isNew ? `= new state I${j}` : `= I${j}, which already exists`}.` });
+      build.push({ state: j, from: i, sym: X, fresh: isNew, line: isNew ? [3, 4, 5, 6, 7] : [3, 4, 5, 7], vars: { I: `I${i}`, X, J: `I${j}`, "|C|": states.length, new: isNew }, note: `goto(I${i}, ${X}): move the dot past ${X} in every item of I${i} that has ${X} next, then close. ${isNew ? `That's a set we haven't seen: new state I${j}.` : `That's I${j} again, so just add the move.`}` });
       if (states.length > 250) throw new Error("The automaton has more than 250 states. Try a smaller grammar.");
     }
   }
@@ -440,19 +521,20 @@ export function lrParse(auto, table, tokens, { limit = 400 } = {}) {
   const push = (action, extra = {}) => steps.push({
     stack: states.map((s, k) => (k ? `${syms[k - 1]} ${names[s]}` : names[s])).join(" "),
     states: [...states], pos, input, action, forest: forest.map(clone), ...extra,
+    vars: { s: names[states.at(-1)], a: input[pos] ?? END, ...(extra.vars ?? {}), "stack depth": states.length },
   });
-  push("Start in state 0.");
+  push("Start in state 0 with the first token as lookahead.", { line: 1 });
   while (!result) {
-    if (steps.length > limit) { result = "limit"; push(`Stopped after ${limit} steps.`, { bad: true }); break; }
+    if (steps.length > limit) { result = "limit"; push(`Stopped after ${limit} steps.`, { bad: true, line: 2 }); break; }
     const s = states.at(-1), a = input[pos], cell = table.action[s].get(a) ?? [];
-    if (!cell.length) { result = "error"; push(`Error: ACTION[${names[s]}, ${a}] is empty.`, { bad: true, cell: [s, a] }); break; }
+    if (!cell.length) { result = "error"; push(`Error: ACTION[${names[s]}, ${a}] is empty: in this state no valid input can continue with ${a}.`, { bad: true, cell: [s, a], line: [3, 10], vars: { "ACTION[s, a]": "empty" } }); break; }
     const act = cell.find((x) => x.type === "s") ?? cell[0];
     const conflict = cell.length > 1 ? ` (conflict: ${cell.map(table.label).join(" / ")}; taking ${table.label(act)})` : "";
-    if (act.type === "acc") { result = "accept"; push(`ACTION[${names[s]}, $] = accept: the whole input reduced to ${g.prods[0].rhs[0]}.`, { good: true, cell: [s, a] }); break; }
+    if (act.type === "acc") { result = "accept"; push(`ACTION[${names[s]}, $] = accept: the whole input reduced to ${g.prods[0].rhs[0]}.`, { good: true, cell: [s, a], line: [3, 9], vars: { s: names[s], "ACTION[s, a]": "acc" } }); break; }
     if (act.type === "s") {
       states.push(act.n); syms.push(a); forest.push({ ...node(a, "matched") });
       pos++;
-      push(`ACTION[${names[s]}, ${a}] = ${table.label(act)}${conflict}: shift ${a} and go to state ${names[act.n]}.`, { cell: [s, a] });
+      push(`ACTION[${names[s]}, ${a}] = ${table.label(act)}${conflict}: shift ${a} and go to state ${names[act.n]}. No rule body is complete on top of the stack yet.`, { cell: [s, a], line: [3, 4, 5], vars: { s: names[s], a, "ACTION[s, a]": table.label(act), t: names[act.n] } });
       continue;
     }
     const pr = g.prods[act.n], n = pr.rhs.length;
@@ -462,9 +544,9 @@ export function lrParse(auto, table, tokens, { limit = 400 } = {}) {
     const parent = node(pr.lhs, "expanded");
     parent.kids = kids;
     forest.push(parent);
-    if (to == null) { result = "error"; push(`Reduce by ${showProd(pr)}, but GOTO[${names[t]}, ${pr.lhs}] is empty.`, { bad: true }); break; }
+    if (to == null) { result = "error"; push(`Reduce by ${showProd(pr)}, but GOTO[${names[t]}, ${pr.lhs}] is empty.`, { bad: true, line: [6, 7, 10] }); break; }
     states.push(to); syms.push(pr.lhs);
-    push(`ACTION[${names[s]}, ${a}] = r${act.n}${conflict}: reduce by ${showProd(pr)}. Pop ${n * 2} symbols, then GOTO[${names[t]}, ${pr.lhs}] = ${names[to]}.`, { cell: [s, a], prod: act.n });
+    push(`ACTION[${names[s]}, ${a}] = r${act.n}${conflict}: the handle ${pr.rhs.join(" ") || EPS} is on top, so reduce by ${showProd(pr)}. Pop ${n * 2} entries, uncovering state ${names[t]}, then push ${pr.lhs} and GOTO[${names[t]}, ${pr.lhs}] = ${names[to]}.`, { cell: [s, a], prod: act.n, line: [3, 6, 7, 8], vars: { s: names[s], a, "ACTION[s, a]": `r${act.n}`, "A → β": showProd(pr), t: names[t], "GOTO[t, A]": names[to] } });
   }
   return { steps, accepted: result === "accept" };
 }
@@ -493,22 +575,36 @@ export function cyk(g, tokens) {
       cell[0][i].push(p.lhs);
       back.set(`0.${i}.${p.lhs}`, { leaf: tokens[i] });
     }
-    steps.push({ len: 1, i, splits: [], note: `"${tokens[i]}": ${cell[0][i].length ? `{${cell[0][i].join(", ")}} have a rule → ${tokens[i]}` : `no rule produces ${tokens[i]}, so the cell is empty`}.`, table: snap() });
+    steps.push({ len: 1, i, splits: [], line: [1, 2], vars: { i: i + 1, [`w${i + 1}`]: tokens[i], [`T[${i + 1},${i + 1}]`]: cell[0][i].length ? cell[0][i] : "∅" }, note: `"${tokens[i]}": ${cell[0][i].length ? `{${cell[0][i].join(", ")}} have a rule → ${tokens[i]}` : `no rule produces ${tokens[i]}, so the cell is empty`}.`, table: snap() });
   }
+  // One step per split (len, i, k), so the triple loop can be followed exactly.
+  const setText = (c) => (c.length ? `{${c.join(", ")}}` : "∅");
   for (let len = 2; len <= n; len++) for (let i = 0; i + len <= n; i++) {
     const target = cell[len - 1][i], splits = [];
+    const span = tokens.slice(i, i + len).join(" "), I = i + 1, J = i + len;
     for (let k = 1; k < len; k++) {
       const left = cell[k - 1][i], right = cell[len - k - 1][i + k], found = [];
       for (const p of g.prods) if (p.rhs.length === 2 && left.includes(p.rhs[0]) && right.includes(p.rhs[1])) {
         found.push(`${p.lhs} → ${p.rhs.join(" ")}`);
         if (!target.includes(p.lhs)) { target.push(p.lhs); back.set(`${len - 1}.${i}.${p.lhs}`, { k, B: p.rhs[0], C: p.rhs[1] }); }
       }
-      splits.push({ k, left: [len - k === 0 ? 0 : k - 1, i], right: [len - k - 1, i + k], found });
+      const split = { k, left: [k - 1, i], right: [len - k - 1, i + k], found };
+      splits.push(split);
+      const K = i + k, lastK = k === len - 1;
+      const l = tokens.slice(i, i + k).join(" "), r = tokens.slice(i + k, i + len).join(" ");
+      steps.push({
+        len, i, k, split, splits: [...splits],
+        line: [...(k === 1 ? [3, 4, 5] : []), 6, 7, ...(found.length ? [8] : [])],
+        vars: { len, i: I, j: J, k: K, [`T[${I},${K}]`]: setText(left), [`T[${K + 1},${J}]`]: setText(right), [`T[${I},${J}]`]: setText(target) },
+        note: `"${span}", split as ${l} | ${r}: the left part can be ${setText(left)} and the right part ${setText(right)}. ${found.length ? `${found.join(", ")} ${found.length > 1 ? "match" : "matches"}, so ${[...new Set(found.map((x) => x.split(" ")[0]))].join(", ")} can derive the whole span.` : "No rule A → B C combines them."}${lastK ? ` Every split tried: T[${I},${J}] = ${setText(target)}.` : ""}`,
+        table: snap(),
+      });
     }
-    const span = tokens.slice(i, i + len).join(" ");
-    steps.push({ len, i, splits, note: `"${span}": try every split. ${splits.map((s) => `${tokens.slice(i, i + s.k).join("")}|${tokens.slice(i + s.k, i + len).join("")} ${s.found.length ? `gives ${s.found.join(", ")}` : "gives nothing"}`).join("; ")}. Cell = ${target.length ? `{${target.join(", ")}}` : "∅"}.`, table: snap() });
   }
   const accepted = cell[n - 1][0].includes(g.start);
+  const lastStep = steps.at(-1);
+  lastStep.line = [...lastStep.line, 9];
+  lastStep.vars = { ...lastStep.vars, accepted };
   const tree = (len, i, A) => {
     const b = back.get(`${len - 1}.${i}.${A}`);
     if (b.leaf) return { id: `${len}.${i}.${A}`, label: A, state: "expanded", kids: [{ id: `t${i}`, label: b.leaf, state: "matched", kids: [] }] };
