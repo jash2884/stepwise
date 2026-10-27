@@ -83,6 +83,10 @@ function art(kind) {
     case "stack": return h("div", { class: "art pda-art" }, h("span", null, "a, A/AA"), h("div", { class: "stk" }, h("i", { class: "hot" }), h("i"), h("i"), h("i")));
     case "colour": return h("div", { class: "art graph-art ra-art" }, ["a", "b", "c", "N"].map((v, i) => h("span", { class: "p", style: `--c:var(--series-${[1, 1, 2, 3][i]})` }, v)));
     case "sdt": return h("div", { class: "art fd-art" }, h("span", null, "E.val = E₁.val + T.val"), h("span", null, "T′.inh = F.val  ↓"), h("span", { class: "hot" }, "L.val = 19"));
+    case "er": return h("div", { class: "art er-art" }, h("svg", { viewBox: "0 0 150 60", "aria-hidden": "true" },
+      h("line", { x1: 40, y1: 38, x2: 110, y2: 38 }), h("line", { x1: 22, y1: 24, x2: 22, y2: 14 }), h("line", { x1: 128, y1: 24, x2: 128, y2: 14 }),
+      h("rect", { x: 4, y: 28, width: 36, height: 20 }), h("path", { d: "M75,26 L97,38 L75,50 L53,38 Z", class: "hot" }), h("rect", { x: 110, y: 28, width: 36, height: 20 }), h("rect", { class: "in", x: 113, y: 31, width: 30, height: 14 }),
+      h("ellipse", { cx: 22, cy: 9, rx: 15, ry: 7 }), h("ellipse", { cx: 128, cy: 9, rx: 15, ry: 7 }), h("line", { class: "u", x1: 14, y1: 9, x2: 30, y2: 9 })));
     default: return h("div", { class: "art fd-art" }, h("span", null, "AB → C"), h("span", null, "C → D"), h("span", { class: "hot" }, "AB⁺ = ABCD"));
   }
 }

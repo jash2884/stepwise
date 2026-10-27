@@ -219,11 +219,195 @@ export function languageUpTo(g, n) {
   return new Set([...(L.get(g.start) ?? [])].map((w) => (w === "" ? [] : w.split(J)).join(" ")));
 }
 
+// --- Greibach normal form ------------------------------------------------------
+// Hopcroft & Ullman (1979), Theorem 4.6: start from CNF, number the variables
+// A1 … An, substitute until every Ai → Aj … has j > i (removing left recursion
+// with new variables Bk on the way), then substitute back from An down so every
+// body starts with a terminal. Every rule ends up as A → a α, α only variables.
+export const GNF_CODE = [
+  "convert to CNF  // no ε-rules (except S → ε), unit rules or useless symbols",
+  "rename the variables A1, A2, …, An",
+  "for k ← 1 … n",
+  "  for j ← 1 … k − 1",
+  "    replace each Ak → Aj γ by Ak → β γ for every Aj → β",
+  "  if some Ak → Ak α  // left recursion",
+  "    Ak → β | β Bk  for every Ak → β not starting with Ak",
+  "    Bk → α | α Bk  for every Ak → Ak α, which is removed",
+  "for k ← n − 1 down to 1  // An already starts with a terminal",
+  "  replace each Ak → Al γ (l > k) by Ak → β γ for every Al → β",
+  "for each Bk",
+  "  replace each Bk → Al γ by Bk → β γ for every Al → β",
+];
+
+// Already CNF in Hopcroft and Ullman's sense (A → B C | a, the start symbol may
+// be on a right-hand side, no ε) with no useless symbols: use it as it is.
+function readyCNF(g) {
+  if (!g.prods.every((p) => (p.rhs.length === 2 && p.rhs.every((s) => g.isNT(s))) || (p.rhs.length === 1 && !g.isNT(p.rhs[0])))) return false;
+  const gen = new Set();
+  for (let changed = true; changed;) {
+    changed = false;
+    for (const p of g.prods) if (!gen.has(p.lhs) && p.rhs.every((s) => !g.isNT(s) || gen.has(s))) { gen.add(p.lhs); changed = true; }
+  }
+  const reach = [g.start];
+  for (let k = 0; k < reach.length; k++) for (const p of g.prods) if (p.lhs === reach[k]) for (const s of p.rhs) if (g.isNT(s) && !reach.includes(s)) reach.push(s);
+  return g.nonterminals.every((A) => gen.has(A) && reach.includes(A));
+}
+
+// Any numbering works, but a good one saves work: if A's rules start with B,
+// give B the higher number whenever there's no cycle in the way, so fewer
+// substitutions are needed. Groups of variables that start each other's rules
+// (cycles) keep their original order; ties go to the earlier variable.
+function numbering(g, vars) {
+  const first = new Map(vars.map((A) => [A, new Set(g.prods.filter((p) => p.lhs === A && p.rhs.length && vars.includes(p.rhs[0]) && p.rhs[0] !== A).map((p) => p.rhs[0]))]));
+  const reach = (A) => { const seen = new Set([A]), todo = [A]; while (todo.length) for (const B of first.get(todo.pop())) if (!seen.has(B)) { seen.add(B); todo.push(B); } return seen; };
+  const R = new Map(vars.map((A) => [A, reach(A)]));
+  const comp = new Map(vars.map((A) => [A, vars.find((B) => R.get(A).has(B) && R.get(B).has(A))]));
+  const out = [], left = new Set(vars);
+  while (left.size) {
+    // A group is ready when nothing still waiting (outside it) starts with it.
+    const ready = vars.find((A) => left.has(A) && ![...left].some((X) => comp.get(X) !== comp.get(A) && first.get(X).has(A) ));
+    const c = comp.get(ready ?? [...left][0]);
+    for (const A of vars) if (left.has(A) && comp.get(A) === c) { out.push(A); left.delete(A); }
+  }
+  return out;
+}
+
+export function isGNF(g) {
+  const onRight = g.prods.some((p) => p.rhs.includes(g.start));
+  return g.prods.every((p) => (p.rhs.length >= 1 && !g.isNT(p.rhs[0]) && p.rhs.slice(1).every((s) => g.isNT(s)))
+    || (!p.rhs.length && p.lhs === g.start && !onRight));
+}
+
+export function toGNF(g0, { limit = 300 } = {}) {
+  const ready = readyCNF(g0);
+  const cnf = ready ? null : toCNF(g0);
+  const base = ready ? g0 : cnf.grammar;
+  const isT = new Set(base.terminals);
+  const steps = [];
+  let nts = [...g0.nonterminals], prods = g0.prods.map((p) => ({ lhs: p.lhs, rhs: [...p.rhs] })), start = g0.start;
+  const snap = (phase, line, note, { added = [], removed = [], vars = {}, focus = null } = {}) => {
+    prods.sort((a, b) => nts.indexOf(a.lhs) - nts.indexOf(b.lhs));
+    const addedK = new Set(added.map(keyOf));
+    steps.push({
+      phase, line, note, vars: { phase, ...vars }, start, nonterminals: [...nts],
+      prods: prods.map((p) => ({ lhs: p.lhs, rhs: [...p.rhs], mark: addedK.has(keyOf(p)) ? "new" : null })),
+      removed: removed.map((p) => ({ lhs: p.lhs, rhs: [...p.rhs] })), focus,
+    });
+  };
+  snap("given", [], "The grammar as given. In Greibach normal form every rule is A → a α: one terminal first, then only variables.");
+
+  // 1. CNF
+  nts = [...base.nonterminals]; prods = base.prods.map((p) => ({ lhs: p.lhs, rhs: [...p.rhs] })); start = base.start;
+  snap("CNF", 1, ready
+    ? "This grammar is already in Chomsky normal form (every rule A → B C or A → a, nothing useless), so start from it as it is."
+    : `First convert to Chomsky normal form (switch to CNF mode to watch each step): ${base.prods.length} rules, all A → B C or A → a${base.prods.some((p) => !p.rhs.length) ? `, plus ${base.start} → ε` : ""}. Now every body starts with a terminal or with a variable followed by one more variable.`,
+  { vars: { rules: base.prods.length } });
+
+  const epsRule = base.prods.some((p) => !p.rhs.length);
+  const order = numbering(base, base.nonterminals.filter((A) => base.prods.some((p) => p.lhs === A && p.rhs.length)));
+  if (!order.length) {
+    const grammar = make([base.start], epsRule ? [{ lhs: base.start, rhs: [] }] : [], base.start);
+    steps.push({ ...steps.at(-1), line: [], phase: "done", note: epsRule ? `The language is just {ε}: ${base.start} → ε is the whole grammar, and that is allowed in GNF.` : "The language is empty, so there are no rules to convert.", vars: { phase: "done", rules: grammar.prods.length } });
+    return { grammar, steps, names: [], cnf: base, ready, bs: [] };
+  }
+
+  // 2. RENAME
+  const clash = (pre) => [...isT].some((t) => new RegExp(`^${pre}\\d+$`).test(t));
+  const [AP, BP] = !clash("A") && !clash("B") ? ["A", "B"] : ["V", "Z"];
+  const n = order.length;
+  const A = order.map((_, i) => `${AP}${i + 1}`);
+  const rename = new Map(order.map((X, i) => [X, A[i]]));
+  const names = order.map((X, i) => [A[i], X]);
+  const S = epsRule ? rename.get(base.start) : null;
+  prods = base.prods.filter((p) => p.rhs.length).map((p) => ({ lhs: rename.get(p.lhs), rhs: p.rhs.map((s) => rename.get(s) ?? s) }));
+  nts = [...A]; start = rename.get(base.start);
+  const same = order.every((X, i) => X === A[i]);
+  snap("RENAME", 2, same
+    ? `The variables are already called ${A.join(", ")}, in that order. The number of each one is what the next phase compares.`
+    : `Number the variables: ${names.map(([a, x]) => `${x} = ${a}`).join(", ")}. Any numbering works; this one puts a variable before the ones its rules start with where it can, which saves substitutions.${epsRule ? ` ${start} → ε is set aside for now and comes back at the end.` : ""} The goal of the next phase is that every Ai → Aj … has j > i.`,
+  { vars: { n, order: A.join(" < ") } });
+
+  const isNT = (s) => nts.includes(s);
+  const idx = (s) => A.indexOf(s) + 1;
+  const rulesOf = (X) => prods.filter((p) => p.lhs === X);
+  const has = (p) => prods.some((q) => q.lhs === p.lhs && same2(q.rhs, p.rhs));
+  const grow = (p, added) => {
+    if (has(p)) return;
+    prods.push(p); added.push(p);
+    if (prods.length > limit) throw new Error(`Greibach normal form for this grammar needs more than ${limit} rules (substitution can multiply them quickly). Try a smaller grammar.`);
+  };
+  const subst = (X, Y, line, phase, why, vars) => {
+    const targets = rulesOf(X).filter((p) => p.rhs[0] === Y);
+    if (!targets.length) return false;
+    const bodies = rulesOf(Y), added = [];
+    prods = prods.filter((p) => !targets.includes(p));
+    for (const p of targets) for (const q of bodies) grow({ lhs: X, rhs: [...q.rhs, ...p.rhs.slice(1)] }, added);
+    snap(phase, line, `${targets.map(showProd).join(", ")} ${targets.length === 1 ? "starts" : "start"} with ${Y}${why}. Replace ${Y} by each of its ${bodies.length} bod${bodies.length === 1 ? "y" : "ies"} (${bodies.map((q) => q.rhs.join(" ")).join(" | ")}): ${added.length ? added.map(showProd).join(", ") : "nothing new"}.`, { added, removed: targets, vars });
+    return true;
+  };
+
+  // 3. ORDER (with left recursion removed as each Ak is finished)
+  const bs = [];
+  for (let k = 1; k <= n; k++) {
+    const Ak = A[k - 1];
+    let changed = false;
+    for (let j = 1; j < k; j++) {
+      if (subst(Ak, A[j - 1], [4, 5], "ORDER", `, and ${j} < ${k}`, { k, j, Ak, Aj: A[j - 1] })) changed = true;
+    }
+    const left = rulesOf(Ak).filter((p) => p.rhs[0] === Ak);
+    if (left.length) {
+      let Bk = `${BP}${k}`;
+      while (nts.includes(Bk) || isT.has(Bk)) Bk += "′";
+      const rest = rulesOf(Ak).filter((p) => p.rhs[0] !== Ak);
+      const added = [];
+      nts.push(Bk); bs.push(Bk);
+      prods = prods.filter((p) => p.lhs !== Ak);
+      for (const p of rest) { grow({ lhs: Ak, rhs: [...p.rhs] }, []); }
+      for (const p of rest) grow({ lhs: Ak, rhs: [...p.rhs, Bk] }, added);
+      for (const p of left) grow({ lhs: Bk, rhs: p.rhs.slice(1) }, added);
+      for (const p of left) grow({ lhs: Bk, rhs: [...p.rhs.slice(1), Bk] }, added);
+      snap("LEFTREC", [6, 7, 8], `${left.map(showProd).join(", ")} ${left.length === 1 ? "is" : "are"} left recursive (${Ak} → ${Ak} …). Bring in a new variable ${Bk} for "the tail repeated any number of times": ${Ak} → β | β ${Bk} for each other body β, and ${Bk} → α | α ${Bk} for each tail α. The left-recursive rules go.`,
+        { added, removed: left, vars: { k, Ak, Bk, "left-recursive": left.length } });
+      changed = true;
+    }
+    if (!changed) {
+      const firsts = [...new Set(rulesOf(Ak).map((p) => p.rhs[0]))];
+      snap("ORDER", 3, `${Ak}: every rule already starts with ${firsts.some((s) => isNT(s)) ? `a terminal or a higher-numbered variable (${firsts.filter(isNT).join(", ")})` : "a terminal"}, so nothing to do.`, { vars: { k, Ak } });
+    }
+  }
+  snap("ORDER", 3, `Every rule now starts with a terminal or with Aj where j is bigger than the left side's number. So ${A[n - 1]}, the highest, can only start with a terminal: ${rulesOf(A[n - 1]).map((p) => p.rhs.join(" ")).join(" | ")}.`, { vars: { n, new: bs.join(", ") || "none" } });
+
+  // 4. BACK: substitute from An−1 down to A1, then the B's.
+  for (let k = n - 1; k >= 1; k--) {
+    const Ak = A[k - 1];
+    const firsts = [...new Set(rulesOf(Ak).map((p) => p.rhs[0]).filter(isNT))].sort((x, y) => idx(x) - idx(y));
+    if (!firsts.length) { snap("BACK", 9, `${Ak}'s rules all start with a terminal already.`, { vars: { k, Ak } }); continue; }
+    for (const Al of firsts) subst(Ak, Al, [9, 10], "BACK", `, and ${Al}'s rules already start with terminals`, { k, Ak, Al, l: idx(Al) });
+  }
+  for (let round = 0; bs.some((B) => rulesOf(B).some((p) => isNT(p.rhs[0]))); round++) {
+    if (round > nts.length) throw new Error("Could not bring every B-rule to Greibach form.");
+    for (const B of bs) {
+      const firsts = [...new Set(rulesOf(B).map((p) => p.rhs[0]).filter(isNT))];
+      for (const X of firsts) if (rulesOf(X).every((p) => !isNT(p.rhs[0]))) subst(B, X, [11, 12], "BACK", `, and ${X}'s rules now all start with terminals`, { B, X });
+    }
+  }
+  if (epsRule) { prods.push({ lhs: S, rhs: [] }); snap("BACK", [], `Put ${S} → ε back. ${S} is the start symbol and never appears on a right-hand side, so it is the one ε-rule GNF allows.`, { added: [{ lhs: S, rhs: [] }] }); }
+  const grammar = make(nts.filter((X) => prods.some((p) => p.lhs === X)), prods.map((p) => ({ lhs: p.lhs, rhs: [...p.rhs] })), start);
+  const last = steps.at(-1);
+  steps.push({ ...last, line: [], removed: [], prods: last.prods.map((p) => ({ ...p, mark: null })), phase: "done",
+    note: `Done: ${grammar.prods.length} rules, every one A → a α with α only variables${epsRule ? `, plus ${S} → ε` : ""}. This grammar is in Greibach normal form. Each derivation step now produces exactly one terminal, so a string of length m takes exactly m steps.`,
+    vars: { phase: "done", rules: grammar.prods.length, new: bs.join(", ") || "none" } });
+  return { grammar, steps, names, cnf: base, ready, bs };
+}
+const same2 = (a, b) => a.length === b.length && a.every((x, i) => x === b[i]);
+
 export const EXAMPLES = {
   sipser: { name: "Sipser Example 2.10", text: "S -> A S A | a B\nA -> B | S\nB -> b | ε", input: "a b a" },
   hmu: { name: "Expressions (HMU §7.1.5)", text: "E -> E + T | T\nT -> T * F | F\nF -> ( E ) | I\nI -> a | b | I a | I b | I 0 | I 1", input: "a + b * a" },
   anbn: { name: "aⁿbⁿ with ε", text: "S -> a S b | ε", input: "a a b b" },
   useless: { name: "With useless symbols (HMU Example 7.1)", text: "S -> A B | a\nA -> b\nB -> b B", input: "a" },
   parens: { name: "Balanced parentheses", text: "S -> ( S ) S | ε", input: "( ) ( )" },
+  exam: { name: "Exam favourite: S → AA | a, A → SS | b", text: "S -> A A | a\nA -> S S | b", input: "a a b" },
+  hu: { name: "Already in CNF (Hopcroft & Ullman Example 4.10)", text: "A1 -> A2 A3\nA2 -> A3 A1 | b\nA3 -> A1 A2 | a", input: "b a a" },
 };
 export { EPS };
