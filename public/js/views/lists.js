@@ -17,6 +17,10 @@ const EXAMPLES = {
 };
 
 const NH = 38, ROW0 = 100, ROW1 = 236;
+const f1 = (v) => v.toFixed(1);
+// A cubic with explicit control points, in the same "M x,y C … " shape as
+// curve(), so glide() can tween between the two kinds of arrow.
+const cubic = (x1, y1, c1x, c1y, c2x, c2y, x2, y2) => `M${f1(x1)},${f1(y1)} C${f1(c1x)},${f1(c1y)} ${f1(c2x)},${f1(c2y)} ${f1(x2)},${f1(y2)}`;
 
 // Nodes are boxes split into fields ([data | next], or [prev | data | next]);
 // every pointer field is an arrow keyed by its node and field, so when a
@@ -42,7 +46,18 @@ function listSvg(st, kind, maxX, row1) {
       const t = byId.get(to), tx = px(t.x), ty = py(t.y);
       const natural = field === "next" ? t.x > n.x + 0.01 : t.x < n.x - 0.01;
       const adjacent = Math.abs(t.x - n.x) <= 1.01 || t.y !== n.y;
-      if (natural && adjacent) d = curve(sx, y + off, field === "next" ? tx - NW / 2 - 2 : tx + NW / 2 + 2, ty + off, 0);
+      if (kind === "d" && t.y !== n.y) {
+        // Doubly, node waiting in the lower row: four arrows meet it, so keep
+        // them apart. Each leaves its own field through the face toward the
+        // other row and lands on the target's facing side, clear of the
+        // pointer tags under the row-0 nodes; next arrows bow forwards (right)
+        // and prev arrows backwards (left), so a pair never crosses.
+        const down = t.y > n.y, dir = to === n.id ? 0 : Math.sign(tx - x) || (field === "next" ? 1 : -1);
+        const y1 = y + (down ? NH / 2 : -NH / 2), y2 = ty + (down ? -NH / 2 - 2 : NH / 2 + 2);
+        const x1 = n.y ? sx : sx + (field === "next" ? 5 : -5), ex = tx - dir * (t.y ? 12 : 28);
+        const bow = field === "next" ? 12 : -12, dy = y2 - y1;
+        d = cubic(x1, y1, x1 + bow, y1 + dy * 0.42, ex + bow, y2 - dy * 0.42, ex, y2);
+      } else if (natural && adjacent) d = curve(sx, y + off, field === "next" ? tx - NW / 2 - 2 : tx + NW / 2 + 2, ty + off, 0);
       else {
         const up = field === "next", span = Math.abs(t.x - n.x);
         const bend = (up ? 1 : -1) * Math.min(90, 34 + 16 * span);

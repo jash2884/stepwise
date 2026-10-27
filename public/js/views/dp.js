@@ -32,8 +32,8 @@ const BLURB = {
   coinMin: "M[i][a] = fewest coins to pay a using only the first i coin types (∞ = impossible).",
   mcm: "m[i][j] = cheapest way to multiply Ai … Aj; the small k is s[i][j], where the best split goes. Only cells with i ≤ j are used.",
   lis: "Row L holds the longest increasing run ending at each index; prev points to the element before it in that run.",
-  fibMemo: "The call tree grows as the recursion runs. Green nodes are answered straight from the memo.",
-  fibTable: "Bottom-up: fill F from the left, so every value you need is already there.",
+  fibMemo: "The call tree grows as the recursion runs. Green nodes are answered straight from the memo. F(0) and F(1) are the base cases: the code returns them directly, so the memo row shows them pre-filled and marked “base”.",
+  fibTable: "Bottom-up: start from the base cases F[0] = 0 and F[1] = 1 (marked “base”), then fill F from the left, so every value you need is already there.",
 };
 
 // The table as SVG so the cursor can glide between cells and arrows can run
@@ -47,6 +47,7 @@ function gridSvg(res, st, { hide = null } = {}) {
   const W = X0 + cols * CW + 10, H = Y0 + rows * CH + 10;
   const cx = (j) => X0 + j * CW + CW / 2, cy = (i) => Y0 + i * CH + CH / 2;
   const key = (c) => `${c[0]},${c[1]}`;
+  const base = new Set((res.base ?? []).map(key));
   const deps = new Set((st.deps ?? []).map(key)), best = new Set((st.best ?? []).map(key)), path = new Set(st.path.map(key));
   const els = [];
   const defs = arrowDefs("dep", "best");
@@ -54,11 +55,11 @@ function gridSvg(res, st, { hide = null } = {}) {
   res.rowHeads.forEach((t, i) => els.push(h("text", { x: X0 - 8, y: cy(i) + 4.5, "text-anchor": "end", class: "dp-head" }, t === "" ? "∅" : t)));
   for (let i = 0; i < rows; i++) for (let j = 0; j < cols; j++) {
     const c = st.cells[i][j], k = `${i},${j}`, unused = res.lower && i > j;
-    const cls = ["dp-cell", unused && "unused", deps.has(k) && "dep", best.has(k) && "best", path.has(k) && "path", st.take && key(st.take) === k && "take"].filter(Boolean).join(" ");
+    const cls = ["dp-cell", unused && "unused", base.has(k) && "base", deps.has(k) && "dep", best.has(k) && "best", path.has(k) && "path", st.take && key(st.take) === k && "take"].filter(Boolean).join(" ");
     els.push(h("rect", { x: X0 + j * CW, y: Y0 + i * CH, width: CW, height: CH, class: cls }));
     if (c && !(hide && hide[0] === i && hide[1] === j)) els.push(h("g", { class: "dp-val", "data-k": `v:${k}`, "data-x": cx(j), "data-y": cy(i) },
       h("text", { x: cx(j), y: cy(i) + (c.s ? 0 : 5), "text-anchor": "middle" }, c.t),
-      c.s ? h("text", { x: cx(j), y: cy(i) + 14, "text-anchor": "middle", class: "dp-sub" }, c.s) : null));
+      c.s ? h("text", { x: cx(j), y: cy(i) + 14, "text-anchor": "middle", class: `dp-sub${base.has(k) ? " base" : ""}` }, c.s) : null));
   }
   // Traceback path, drawn through the cell centres.
   if (st.path.length > 1) els.push(h("polyline", { class: "dp-path", points: st.path.map(([i, j]) => `${cx(j)},${cy(i)}`).join(" ") }));
@@ -131,7 +132,7 @@ export function render(root) {
     out.replaceChildren(
       h("section", { class: "card" }, h("h2", null, P.name), player.el, note,
         traceLayout(h("div", null, treeBox, stage, h("p", { class: "muted small" }, BLURB[state.problem]),
-          legend([["Cell being filled", "var(--accent)"], ["Cells it reads", "var(--series-4)"], ["The one that wins", "var(--series-2)"], ["Traceback", "var(--good)"]])), code, vars),
+          legend([["Cell being filled", "var(--accent)"], ["Cells it reads", "var(--series-4)"], ["The one that wins", "var(--series-2)"], ["Traceback", "var(--good)"], ...(res.base ? [["Base case (given)", "var(--muted)"]] : [])])), code, vars),
         counters),
       h("section", { class: "card" }, h("h2", null, "Complexity"),
         summaryTable(["Problem", "Time", "Space", "The choice at each step"], COMPLEXITY, state.problem)));
