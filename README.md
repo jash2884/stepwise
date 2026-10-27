@@ -1,6 +1,6 @@
 # Stepwise
 
-**See every step of the data structures, OS, DBMS, computer networks, theory of computation and compiler design algorithms you get examined on.** 61 interactive tools, each with pseudocode (the running line highlighted), live variables and a practice mode. Interactive visualisers that animate each algorithm one step at a time with the reasoning written out, plus a practice mode that generates fresh exam-style questions and checks every answer.
+**See every step of the data structures, OS, DBMS, computer networks, theory of computation and compiler design algorithms you get examined on.** 62 interactive tools, each with pseudocode (the running line highlighted), live variables, a practice mode and links to related LeetCode, CSES, HackerRank and GeeksforGeeks problems. Interactive visualisers that animate each algorithm one step at a time with the reasoning written out, plus a practice mode that generates fresh exam-style questions and checks every answer.
 
 **Live:** https://stepwise.jashparmar.com
 
@@ -21,8 +21,8 @@
 | DSA | [**Linked lists**](https://stepwise.jashparmar.com/linked-list) | Singly, doubly and circular lists: insert, delete, reverse with moving arrows, and Floyd's cycle detection. |
 | DSA | [**Dynamic programming**](https://stepwise.jashparmar.com/dynamic-programming) | DP tables filled cell by cell with traceback: LCS, edit distance, knapsack, coin change, matrix chain, LIS. |
 | OS | [**CPU scheduling**](https://stepwise.jashparmar.com/cpu-scheduling) | FCFS, SJF, SRTF, HRRN, Priority, Round Robin, multilevel and feedback queues, with a live Gantt chart. |
-| OS | [**Page replacement**](https://stepwise.jashparmar.com/page-replacement) | FIFO, LRU, Optimal, LFU, MFU and the clock, frame by frame, plus working sets and Belady's anomaly. |
-| OS | [**Disk scheduling**](https://stepwise.jashparmar.com/disk-scheduling) | FCFS, SSTF, SCAN, C-SCAN, LOOK, C-LOOK and N-step SCAN, with the head's path drawn out. |
+| OS | [**Page replacement**](https://stepwise.jashparmar.com/page-replacement) | FIFO, LRU, Optimal, LFU, MFU, the clock and NRU, frame by frame, plus working sets and Belady's anomaly. |
+| OS | [**Disk scheduling**](https://stepwise.jashparmar.com/disk-scheduling) | FCFS, SSTF, SCAN, C-SCAN, LOOK, C-LOOK, N-step SCAN and F-SCAN, with the head's path drawn out. |
 | OS | [**Banker's algorithm**](https://stepwise.jashparmar.com/bankers-algorithm) | Need matrix, safety check and a timeline of resource requests: is the system safe? |
 | OS | [**Deadlock detection**](https://stepwise.jashparmar.com/deadlock-detection) | Draw a resource-allocation graph and watch cycles and the detection algorithm. |
 | OS | [**Semaphores & synchronisation**](https://stepwise.jashparmar.com/semaphores) | Producer–consumer, readers–writers, dining philosophers and race conditions. You pick who runs. |
@@ -37,6 +37,7 @@
 | DBMS | [**Concurrency control**](https://stepwise.jashparmar.com/concurrency-control) | Two-phase locking with a lock table and deadlocks, timestamp ordering and validation, step by step. |
 | DBMS | [**Log-based recovery**](https://stepwise.jashparmar.com/recovery) | Crash anywhere in the log, then watch redo repeat history and undo roll back the losers. |
 | DBMS | [**Hashing & indexing**](https://stepwise.jashparmar.com/hashing) | Chaining, linear, quadratic and double hashing, plus extendible hashing. |
+| DBMS | [**ER to relational**](https://stepwise.jashparmar.com/er-to-relational) | Draw an ER diagram in Chen notation, then map it to tables one rule at a time, with every key shown. |
 | CN | [**Subnetting & VLSM**](https://stepwise.jashparmar.com/subnetting) | Network, broadcast and host range from any IPv4 address, in binary, plus a VLSM planner. |
 | CN | [**Sliding window protocols**](https://stepwise.jashparmar.com/sliding-window) | Stop-and-Wait, Go-Back-N and Selective Repeat on a timeline, with lost frames and ACKs. |
 | CN | [**Routing algorithms**](https://stepwise.jashparmar.com/routing) | LSP flooding, Dijkstra and distance-vector routing, with packets hopping along the chosen path. |
@@ -54,7 +55,7 @@
 | TOC | [**DFA to regex & product**](https://stepwise.jashparmar.com/dfa-to-regex) | State elimination with edge labels rerouting as states vanish, plus union and intersection of DFAs. |
 | TOC | [**Pumping lemma**](https://stepwise.jashparmar.com/pumping-lemma) | Play the pumping game against an adversary: pick s, it splits xyz, you pick i. Can you prove L isn't regular? |
 | TOC | [**Pushdown automata**](https://stepwise.jashparmar.com/pushdown-automata) | Nondeterministic PDAs searched breadth first, the stack animated, and CFG → PDA. |
-| TOC | [**CFG to CNF**](https://stepwise.jashparmar.com/cfg-to-cnf) | Chomsky normal form step by step: new start, ε-rules, unit rules, useless symbols, binarise. |
+| TOC | [**CFG to CNF and GNF**](https://stepwise.jashparmar.com/cfg-to-cnf) | Chomsky normal form step by step (ε, unit and useless rules, binarise), then on to Greibach normal form. |
 | TOC | [**CYK parsing**](https://stepwise.jashparmar.com/cyk-parsing) | Fill the CYK triangle cell by cell and get the parse tree for CNF grammars. |
 | TOC | [**Turing machine**](https://stepwise.jashparmar.com/turing-machine) | A live tape and head: aⁿbⁿcⁿ, palindromes, binary increment, busy beaver. |
 | CD | [**Lexical analysis**](https://stepwise.jashparmar.com/lexical-analysis) | A maximal-munch lexer DFA turns characters into tokens and fills the symbol table. |
@@ -84,7 +85,7 @@
 - **Offline.** A service worker, versioned by a content hash at build time, precaches every tool; the site is installable as an app.
 - **Resilience.** Failed loads show a retry screen, unexpected errors show a reload prompt, and every route has a loading state.
 - **Security and caching.** Strict CSP, HSTS, `nosniff`, a locked-down Permissions-Policy; scripts revalidate on every load (so a deploy is never half-applied), icons cache for a week.
-- **Tests.** 332 tests: textbook examples (Silberschatz, Dragon Book, Hopcroft–Ullman…), fuzz suites running every engine on thousands of random inputs against invariants, and module checks that every file parses and every view loads. CI runs them plus the production build on every push.
+- **Tests.** 353 tests: textbook examples (Silberschatz, Dragon Book, Hopcroft–Ullman…), fuzz suites running every engine on thousands of random inputs against invariants, and module checks that every file parses and every view loads. CI runs them plus the production build on every push.
 
 ## Develop
 

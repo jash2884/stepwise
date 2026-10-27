@@ -138,7 +138,11 @@ export function render(root) {
   }
 
   const modeRow = h("div", { class: "row", role: "group", "aria-label": "Normal form" },
-    [["cnf", "Chomsky (CNF)"], ["gnf", "Greibach (GNF)"]].map(([k, label]) => h("button", { type: "button", class: "btn ghost toggle", "data-nf": k, "aria-pressed": String(k === state.nf), onclick: () => { state.nf = k; update(); } }, label)));
+    [["cnf", "Chomsky (CNF)"], ["gnf", "Greibach (GNF)"]].map(([k, label]) => h("button", { type: "button", class: "btn ghost toggle", "data-nf": k, "aria-pressed": String(k === state.nf), onclick: () => {
+      // The default (Sipser) grammar is far too big in GNF, so switch to the book example.
+      if (k === "gnf" && state.g === EXAMPLES.sipser.text) { state.g = EXAMPLES.hu.text; state.w = EXAMPLES.hu.input; gIn.value = state.g; wIn.value = state.w; }
+      state.nf = k; update();
+    } }, label)));
   const visual = h("div", { class: "panel-body" },
     h("section", { class: "card inputs" },
       modeRow,
