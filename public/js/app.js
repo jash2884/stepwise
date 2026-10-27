@@ -104,6 +104,7 @@ route();
 
 // --- Theme ---------------------------------------------------------------------
 const toggle = document.getElementById("theme");
+// Light by default (set on <html>); a choice made with the toggle is remembered.
 const saved = (() => { try { return localStorage.getItem("theme"); } catch { return null; } })();
 if (saved) document.documentElement.dataset.theme = saved;
 toggle.addEventListener("click", () => {
