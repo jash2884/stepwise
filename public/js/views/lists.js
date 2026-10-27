@@ -57,6 +57,14 @@ function listSvg(st, kind, maxX, row1) {
         const x1 = n.y ? sx : sx + (field === "next" ? 5 : -5), ex = tx - dir * (t.y ? 12 : 28);
         const bow = field === "next" ? 12 : -12, dy = y2 - y1;
         d = cubic(x1, y1, x1 + bow, y1 + dy * 0.42, ex + bow, y2 - dy * 0.42, ex, y2);
+      } else if (kind === "d" && natural && !adjacent) {
+        // Doubly bypass (a node is being unlinked): the next arrow arcs over
+        // the row and the prev arrow under it, both between the neighbours'
+        // facing sides, just like the in-row arrows they replace. The region
+        // under a neighbour's bottom face stays free, so the dropped node's
+        // own arrows can reach it without crossing the prev arc.
+        const up = field === "next", bend = (up ? 1 : -1) * Math.min(106, 50 + 16 * Math.abs(t.x - n.x));
+        d = curve(sx, y + off, up ? tx - NW / 2 - 2 : tx + NW / 2 + 2, ty + off, bend);
       } else if (natural && adjacent) d = curve(sx, y + off, field === "next" ? tx - NW / 2 - 2 : tx + NW / 2 + 2, ty + off, 0);
       else {
         const up = field === "next", span = Math.abs(t.x - n.x);
