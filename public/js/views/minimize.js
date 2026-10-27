@@ -1,4 +1,5 @@
-import { EXAMPLES, minimize, parseAutomaton, subsetConstruction, toText } from "../engines/automata.js";
+import { CODE, EXAMPLES, minimize, parseAutomaton, subsetConstruction, toText } from "../engines/automata.js";
+import { codePanel, traceLayout, varsPanel } from "../code.js";
 import { stateDiagram } from "../diagram.js";
 import { copyLink, h, morph, notice, page, readParams, rng, stepper, writeParams } from "../ui.js";
 import { exampleSelect, faEdges, mountTabs, numberQuestion, randomDfaText, series, stat } from "./kit.js";
@@ -46,6 +47,7 @@ export function render(root) {
       for (const q of shownStates) for (const a of dfa.alphabet) if (q === "dead" || !dfa.next(q, a).length) edges.push({ from: q, to: "dead", label: a });
     }
     const box = h("div", { class: "chart-wrap" }), groupsBox = h("div"), note = h("p", { class: "step-note", "aria-live": "polite" });
+    const code = codePanel(CODE.minimize), vars = varsPanel();
     // Colour groups so a group that survives a round keeps its colour.
     const colourOf = new Map();
     let nextColour = 0;
@@ -67,15 +69,19 @@ export function render(root) {
             h("div", { class: "partition" }, rr.groups.map((g, gi) => h("span", { style: series(colours[ri][gi]) }, `{${g.join(", ")}}`))))));
           note.textContent = (i === 0 && res.steps.length ? `${res.steps.map((s) => s.note).join(" ")} ` : "") + r.note;
           note.className = "step-note";
+          code.show(r.line);
+          vars.show(r.vars);
         } else {
           morph(box, stateDiagram({ states: min.states.map((id) => ({ id })), edges: faEdges(min), start: min.start, accept: min.accept, classes: Object.fromEntries(min.states.map((q) => [q, "grp"])), styles: Object.fromEntries(rounds.at(-1).groups.map((g, gi) => [g.length === 1 ? g[0] : `{${g.join(",")}}`, series(colours.at(-1)[gi])])), aria: `Minimal DFA with ${min.states.length} states.` }));
           note.textContent = `Minimal DFA: ${min.states.length} state${min.states.length === 1 ? "" : "s"}${min.states.length < dfa.states.length ? `, down from ${dfa.states.length}` : ". It was already minimal"}.`;
           note.className = "step-note good";
+          code.show(10);
+          vars.show({ groups: rounds.at(-1).groups.length, "minimal states": min.states.length, start: min.start, accepting: min.accept });
         }
       },
     });
     out.replaceChildren(
-      h("section", { class: "card" }, h("h2", null, "Partition refinement"), player.el, box, note, groupsBox,
+      h("section", { class: "card" }, h("h2", null, "Partition refinement"), player.el, note, traceLayout(h("div", null, box, groupsBox), code, vars),
         h("div", { class: "stats-row" }, stat("Original states", dfa.states.length), stat("Unreachable", res.unreachable.length), stat("Minimal states", min.states.length), stat("Rounds", rounds.length - 1))),
       h("section", { class: "card" }, h("h2", null, "Minimal DFA"),
         h("pre", { class: "grammar-box" }, toText(min)),

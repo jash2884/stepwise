@@ -4,6 +4,29 @@
 
 const PREC = { "+": 1, "-": 1, "*": 2, "/": 2, "%": 2, "^": 3 };
 
+export const CODE = {
+  gen: [
+    "gen(n):  // post-order: children before the operator",
+    "  if n is a name or a constant then return n",
+    "  l ← gen(left child); r ← gen(right child)",
+    "  t ← newtemp()",
+    "  emit(t = l op r)  // or t = minus l",
+    "  return t",
+    "for each statement x = E",
+    "  emit(x = gen(E))",
+  ],
+  dag: [
+    "for each statement x = E",
+    "  n ← node(E)  // built bottom-up",
+    "  move the label x onto n",
+    "node(leaf y): the node labelled y, or a new leaf y",
+    "node(op, l, r):",
+    "  if a node with label op and children l, r exists then",
+    "    return it  // a common subexpression",
+    "  create the node op(l, r) and return it",
+  ],
+};
+
 function lex(src) {
   const out = [];
   const re = /\s*(?:([A-Za-z_]\w*)|(\d+(?:\.\d+)?)|(.))/gy;
@@ -85,12 +108,12 @@ export function generate(stmts) {
       const res = `t${++t}`;
       const ins = n.op === "minus" ? { op: "minus", a1: args[0], a2: null, res } : { op: n.op, a1: args[0], a2: args[1], res };
       code.push(ins);
-      steps.push({ stmt: si, node: path, order: order++, code: code.length - 1, note: `${n.op === "minus" ? "Unary minus" : `Operator ${n.op}`}: its operands are ready (${args.join(", ")}), so emit ${show(ins)}.` });
+      steps.push({ stmt: si, node: path, order: order++, code: code.length - 1, line: [3, 4, 5, 6], vars: { x: s.target, op: n.op, l: args[0], r: args[1] ?? "–", t: res, temps: t }, note: `${n.op === "minus" ? "Unary minus" : `Operator ${n.op}`}: its operands are ready (${args.join(", ")}), so emit ${show(ins)}. Its value now lives in ${res} for the parent to use.` });
       return res;
     };
     const v = walk(s.tree, "r");
     code.push({ op: "=", a1: v, a2: null, res: s.target });
-    steps.push({ stmt: si, node: "root", code: code.length - 1, note: `Assign the result to ${s.target}: ${s.target} = ${v}.` });
+    steps.push({ stmt: si, node: "root", code: code.length - 1, line: [7, 8], vars: { x: s.target, op: "=", l: v, r: "–", t: "–", temps: t }, note: `Assign the result to ${s.target}: ${s.target} = ${v}.` });
   }
   return { code, steps, temps: t };
 }
@@ -113,26 +136,26 @@ export function dag(stmts) {
     const walk = (n) => {
       if (n.op === "id" || n.op === "num") {
         const r = leaf(n.name);
-        if (!r.reused) steps.push({ stmt: si, node: r.id, note: `Leaf for ${n.name}.` });
+        if (!r.reused) steps.push({ stmt: si, node: r.id, line: [2, 4], vars: { x: s.target, op: n.name, node: `node ${r.id + 1}`, "DAG nodes": nodes.length }, note: `Leaf for ${n.name}: its initial value, since no node is labelled ${n.name} yet.` });
         return r.id;
       }
       const kids = n.kids.map(walk);
       const k = `${n.op}:${kids.join(",")}`;
       if (byKey.has(k)) {
         const id = byKey.get(k);
-        steps.push({ stmt: si, node: id, reused: true, note: `${describeNode(n.op, kids, nodes)} already exists as node ${id + 1}: a common subexpression, so reuse it instead of computing it again.` });
+        steps.push({ stmt: si, node: id, reused: true, line: [2, 5, 6, 7], vars: { x: s.target, op: n.op, children: kids.map((k) => nodeName(nodes[k])), node: `node ${id + 1}`, "DAG nodes": nodes.length }, note: `${describeNode(n.op, kids, nodes)} already exists as node ${id + 1}: a common subexpression, so reuse it instead of computing it again.` });
         return id;
       }
       nodes.push({ id: nodes.length, op: n.op, kids, labels: [] });
       byKey.set(k, nodes.length - 1);
-      steps.push({ stmt: si, node: nodes.length - 1, note: `New node ${nodes.length} for ${describeNode(n.op, kids, nodes)}.` });
+      steps.push({ stmt: si, node: nodes.length - 1, line: [2, 5, 6, 8], vars: { x: s.target, op: n.op, children: kids.map((k) => nodeName(nodes[k])), node: `node ${nodes.length}`, "DAG nodes": nodes.length }, note: `No node ${n.op} with these children exists yet, so create node ${nodes.length} for ${describeNode(n.op, kids, nodes)}.` });
       return nodes.length - 1;
     };
     const id = walk(s.tree);
     for (const n of nodes) n.labels = n.labels.filter((x) => x !== s.target);
     nodes[id].labels.push(s.target);
     current.set(s.target, id);
-    steps.push({ stmt: si, node: id, note: `Attach ${s.target} to node ${id + 1}${nodes[id].labels.length > 1 ? ` (it now names ${nodes[id].labels.join(", ")})` : ""}.` });
+    steps.push({ stmt: si, node: id, line: [1, 3], vars: { x: s.target, node: `node ${id + 1}`, labels: nodes[id].labels, "DAG nodes": nodes.length }, note: `Attach ${s.target} to node ${id + 1}${nodes[id].labels.length > 1 ? ` (it now names ${nodes[id].labels.join(", ")})` : ""}. Any earlier node labelled ${s.target} loses the label: later uses of ${s.target} mean this new value.` });
   }
   // Code from the DAG: each interior node once, in creation order.
   const name = new Map(), code = [];

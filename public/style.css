@@ -978,3 +978,19 @@ table.ra-ranges td.left { color: var(--text); font-size: 13px; }
 @keyframes ra-push { from { opacity: 0; transform: translateY(-36px); } }
 @media (max-width: 520px) { .ra-colour { grid-template-columns: 1fr; } .ra-stack { flex-direction: row-reverse; flex-wrap: wrap; justify-content: flex-end; min-height: 0; border: 2px solid var(--line); border-left: 0; border-radius: 0 12px 12px 0; } }
 @media (prefers-reduced-motion: reduce) { .ra-edge, .ra-node, .ra-node circle { transition: none; } .ra-stack span.push { animation: none; } }
+/* Upgraded TOC/CD tools: stacked visuals beside the code, parser stacks that push and pop */
+.tcd-stack { display: grid; gap: 12px; min-width: 0; }
+.tcd-stack > * { min-width: 0; }
+.tcd-sub { margin: 12px 0 6px; }
+.cyk-word span { border-radius: 6px; transition: background 0.25s; }
+.cyk-word span.on { background: var(--accent-soft); }
+.cyk-word span.l { background: color-mix(in srgb, var(--series-1) 18%, transparent); }
+.cyk-word span.r { background: color-mix(in srgb, var(--series-2) 18%, transparent); }
+.ll-stack span { max-width: 140px; overflow: hidden; }
+.ll-stack span.push { animation: tcd-push 0.35s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.ll-stack span.ghost { border-style: dashed; color: var(--muted); animation: tcd-pop 0.5s ease-in forwards; }
+.lr-stack span.st { color: var(--muted); font-size: 13px; min-width: 26px; background: var(--surface); }
+.lr-stack span.top { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+@keyframes tcd-push { from { opacity: 0; transform: translateY(-14px) scale(0.85); } }
+@keyframes tcd-pop { 0% { opacity: 0.9; } 55% { opacity: 0; transform: translateY(-14px); max-width: 140px; } 100% { opacity: 0; transform: translateY(-14px); max-width: 0; min-width: 0; padding: 0; margin-left: -3px; border-width: 0; } }
+@media (prefers-reduced-motion: reduce) { .ll-stack span.push, .ll-stack span.ghost { animation: none; } .ll-stack span.ghost { display: none; } }

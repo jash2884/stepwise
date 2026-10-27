@@ -1,4 +1,5 @@
-import { regexToNfa, run, toText } from "../engines/automata.js";
+import { CODE, regexToNfa, run, toText } from "../engines/automata.js";
+import { codePanel, traceLayout, varsPanel } from "../code.js";
 import { stateDiagram } from "../diagram.js";
 import { copyLink, h, morph, notice, page, readParams, rng, stepper, writeParams } from "../ui.js";
 import { choice, exampleSelect, faEdges, mountTabs, randomString, stat } from "./kit.js";
@@ -49,6 +50,7 @@ export function render(root) {
     nfa = res.nfa;
     const box = h("div", { class: "chart-wrap" }), note = h("p", { class: "step-note", "aria-live": "polite" }), frag = h("p", { class: "big-answer" });
     const count = res.steps.length + 1;
+    const code = codePanel(CODE.thompson), vars = varsPanel({ title: "Variables and fragment stack" });
     player = stepper({
       count, label: "Step", interval: 1200,
       render: (i) => {
@@ -58,16 +60,20 @@ export function render(root) {
           frag.replaceChildren("Fragment: ", h("b", null, st.text));
           note.textContent = st.note;
           note.className = "step-note";
+          code.show(st.line);
+          vars.show(st.vars);
         } else {
           morph(box, stateDiagram({ states: nfa.states.map((id) => ({ id })), edges: faEdges(nfa), start: nfa.start, accept: nfa.accept, aria: `ε-NFA with ${nfa.states.length} states.` }));
           frag.replaceChildren("NFA for ", h("b", null, state.re.replace(/\s+/g, "")));
           note.textContent = `Done: ${nfa.states.length} states, start ${nfa.start}, accepting ${nfa.accept[0]}.`;
           note.className = "step-note good";
+          code.show(6);
+          vars.show({ postfix: res.postfix, stack: [state.re.replace(/\s+/g, "")], states: nfa.states.length, start: nfa.start, accept: nfa.accept[0] });
         }
       },
     });
     out.replaceChildren(
-      h("section", { class: "card" }, h("h2", null, "Thompson's construction"), player.el, frag, box, note,
+      h("section", { class: "card" }, h("h2", null, "Thompson's construction"), player.el, note, traceLayout(h("div", null, frag, box), code, vars),
         h("div", { class: "stats-row" }, stat("Postfix", res.postfix, true), stat("States", nfa.states.length), stat("Alphabet", `{${nfa.alphabet.join(", ")}}`, true))),
       h("section", { class: "card" }, h("h2", null, "Test a string"), h("label", { class: "stack" }, "String", wIn), testBox,
         h("p", null, h("a", { href: `/nfa-to-dfa?fa=${encodeURIComponent(toText(nfa))}` }, "Convert this NFA to a DFA →"), " · ", h("a", { href: `/finite-automata?fa=${encodeURIComponent(toText(nfa))}&w=${encodeURIComponent(state.w)}` }, "Run it step by step →"))));

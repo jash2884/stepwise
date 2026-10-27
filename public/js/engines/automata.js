@@ -74,11 +74,63 @@ export function closure(fa, set) {
 const sorted = (set) => [...set].sort(byName);
 const show = (set) => `{${sorted(set).join(", ")}}`;
 
+// Pseudocode for each algorithm; steps name the line (1-based) being run.
+export const CODE = {
+  dfa: [
+    "q ← q0",
+    "for each symbol c of w, left to right",
+    "  if δ(q, c) is undefined then reject  // stuck",
+    "  q ← δ(q, c)",
+    "accept iff q ∈ F",
+  ],
+  nfa: [
+    "S ← ε-closure({q0})  // every state we could be in",
+    "for each symbol c of w, left to right",
+    "  M ← ∅",
+    "  for each q in S: M ← M ∪ δ(q, c)  // move(S, c)",
+    "  S ← ε-closure(M)",
+    "  if S = ∅ then reject  // every path is stuck",
+    "accept iff S contains an accepting state",
+  ],
+  subset: [
+    "A ← ε-closure({q0}); Dstates ← {A}, unmarked",
+    "while some T in Dstates is unmarked",
+    "  mark T",
+    "  for each input symbol a",
+    "    U ← ε-closure(move(T, a))",
+    "    if U is not in Dstates then",
+    "      add U to Dstates, unmarked  // a new DFA state",
+    "    Dtran[T, a] ← U",
+    "accepting: every set containing an NFA accepting state",
+  ],
+  minimize: [
+    "remove states unreachable from q0",
+    "if moves are missing, add a dead state",
+    "P ← { F, Q − F }  // 0-equivalence",
+    "repeat for k ← 1, 2, …",
+    "  for each group G in P",
+    "    split G: p, q stay together only if, for every symbol a,",
+    "      δ(p, a) and δ(q, a) are in the same group of P",
+    "  P ← the groups after splitting",
+    "until no group splits",
+    "each group of P becomes one state of the minimal DFA",
+  ],
+  thompson: [
+    "for each token t of the postfix regex",
+    "  if t is a symbol a or ε: push s --a--> f",
+    "  if t is · : pop B, A; merge A.end with B.start; push AB",
+    "  if t is | : pop B, A; new s, f; s ε→ A, B; A, B ε→ f; push A|B",
+    "  if t is *, + or ? : pop A; new s, f; add loop and/or bypass; push",
+    "the one fragment left on the stack is the NFA",
+  ],
+};
+
 // Run the automaton on a string, keeping the set of active states (one state for a DFA).
 export function run(fa, input) {
   const symbols = [...String(input)];
+  const dfa = fa.kind === "DFA";
   let current = closure(fa, [fa.start]);
-  const steps = [{ index: 0, active: sorted(current), via: [], note: fa.kind === "ε-NFA" ? `Start in ε-closure(${fa.start}) = ${show(current)}.` : `Start in ${fa.start}.` }];
+  const steps = [{ index: 0, active: sorted(current), via: [], line: 1, vars: dfa ? { q: fa.start, w: symbols.join("") || "ε" } : { S: show(current), w: symbols.join("") || "ε" }, note: fa.kind === "ε-NFA" ? `Start in ε-closure(${fa.start}) = ${show(current)}: the start state plus everything reachable from it by ε-moves alone.` : `Start in ${fa.start}${dfa ? "" : ", the only state the NFA can be in before reading anything"}.` }];
   symbols.forEach((c, i) => {
     const via = [], moved = new Set();
     for (const q of current) for (const t of fa.next(q, c)) { moved.add(t); via.push({ from: q, sym: c, to: t }); }
@@ -87,11 +139,19 @@ export function run(fa, input) {
     if (!fa.alphabet.includes(c)) note = `"${c}" isn't in the alphabet {${fa.alphabet.join(", ")}}, so there's nowhere to go.`;
     else if (!next.size) note = `Read "${c}": no transitions from ${show(current)}, so the automaton gets stuck.`;
     else if (fa.kind === "DFA") note = `Read "${c}": ${[...current][0]} → ${[...next][0]}.`;
-    else note = `Read "${c}": move ${show(current)} to ${show(moved)}${fa.kind === "ε-NFA" ? `, then ε-closure = ${show(next)}` : ""}.`;
+    else note = `Read "${c}": move ${show(current)} to ${show(moved)}${fa.kind === "ε-NFA" ? `, then ε-closure = ${show(next)}` : ""}. Every state follows all of its ${c}-moves, so the set holds everywhere a guess could have led.`;
+    const was = current;
     current = next;
-    steps.push({ index: i + 1, active: sorted(current), via, note });
+    const stuck = !next.size;
+    const line = dfa ? (stuck ? [2, 3] : [2, 4]) : (stuck ? [4, 5, 6] : [3, 4, 5]);
+    const vars = dfa ? { i, c, q: stuck ? "stuck" : [...next][0], w: symbols.join("") }
+      : { i, c, "S before": show(was), M: show(moved), S: show(next), "|S|": next.size };
+    steps.push({ index: i + 1, active: sorted(current), via, note, line, vars });
   });
   const accepted = [...current].some((q) => fa.accept.includes(q));
+  const last = steps.at(-1);
+  last.line = [...new Set([...[last.line].flat(), dfa ? 5 : 7])];
+  last.vars = { ...last.vars, accepted };
   steps.at(-1).note += accepted
     ? ` The input is used up in ${show(new Set([...current].filter((q) => fa.accept.includes(q))))}, an accepting state: ACCEPTED.`
     : ` The input is used up and no active state is accepting: REJECTED.`;
@@ -105,7 +165,7 @@ export function subsetConstruction(nfa, { includeDead = true } = {}) {
   const find = (set) => sets.findIndex((s) => s.size === set.size && [...set].every((q) => s.has(q)));
   const start = closure(nfa, [nfa.start]);
   sets.push(start); names.push(nameFor(0));
-  steps.push({ state: "A", note: `A = ε-closure({${nfa.start}}) = ${show(start)}.` });
+  steps.push({ state: "A", line: 1, vars: { T: "–", a: "–", Dstates: ["A"], unmarked: ["A"] }, note: `A = ε-closure({${nfa.start}}) = ${show(start)}. It's the DFA's start state, and it's unmarked: its moves haven't been worked out yet.` });
   const delta = new Map();
   for (let i = 0; i < sets.length; i++) {
     for (const a of nfa.alphabet) {
@@ -116,11 +176,19 @@ export function subsetConstruction(nfa, { includeDead = true } = {}) {
       let j = find(target), fresh = false;
       if (j === -1) { sets.push(target); names.push(target.size ? nameFor(sets.length - 1) : "∅"); j = sets.length - 1; fresh = true; }
       delta.set(key(names[i], a), [names[j]]);
-      steps.push({ from: names[i], sym: a, to: names[j], fresh, note: `From ${names[i]} ${show(sets[i])} on "${a}": move = ${show(moved)}${nfa.kind === "ε-NFA" ? `, ε-closure = ${show(target)}` : ""} → ${fresh ? `new state ${names[j]}` : `existing ${names[j]}`}.` });
+      steps.push({
+        from: names[i], sym: a, to: names[j], fresh,
+        line: fresh ? [3, 4, 5, 6, 7, 8] : [3, 4, 5, 6, 8],
+        vars: { T: `${names[i]} = ${show(sets[i])}`, a, "move(T, a)": show(moved), U: `${names[j]} = ${show(target)}`, Dstates: [...names], unmarked: names.slice(i + 1) },
+        note: `From ${names[i]} ${show(sets[i])} on "${a}": move = ${show(moved)}${nfa.kind === "ε-NFA" ? `, ε-closure = ${show(target)}` : ""} → ${fresh ? `a set we haven't seen, so it becomes new state ${names[j]} (unmarked, to be processed later)` : `the same set as ${names[j]}, so the move just points there`}.`,
+      });
       if (sets.length > 64) throw new Error("The DFA would have more than 64 states.");
     }
   }
   const accept = names.filter((_, i) => [...sets[i]].some((q) => nfa.accept.includes(q)));
+  const lastStep = steps.at(-1);
+  lastStep.line = [...[lastStep.line].flat(), 9];
+  lastStep.vars = { ...lastStep.vars, unmarked: [], accepting: accept };
   const dfa = build([...names], nfa.alphabet, "A", accept, delta);
   return { dfa, sets: Object.fromEntries(names.map((n, i) => [n, sorted(sets[i])])), steps };
 }
@@ -151,7 +219,8 @@ export function minimize(dfaIn) {
   const accepting = new Set(dfaIn.accept.filter((q) => reach.has(q)));
   // 3. Refine.
   let groups = [states.filter((q) => !accepting.has(q)), states.filter((q) => accepting.has(q))].filter((g) => g.length);
-  const rounds = [{ k: 0, groups: groups.map((g) => [...g]), note: `0-equivalence: split accepting from non-accepting states.` }];
+  const showP = (gs) => gs.map((g) => `{${g.join(",")}}`).join(" ");
+  const rounds = [{ k: 0, groups: groups.map((g) => [...g]), line: [1, 2, 3], vars: { k: 0, P: showP(groups), "|P|": groups.length, unreachable: unreachable.length ? unreachable : "none", dead: dead ? "added" : "not needed" }, note: `0-equivalence: split accepting from non-accepting states. Only the empty string has been tried so far, and it already separates F from the rest.` }];
   for (let k = 1; ; k++) {
     const groupOf = new Map(groups.flatMap((g, i) => g.map((q) => [q, i])));
     const next = [];
@@ -166,7 +235,12 @@ export function minimize(dfaIn) {
       if (bySig.size > 1) reasons.push(`{${g.join(", ")}} splits into ${[...bySig.values()].map((x) => `{${x.join(", ")}}`).join(" and ")}: their moves lead into different groups.`);
       next.push(...bySig.values());
     }
-    rounds.push({ k, groups: next.map((g) => [...g]), note: next.length === groups.length ? `${k}-equivalence: no group splits, so the partition is final.` : `${k}-equivalence: ${reasons.join(" ")}` });
+    rounds.push({
+      k, groups: next.map((g) => [...g]),
+      line: next.length === groups.length ? [4, 5, 6, 7, 9] : [4, 5, 6, 7, 8],
+      vars: { k, P: showP(next), "|P|": next.length, splits: reasons.length || "none" },
+      note: next.length === groups.length ? `${k}-equivalence: no group splits, so the partition is final. States left in the same group agree on every string.` : `${k}-equivalence: ${reasons.join(" ")} Some string of length ${k} now tells them apart.`,
+    });
     if (next.length === groups.length) break;
     groups = next;
   }
@@ -241,7 +315,8 @@ export function regexToNfa(re) {
   const add = (from, sym, to) => { const k = key(from, sym), l = delta.get(k) ?? []; l.push(to); delta.set(k, l); };
   const real = (q) => { while (alias.has(q)) q = alias.get(q); return q; };
   const stack = [];
-  for (const tok of postfix) {
+  const shown = postfix.map((t) => (t.t === "sym" ? t.v : t.t === "eps" ? "ε" : t.t));
+  for (const [ti, tok] of postfix.entries()) {
     if (tok.t === "sym" || tok.t === "eps") {
       const s = fresh(), f = fresh(), sym = tok.t === "eps" ? EPS : tok.v;
       add(s, sym, f);
@@ -275,6 +350,8 @@ export function regexToNfa(re) {
     }
     if (n > 120) throw new Error("That expression is too long. Keep it under about 60 symbols.");
     Object.assign(steps.at(-1), {
+      line: tok.t === "sym" || tok.t === "eps" ? [1, 2] : tok.t === "·" ? [1, 3] : tok.t === "|" ? [1, 4] : [1, 5],
+      vars: { t: shown[ti], position: `${ti + 1} of ${postfix.length}`, stack: stack.map((f) => f.text), states: n - alias.size },
       created: n, fusedN: alias.size,
       edges: [...delta].flatMap(([k, list]) => { const [from, sym] = k.split("\u0000"); return list.map((to) => [Number(from), sym, to]); }),
       frag: { ...stack.at(-1) },
@@ -303,7 +380,7 @@ export function regexToNfa(re) {
       const e = { from: nm(from), to: nm(to), label: sym };
       if (!edges.some((x) => x.from === e.from && x.to === e.to && x.label === e.label)) edges.push(e);
     }
-    return { note: st.note(nm), states: [...new Set(st.states.map(nm))], nodes, edges, start: nm(st.frag.start), end: nm(st.frag.end), text: st.frag.text };
+    return { line: st.line, vars: st.vars, note: st.note(nm), states: [...new Set(st.states.map(nm))], nodes, edges, start: nm(st.frag.start), end: nm(st.frag.end), text: st.frag.text };
   };
   return {
     nfa,

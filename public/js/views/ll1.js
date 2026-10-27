@@ -1,4 +1,6 @@
-import { END, EPS, EXAMPLES, leftFactor, ll1, ll1Parse, parseGrammar, removeLeftRecursion, showProd, toText, tokenize } from "../engines/grammar.js";
+import { CODE, END, EPS, EXAMPLES, leftFactor, ll1, ll1Parse, parseGrammar, removeLeftRecursion, showProd, toText, tokenize } from "../engines/grammar.js";
+import { codePanel, traceLayout, varsPanel } from "../code.js";
+import { stackChips } from "./stackchips.js";
 import { treeDiagram } from "../diagram.js";
 import { copyLink, h, morph, notice, page, readParams, rng, stepper, writeParams } from "../ui.js";
 import { choice, exampleSelect, mountTabs, stat } from "./kit.js";
@@ -25,7 +27,7 @@ export function render(root) {
       h("p", null, "For each rule A → α: put it in M[A, a] for every terminal a in FIRST(α). If α can derive ε, also put it in M[A, b] for every b in FOLLOW(A)."),
       h("p", null, "The grammar is ", h("b", null, "LL(1)"), " if no cell gets two rules. Left recursion and common prefixes always cause clashes, so fix them first."),
       h("p", null, "To parse, keep a stack holding $ and the start symbol. If the top is a terminal, it must match the next token. If it's a non-terminal A, look up M[A, next token], pop A and push the rule's body in reverse. Accept when both reach $.")),
-    conventions: ["Tokens are separated by spaces (or typed together when every terminal is one character or id).", "Red cells hold more than one rule: a conflict.", "Dashed tree nodes are on the stack but not expanded yet."],
+    conventions: ["Tokens are separated by spaces (or typed together when every terminal is one character or id).", "Red cells hold more than one rule: a conflict.", "Dashed tree nodes are on the stack but not expanded yet.", "X is the symbol on top of the stack and a is the next input token."],
   });
   const gIn = h("textarea", { rows: 7, class: "mono", "aria-label": "Grammar", oninput: (e) => { state.g = e.target.value; update(); } }, state.g);
   const wIn = h("input", { type: "text", class: "mono wide", value: state.w, "aria-label": "Input tokens", oninput: (e) => { state.w = e.target.value; update(); } });
@@ -48,12 +50,15 @@ export function render(root) {
     const res = ll1Parse(g, t, tokens);
     const tableBox = h("div"), stackBox = h("div", { class: "ll-stack" }), inputBox = h("div", { class: "input-chars" }), treeBox = h("div", { class: "chart-wrap" });
     const note = h("p", { class: "step-note", "aria-live": "polite" });
+    const code = codePanel(CODE.ll1Parse, { title: "Pseudocode (table-driven LL(1))" }), vars = varsPanel();
     player = stepper({
       count: res.steps.length, label: "Step", interval: 900,
       render: (i) => {
         const st = res.steps[i];
         tableBox.replaceChildren(parseTable(g, t, { hot: st.nt ? [st.nt, st.t] : null }));
-        stackBox.replaceChildren(...[...st.stack].reverse().map((s, k) => h("span", { class: `${k === 0 ? "top" : ""}${g.isNT(s) ? " nt" : ""}` }, s)));
+        stackBox.replaceChildren(...stackChips(st.stack, i ? res.steps[i - 1].stack : null, { topFirst: true, classOf: (s) => (g.isNT(s) ? "nt" : null) }));
+        code.show(st.line);
+        vars.show(st.vars);
         inputBox.replaceChildren(...st.input.map((s, k) => h("span", { class: k < st.pos ? "done" : k === st.pos ? "now" : null }, s)));
         morph(treeBox, treeDiagram(st.tree, { aria: "Parse tree so far" }));
         note.textContent = st.action;
@@ -63,11 +68,12 @@ export function render(root) {
     out.replaceChildren(
       h("section", { class: "card" }, h("h2", null, "Parsing table"), tableBox,
         h("p", { class: "muted small" }, "Hover a cell to see why the rule is there.")),
-      h("section", { class: "card" }, h("h2", null, "Parse"), player.el,
-        h("div", { class: "ll-row" },
-          h("div", null, h("h3", { class: "small muted" }, "Stack (top first)"), stackBox),
-          h("div", null, h("h3", { class: "small muted" }, "Input"), inputBox)),
-        note, treeBox,
+      h("section", { class: "card" }, h("h2", null, "Parse"), player.el, note,
+        traceLayout(h("div", null,
+          h("div", { class: "ll-row" },
+            h("div", null, h("h3", { class: "small muted" }, "Stack (top first)"), stackBox),
+            h("div", null, h("h3", { class: "small muted" }, "Input"), inputBox)),
+          h("h3", { class: "small muted tcd-sub" }, "Parse tree so far"), treeBox), code, vars),
         h("div", { class: "stats-row" }, stat("Tokens", tokens.length), stat("Steps", res.steps.length - 1), stat("Result", res.accepted ? "Accepted" : "Error"))),
       h("section", { class: "card" }, h("h2", null, "Trace"), h("div", { class: "table-wrap" }, h("table", { class: "parse trace" },
         h("thead", null, h("tr", null, ["#", "Stack", "Input", "Action"].map((x) => h("th", { scope: "col" }, x)))),

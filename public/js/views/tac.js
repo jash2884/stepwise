@@ -1,4 +1,5 @@
-import { dag, EXAMPLES, generate, parseBlock, quadruples, show, tree, triples } from "../engines/tac.js";
+import { CODE, dag, EXAMPLES, generate, parseBlock, quadruples, show, tree, triples } from "../engines/tac.js";
+import { codePanel, traceLayout, varsPanel } from "../code.js";
 import { dagDiagram, treeDiagram } from "../diagram.js";
 import { copyLink, h, morph, notice, page, readParams, rng, stepper, writeParams } from "../ui.js";
 import { exampleSelect, mountTabs, numberQuestion, stat } from "./kit.js";
@@ -39,6 +40,8 @@ export function render(root) {
 
     // 1. Syntax trees → naive code.
     const treeBox = h("div", { class: "chart-wrap" }), codeBox = h("div"), note1 = h("p", { class: "step-note", "aria-live": "polite" });
+    const code1 = codePanel(CODE.gen, { title: "Pseudocode (tree walk)" }), vars1 = varsPanel();
+    const code2 = codePanel(CODE.dag, { title: "Pseudocode (value numbering)" }), vars2 = varsPanel();
     const p1 = stepper({
       count: naive.steps.length, label: "Instruction", interval: 1000,
       render: (i) => {
@@ -46,6 +49,8 @@ export function render(root) {
         morph(treeBox, treeDiagram(tree(stmts[st.stmt]), { lit: [st.node === "root" ? "root" : st.node], aria: `Syntax tree of ${stmts[st.stmt].src}` }));
         codeBox.replaceChildren(codeList(naive.code, st.code, st.code));
         note1.textContent = `${stmts[st.stmt].src}: ${st.note}`;
+        code1.show(st.line);
+        vars1.show(st.vars);
         note1.className = `step-note${i === naive.steps.length - 1 ? " good" : ""}`;
       },
     });
@@ -66,6 +71,8 @@ export function render(root) {
         const nodes = d.nodes.filter((n) => n.id <= seen).map((n) => ({ id: n.id, label: n.op, kids: n.kids, labels: names.get(n.id), leaf: n.leaf }));
         morph(dagBox, dagDiagram(nodes, { lit: st.reused ? [] : [st.node], reused: st.reused ? [st.node] : [], aria: "Expression DAG so far" }));
         note2.textContent = `${stmts[st.stmt].src}: ${st.note}`;
+        code2.show(st.line);
+        vars2.show(st.vars);
         note2.className = `step-note${st.reused ? " good" : ""}`;
       },
     });
@@ -74,8 +81,8 @@ export function render(root) {
     const quads = quadruples(d.code), trips = triples(d.code);
     out.replaceChildren(
       h("section", { class: "card" }, h("h2", null, "1. Syntax tree to three-address code"), p1.el, note1,
-        h("div", { class: "grid-2 tight" }, treeBox, codeBox)),
-      h("section", { class: "card" }, h("h2", null, "2. Build the DAG"), p2.el, dagBox, note2,
+        traceLayout(h("div", { class: "tcd-stack" }, treeBox, codeBox), code1, vars1)),
+      h("section", { class: "card" }, h("h2", null, "2. Build the DAG"), p2.el, note2, traceLayout(dagBox, code2, vars2),
         h("div", { class: "stats-row" }, stat("Tree code", `${naive.code.length} instr.`), stat("DAG code", `${d.code.length} instr.`), stat("Saved", saved), stat("DAG nodes", d.nodes.length))),
       h("div", { class: "grid-2" },
         h("section", { class: "card" }, h("h2", null, "Code from the DAG"), codeList(d.code),

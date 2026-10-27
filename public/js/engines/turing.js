@@ -7,6 +7,18 @@
 
 export const BLANK = "_";
 
+export const CODE = [
+  "state ← q0; head ← 0  // on the first input cell",
+  "loop",
+  "  a ← tape[head]",
+  "  if there is no rule for (state, a) then halt",
+  "  (p, b, D) ← δ(state, a)",
+  "  tape[head] ← b",
+  "  head ← head − 1, head + 1 or head  // D = L, R or S",
+  "  state ← p",
+  "accept iff it halts in an accepting state",
+];
+
 export function parseTM(text) {
   let start = null;
   const accept = new Set(), rules = new Map(), states = [], order = [];
@@ -46,25 +58,30 @@ export function runTM(tm, input, { limit = 2000 } = {}) {
     steps.push({ state, head, lo, cells: Array.from({ length: hi - lo + 1 }, (_, i) => read(lo + i)), rule, note });
   };
   snap(`Start in ${tm.start} with the head on the first cell.`);
+  Object.assign(steps[0], { line: 1, vars: { state, head, a: read(head), moves: 0 } });
   while (!result) {
     const r = tm.rule(state, read(head));
     if (!r) {
       result = tm.accept.includes(state) ? "accept" : "reject";
       steps.at(-1).note += ` No rule for (${state}, ${read(head)}), so the machine halts in ${state}: ${result === "accept" ? "ACCEPTED" : "REJECTED"}.`;
       steps.at(-1).halt = result;
+      steps.at(-1).line = [...[steps.at(-1).line].flat(), 3, 4, 9];
+      steps.at(-1).vars = { ...steps.at(-1).vars, a: read(head), halted: result === "accept" ? "accept" : "reject" };
       break;
     }
-    if (steps.length > limit) { result = "limit"; steps.at(-1).note += ` Stopped after ${limit} moves: the machine may never halt on this input.`; steps.at(-1).halt = "limit"; break; }
+    if (steps.length > limit) { result = "limit"; steps.at(-1).note += ` Stopped after ${limit} moves: the machine may never halt on this input.`; steps.at(-1).halt = "limit"; steps.at(-1).line = 2; break; }
     const was = read(head);
     if (r.write === BLANK) tape.delete(head); else tape.set(head, r.write);
     const from = state;
     head += r.move === "L" ? -1 : r.move === "R" ? 1 : 0;
     state = r.next;
     snap(`In ${from} reading ${was}: write ${r.write}, move ${r.move === "L" ? "left" : r.move === "R" ? "right" : "nowhere"}, go to ${r.next}.`, r);
+    Object.assign(steps.at(-1), { line: [3, 5, 6, 7, 8], vars: { state: from, a: was, p: r.next, b: r.write, D: r.move, head, moves: steps.length - 1 } });
     if (tm.accept.includes(state) && !tm.rule(state, read(head))) {
       result = "accept";
       steps.at(-1).note += " That's an accepting state with no further moves: ACCEPTED.";
       steps.at(-1).halt = "accept";
+      steps.at(-1).line = [...steps.at(-1).line, 4, 9];
     }
   }
   const out = steps.at(-1).cells.join("").replace(/^_+|_+$/g, "");
