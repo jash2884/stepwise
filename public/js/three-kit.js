@@ -141,18 +141,26 @@ export async function scene3d(container, opts = {}) {
     });
   }
   const onVis = () => { last = performance.now(); loop(); };
+  // A frame shortly after anything changes, so a scene never sits blank when
+  // animation frames are throttled (background tabs, hidden panes).
+  let kickT = 0;
+  const kick = () => { clearTimeout(kickT); kickT = setTimeout(() => { if (!disposed) renderer.render(scene, camera); }, 40); };
   document.addEventListener("visibilitychange", onVis);
   applyTheme();
   loop();
+  scene.addEventListener("childadded", kick);
+  const kickTimer = setInterval(() => { if (!visible || document.hidden || disposed) return; if (performance.now() - last > 600) renderer.render(scene, camera); }, 500);
 
   // Tween any numeric properties: tween(mesh.position, { x: 2, y: 1 }, 600).
   function tween(obj, to, ms = 600, how = ease.inOut) {
+    kick();
     if (reducedMotion() || ms <= 0) { Object.assign(obj, to); return Promise.resolve(); }
     const from = Object.fromEntries(Object.keys(to).map((k) => [k, obj[k]]));
     return new Promise((resolve) => tweens.add({ start: performance.now(), ms, ease: how, resolve, step: (k) => { for (const key in to) obj[key] = from[key] + (to[key] - from[key]) * k; } }));
   }
   // Move along a path of points (an array of Vector3), e.g. a packet hop.
   function travel(obj, points, ms = 800, how = ease.inOut) {
+    kick();
     if (reducedMotion()) { obj.position.copy(points.at(-1)); return Promise.resolve(); }
     const curve = new THREE.CatmullRomCurve3(points);
     const p = { t: 0 };
@@ -183,6 +191,7 @@ export async function scene3d(container, opts = {}) {
   function dispose() {
     disposed = true;
     cancelAnimationFrame(raf);
+    clearInterval(kickTimer); clearTimeout(kickT);
     io.disconnect(); ro.disconnect(); themeObs.disconnect();
     mq.removeEventListener?.("change", applyTheme);
     document.removeEventListener("visibilitychange", onVis);
@@ -197,7 +206,7 @@ export async function scene3d(container, opts = {}) {
 
   return {
     THREE, scene, camera, renderer, el, target,
-    onFrame: (fn) => { frameFns.add(fn); return () => frameFns.delete(fn); },
+    onFrame: (fn) => { frameFns.add(fn); kick(); return () => frameFns.delete(fn); },
     onTheme: (fn) => { themeFns.push(fn); fn(getComputedStyle(document.documentElement).colorScheme === "dark"); },
     colour: (name) => token(THREE, name),
     tween, travel, label, dispose,

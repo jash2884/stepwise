@@ -161,7 +161,7 @@ export async function graph3d(container, g, opts = {}) {
   });
   const { THREE, scene, camera } = kit;
   const coarse = matchMedia("(pointer: coarse)").matches;
-  kit.el.append(Object.assign(document.createElement("div"), { className: "three-hint", textContent: coarse ? "Drag to turn · pinch to zoom" : "Drag to turn · scroll to zoom" }));
+  kit.el.append(Object.assign(document.createElement("div"), { className: "three-hint", textContent: coarse ? "Drag to turn · pinch to zoom" : "Drag to turn · pinch or Ctrl+scroll to zoom" }));
 
   const V = (q) => new THREE.Vector3(q.x, q.y, q.z);
   const col = (name) => kit.colour(name);

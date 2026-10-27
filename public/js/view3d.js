@@ -14,7 +14,7 @@ export function view3d(key) {
   const toggle = viewToggle(key, (m) => { for (const s of stages) s.apply(m); });
   toggle.el.classList.add("net3d-toggle");
 
-  function stage(el2d, build, { hint = "Drag to orbit · scroll or pinch to zoom" } = {}) {
+  function stage(el2d, build, { hint = "Drag to orbit · pinch or Ctrl+scroll to zoom" } = {}) {
     const box = h("div", { class: "net3d-box" });
     const wrap = h("div", { class: "net3d-wrap", hidden: true }, box, h("p", { class: "three-hint" }, hint));
     const el = h("div", { class: "net3d-stage" }, el2d, wrap);
