@@ -131,7 +131,7 @@ export async function scene3d(container, opts = {}) {
       last = now;
       if (autoRotate && !userTouched) { sph.theta += autoRotate * dt; place(); }
       for (const t of tweens) {
-        const k = Math.min(1, (now - t.start) / t.ms);
+        const k = Math.max(0, Math.min(1, (now - t.start) / t.ms)); // a tween started mid-frame can see now < start
         t.step(t.ease(k));
         if (k >= 1) { tweens.delete(t); t.resolve(); }
       }
