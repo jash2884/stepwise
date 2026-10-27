@@ -2104,3 +2104,16 @@ body { background:
 /* 2D | 3D | Both: side by side when there's room, stacked when not */
 .view-pair.both, .net3d-stage.both { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(330px, 100%), 1fr)); gap: 12px; align-items: start; }
 .view-pair.both > *, .net3d-stage.both > * { min-width: 0; margin: 0; }
+
+/* 3D: DSA and DBMS */
+.fw-head { align-items: center; }
+.fw-head .view-toggle { margin-left: auto; }
+.fw-flat { min-width: 0; }
+.fw-flat[hidden] { display: none; }
+.view-pair > [hidden] { display: none; }
+.d3-legend .k.inf::before { background: color-mix(in srgb, var(--muted) 45%, var(--surface)); border: 1px solid var(--line); }
+@media (max-width: 600px) { .fw-head .view-toggle { margin-left: 0; } }
+.d3-legend.low { top: auto; bottom: 8px; right: 10px; max-width: 64%; }
+.d3-dsa .three-hint { background: color-mix(in srgb, var(--surface) 75%, transparent); padding: 2px 8px; border-radius: 999px; }
+@media (hover: none) { .d3-dsa .three-hint { display: none; } }
+@media (max-width: 600px) { .d3-legend.low { max-width: calc(100% - 20px); left: 10px; right: 10px; justify-content: flex-start; } .d3-dsa .three-hint { display: none; } }

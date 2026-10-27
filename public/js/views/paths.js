@@ -1,7 +1,8 @@
 import { parseGraph, pathFrom, randomGraph, showDist } from "../engines/graph.js";
 import { ALGORITHMS, bellmanFord, COMPLEXITY, dijkstra, floydWarshall } from "../engines/paths.js";
 import { graphTool, matrixTable, names, staticGraph, strip, textQuestion, valueTable } from "../graph-view.js";
-import { h, page } from "../ui.js";
+import { viewToggle } from "../three-kit.js";
+import { h, notice, page } from "../ui.js";
 import { choice, numberQuestion } from "./kit.js";
 
 const LEGENDS = {
@@ -10,13 +11,62 @@ const LEGENDS = {
   floyd: [["k: the stop-over", "n-current"], ["i (row)", "n-hl-i"], ["j (column)", "n-hl-j"], ["Path", "e-path"]],
 };
 
-function side(st, { g, algo, state }, prev) {
+// The Floyd–Warshall matrix can also be shown as a 3D cube of layers, one per k
+// (its own 2D | 3D | Both switch, separate from the graph's). The block below
+// the matrix heading lives for one run; the 3D scene loads only when chosen.
+function floydCube() {
+  let run = null, d3 = null, gen = 0;
+  const drop3d = () => { gen++; d3?.dispose(); d3 = null; };
+  const toggle = viewToggle("floyd-cube", () => mount());
+  async function mount() {
+    drop3d();
+    if (!run) return;
+    const my = gen, { host, flat, pair } = run, mode = toggle.mode, on = mode !== "2d";
+    host.hidden = !on;
+    flat.hidden = mode === "3d";
+    pair.classList.toggle("both", mode === "both");
+    if (!on) { host.replaceChildren(); return; }
+    try {
+      const { floydScene } = await import("./floyd-3d.js");
+      if (my !== gen) return;
+      const sc = await floydScene(host, { nodes: run.nodes, steps: run.steps, height: matchMedia("(max-width: 600px)").matches ? 300 : 400 });
+      if (my !== gen) { sc.dispose(); return; }
+      d3 = sc;
+      d3.show(run.index, true);
+    } catch (e) { host.replaceChildren(notice("error", `3D view unavailable: ${e.message}`)); }
+  }
+  return {
+    // Returns the persistent heading + matrix/cube block for this run.
+    view(st, ctx, title, matrix) {
+      if (run?.res !== ctx.res) {
+        drop3d();
+        const flat = h("div", { class: "fw-flat" }), host = h("div", { class: "d3-host", hidden: true }), heading = h("b");
+        const pair = h("div", { class: "view-pair" }, flat, host);
+        run = { res: ctx.res, steps: ctx.res.steps, nodes: [...ctx.g.nodes], flat, host, pair, heading, index: 0,
+          el: h("div", { class: "fw-block" }, h("div", { class: "g-strip-head fw-head" }, heading, h("span", { class: "muted" }, "row i, column j"), toggle.el), pair) };
+        run.index = Math.max(0, run.steps.indexOf(st));
+        if (toggle.mode !== "2d") mount();
+      }
+      run.heading.textContent = title;
+      run.flat.replaceChildren(matrix);
+      run.index = Math.max(0, run.steps.indexOf(st));
+      try { d3?.show(run.index); } catch (e) { console.error(e); }
+      return run.el;
+    },
+    drop() { drop3d(); run = null; },
+  };
+}
+
+function side(st, { g, algo, state, res }, prev, fw) {
   const path = st.path ? strip("Path", st.path, { prev: prev?.path, kind: "list" }) : null;
+  if (algo !== "floyd") fw?.drop();
   if (algo === "floyd") {
     const [ci, cj] = st.cell ?? [], k = st.k;
     const cls = (i, j) => [i === ci && j === cj && "hot", k != null && ci != null && ((i === ci && j === k) || (i === k && j === cj)) && "src", k != null && (i === k || j === k) && "kband"].filter(Boolean).join(" ") || null;
-    return [h("div", { class: "g-strip-head" }, h("b", null, k ? `D after allowing stop-overs up to ${k}` : st.line === 1 ? "D: direct edges only" : "D: every shortest distance"), h("span", { class: "muted" }, "row i, column j")),
-      matrixTable(g.nodes, (i, j) => showDist(st.D[i][j]), { corner: "i \\ j", cls, prev: prev?.D ? (i, j) => showDist(prev.D[i][j]) : null }), path];
+    const title = k ? `D after allowing stop-overs up to ${k}` : st.line === 1 ? "D: direct edges only" : "D: every shortest distance";
+    const matrix = matrixTable(g.nodes, (i, j) => showDist(st.D[i][j]), { corner: "i \\ j", cls, prev: prev?.D ? (i, j) => showDist(prev.D[i][j]) : null });
+    if (fw) return [fw.view(st, { g, res }, title, matrix), path];
+    return [h("div", { class: "g-strip-head" }, h("b", null, title), h("span", { class: "muted" }, "row i, column j")), matrix, path];
   }
   const rows = (s) => s.table.map((r) => ({ key: r.v, cells: [showDist(r.d), r.pi ?? "–", ...(algo === "dijkstra" ? [r.done ? "✓" : ""] : [])] }));
   const table = valueTable(["v", "d[v]", "π[v]", ...(algo === "dijkstra" ? ["final"] : [])], rows(st), { prev: prev && rows(prev), hot: st.active?.to });
@@ -93,8 +143,10 @@ export function render(root) {
       h("p", null, "Undirected edges count as two directed edges, one each way. A negative undirected edge is therefore a negative cycle on its own.")),
     conventions: ["Ties in the priority queue go to the alphabetically first vertex.", "Bellman–Ford relaxes the edges in the order you list them, and stops early after a round where nothing changes.", "Floyd–Warshall takes k, i and j in alphabetical order and only shows the pairs where a path through k exists.", "Distances start at ∞; ∞ + anything stays ∞."],
   });
-  return graphTool(root, {
-    key: "shortest-paths", head, algos: ALGORITHMS, complexity: COMPLEXITY, side, after, question,
+  const fw = floydCube();
+  const stop = graphTool(root, {
+    key: "shortest-paths", head, algos: ALGORITHMS, complexity: COMPLEXITY, after, question,
+    side: (st, ctx, prev) => side(st, ctx, prev, fw),
     random: (r, algo, directed) => randomGraph(r, { directed, n: algo === "floyd" ? 5 : 6 + Math.floor(r() * 2), extra: 3, negative: algo === "bellman" && directed ? 0.2 : 0 }),
     defaults: { algo: "dijkstra", example: "clrsDijkstra" },
     examples: ["clrsDijkstra", "clrsBellman", "clrsFloyd", "negCycle", "cities"],
@@ -102,4 +154,5 @@ export function render(root) {
     interval: 800,
     title: ({ algo, state }) => `${ALGORITHMS[algo].name} from ${state.source}${state.target ? `, path to ${state.target}` : ""}`,
   });
+  return () => { stop?.(); fw.drop(); };
 }
