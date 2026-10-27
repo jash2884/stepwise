@@ -2104,3 +2104,23 @@ body { background:
 /* 2D | 3D | Both: side by side when there's room, stacked when not */
 .view-pair.both, .net3d-stage.both { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(330px, 100%), 1fr)); gap: 12px; align-items: start; }
 .view-pair.both > *, .net3d-stage.both > * { min-width: 0; margin: 0; }
+
+/* 3D: TOC and CN */
+.d3-legend .k.toc-head::before { --c: var(--accent); border-radius: 50%; }
+.d3-legend .k.toc-good::before { --c: var(--good); }
+.d3-legend .k.toc-bad::before { --c: var(--bad); }
+.d3-legend .k.toc-push::before { --c: var(--series-1); }
+.d3-legend .k.toc-ghost::before { --c: var(--muted); opacity: 0.45; }
+.d3-legend .k.toc-slot::before { --c: var(--series-4); }
+.d3-hud .toc-verdict.accept { border-color: var(--good); }
+.d3-hud .toc-verdict.accept b { color: var(--good); }
+.d3-hud .toc-verdict.reject, .d3-hud .toc-verdict.limit { border-color: var(--bad); }
+.d3-hud .toc-verdict.reject b, .d3-hud .toc-verdict.limit b { color: var(--bad); }
+.view-pair > .tape-wrap { min-width: 0; }
+.view-pair.both > .pda-stage { grid-template-columns: minmax(0, 1fr); }
+.three-stage.toc3d { container-type: inline-size; }
+@container (max-width: 560px) {
+  .toc3d .d3-legend { top: auto; bottom: 8px; right: 8px; max-width: 64%; }
+  .toc3d .d3-hud { font-size: 11.5px; right: 10px; }
+}
+@container (max-width: 420px) { .toc3d .three-hint { display: none; } }

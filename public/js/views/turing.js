@@ -3,6 +3,7 @@ import { codePanel, traceLayout, varsPanel } from "../code.js";
 import { stateDiagram } from "../diagram.js";
 import { copyLink, h, morph, notice, page, readParams, rng, stepper, writeParams } from "../ui.js";
 import { choice, exampleSelect, mountTabs, randomString, stat } from "./kit.js";
+import { viewToggle } from "../three-kit.js";
 
 const CELL = 44;
 
@@ -14,6 +15,26 @@ export function render(root) {
   const p = readParams();
   const state = { tm: p.get("tm") ?? MACHINES.anbn.text, input: p.get("w") ?? MACHINES.anbn.input };
   let player = null;
+  // Optional 3D view: loaded only when chosen, rebuilt when the inputs change.
+  let d3 = null, gen = 0, live = null;
+  const drop3d = () => { gen++; d3?.dispose(); d3 = null; };
+  const toggle = viewToggle("turing-machine", () => { mount3d(); player?.go(player.index); });
+  async function mount3d() {
+    drop3d();
+    if (!live) return;
+    const my = gen, { host, flat, pair } = live, mode = toggle.mode, on = mode !== "2d";
+    host.hidden = !on;
+    for (const el of flat) el.hidden = mode === "3d";
+    pair.classList.toggle("both", mode === "both");
+    if (!on) { host.replaceChildren(); return; }
+    try {
+      const { turingScene } = await import("./turing-3d.js");
+      const sc = await turingScene(host, { ...live.args, height: matchMedia("(max-width: 600px)").matches ? 300 : 400 });
+      if (my !== gen) { sc.dispose(); return; }
+      d3 = sc;
+      d3.show(player?.index ?? 0, true);
+    } catch (e) { host.replaceChildren(notice("error", `3D view unavailable: ${e.message}`)); }
+  }
   const head = page({
     subject: "Theory of computation", title: "Turing machine",
     lede: "A tape, a head and a table of rules. Load a machine, give it an input and watch it read, write and move.",
@@ -31,12 +52,16 @@ export function render(root) {
 
   function update() {
     player?.destroy();
+    drop3d();
+    live = null;
     writeParams({ tm: state.tm, w: state.input });
     let tm, res;
     try { tm = parseTM(state.tm); res = runTM(tm, state.input); } catch (e) { msg.replaceChildren(notice("error", e.message)); out.replaceChildren(); return; }
     msg.replaceChildren();
     const tapeWrap = h("div", { class: "tape-wrap" }), tape = h("div", { class: "tape" }), headTag = h("div", { class: "tape-head" });
     tapeWrap.append(headTag, tape);
+    const host3d = h("div", { class: "d3-host", hidden: true });
+    const pair = h("div", { class: "view-pair" }, tapeWrap, host3d);
     const box = h("div", { class: "chart-wrap" }), note = h("p", { class: "step-note", "aria-live": "polite" }), rules = h("div", { class: "table-wrap" });
     const edges = tmEdges(tm);
     const code = codePanel(CODE), vars = varsPanel();
@@ -67,13 +92,16 @@ export function render(root) {
         vars.show(st.vars);
         note.textContent = st.note;
         note.className = `step-note${st.halt ? (st.halt === "accept" ? " good" : " bad") : ""}`;
+        d3?.show(i);
       },
     });
     out.replaceChildren(
-      h("section", { class: "card" }, h("h2", null, "Run"), player.el, tapeWrap, note, traceLayout(box, code, vars),
+      h("section", { class: "card" }, h("div", { class: "d3-head" }, h("h2", null, "Run"), toggle.el), player.el, pair, note, traceLayout(box, code, vars),
         h("div", { class: "stats-row" }, stat("Moves", res.moves), stat("Result", res.result === "accept" ? "Accepted" : res.result === "reject" ? "Rejected" : "Still running"), stat("Tape at the end", res.output || "blank", true), stat("States", tm.states.length))),
       h("section", { class: "card" }, h("h2", null, "Rules"), rules, h("p", { class: "muted small" }, "In the diagram each arrow reads a → b, M: read a, write b, move M.")));
     requestAnimationFrame(() => player.go(player.index));
+    live = { host: host3d, flat: [tapeWrap], pair, args: { res, blank: BLANK } };
+    if (toggle.mode !== "2d") mount3d();
   }
 
   const visual = h("div", { class: "panel-body" },
@@ -115,5 +143,5 @@ export function render(root) {
 
   mountTabs(root, head, visual, practice, newQuestion);
   update();
-  return () => player?.destroy();
+  return () => { player?.destroy(); drop3d(); };
 }
