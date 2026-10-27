@@ -4,6 +4,7 @@
 // (queue, stack, arrays, matrices) and the page scaffold the four tools share.
 import { codePanel, traceLayout, varsPanel } from "./code.js";
 import { asText, build, byName, EXAMPLES, parseGraph, transpose } from "./engines/graph.js";
+import { viewToggle } from "./three-kit.js";
 import { copyLink, h, morph, notice, readParams, reducedMotion, rng, stepper, tabs, writeParams } from "./ui.js";
 
 const CHAR = 7.8;
@@ -267,6 +268,11 @@ export function graphTool(root, cfg) {
     source: p.get("s") ?? first.source, target: p.get("t") ?? "",
   };
   let player = null;
+  // The optional 3D view (graph3d.js and three.js load only when it's picked).
+  // show3d belongs to the current run; gen3 cancels a build that a newer run overtook.
+  let view3d = null, show3d = null, gen3 = 0;
+  const drop3d = () => { gen3++; view3d?.dispose(); view3d = null; };
+  const toggle = viewToggle(cfg.key ?? "graph", (m) => show3d?.(m));
   const algoSel = h("select", { "aria-label": "Algorithm", onchange: (e) => { state.algo = e.target.value; update(); } },
     Object.entries(cfg.algos).map(([k, a]) => h("option", { value: k, selected: k === state.algo }, a.name)));
   const exSel = h("select", { "aria-label": "Example", onchange: (e) => {
@@ -286,6 +292,7 @@ export function graphTool(root, cfg) {
 
   function update() {
     player?.destroy();
+    drop3d();
     const algo = cfg.algos[state.algo];
     if (algo.mode) state.directed = algo.mode === "directed";
     dirBox.checked = state.directed; dirBox.disabled = !!algo.mode;
@@ -308,13 +315,40 @@ export function graphTool(root, cfg) {
     const code = codePanel(algo.code(g)), vars = varsPanel();
     const stage = h("div", { class: "chart-wrap g-stage" }), side = h("div", { class: "g-side" }), note = h("p", { class: "step-note", "aria-live": "polite" });
     const stats = h("div", { class: "stats-row" });
+    const stage3 = h("div", { class: "g-stage3d", hidden: true });
     let last = -1;
+    // A 3D hiccup must never stop the 2D drawing or the stepper.
+    const draw3d = (i, animate) => {
+      const st = res.steps[i];
+      try { view3d?.update(st, { graph: st.transposed ? gT : g, animate }); } catch (e) { console.error(e); }
+    };
+    show3d = async (m) => {
+      drop3d();
+      const my = gen3;
+      stage.hidden = m === "3d"; stage3.hidden = m !== "3d";
+      if (m !== "3d") { stage3.replaceChildren(); return; }
+      try {
+        const { graph3d } = await import("./graph3d.js");
+        if (my !== gen3) return;
+        const v = await graph3d(stage3, g, { seed2d: layout.pos, height: matchMedia("(max-width: 600px)").matches ? 300 : 400,
+          aria: `3D view of the ${g.directed ? "directed" : "undirected"} graph: ${g.nodes.length} vertices, ${g.edges.length} edges. Drag to turn it.` });
+        if (my !== gen3) { v.dispose(); return; }
+        view3d = v;
+        draw3d(Math.max(0, last), false);
+      } catch (e) {
+        console.error(e);
+        stage.hidden = false; stage3.hidden = true;
+        stage3.replaceChildren(notice("info", "The 3D view couldn't start in this browser, so here's the 2D one."));
+        stage3.hidden = false;
+      }
+    };
     player = stepper({
       count: res.steps.length, label: "Step", interval: cfg.interval ?? 900,
       render: (i) => {
         const st = res.steps[i], before = Math.abs(i - last) === 1 ? res.steps[last] : null;
         last = i;
         morph(stage, graphSvg(st.transposed ? gT : g, layout, { nodeCls: st.nodes, nodeStyle: st.styles, badges: st.badges, edgeCls: st.edges, active: st.active, flash: changedKeys(before?.badges, st.badges) }));
+        draw3d(i, !!before);
         side.replaceChildren(...[cfg.side(st, ctx, before)].flat().filter(Boolean));
         code.show(st.line); vars.show(st.vars);
         note.textContent = st.note;
@@ -324,10 +358,11 @@ export function graphTool(root, cfg) {
     });
     out.replaceChildren(
       h("section", { class: "card" }, h("h2", null, cfg.title ? cfg.title(ctx) : algo.name), player.el, note,
-        traceLayout(h("div", null, stage, legend(cfg.legend(state.algo, g)), side), code, vars), stats),
+        traceLayout(h("div", null, h("div", { class: "g-view-bar" }, toggle.el), stage, stage3, legend(cfg.legend(state.algo, g)), side), code, vars), stats),
       ...[cfg.after?.(res, ctx)].flat().filter(Boolean),
       h("section", { class: "card" }, h("h2", null, "Complexity"), complexityCard(cfg.complexity, state.algo),
         h("p", { class: "muted small" }, "V is the number of vertices and E the number of edges.")));
+    if (toggle.mode === "3d") show3d("3d");
   }
 
   const visual = h("div", { class: "panel-body" },
@@ -352,7 +387,7 @@ export function graphTool(root, cfg) {
   root.replaceChildren(cfg.head, tab.el, panels);
   tab.select("visual");
   update();
-  return () => player?.destroy();
+  return () => { player?.destroy(); drop3d(); };
 }
 
 // A plain drawing of a graph for practice questions.

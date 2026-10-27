@@ -94,7 +94,7 @@ export function render(root) {
     conventions: ["Ties in the priority queue go to the alphabetically first vertex.", "Bellman–Ford relaxes the edges in the order you list them, and stops early after a round where nothing changes.", "Floyd–Warshall takes k, i and j in alphabetical order and only shows the pairs where a path through k exists.", "Distances start at ∞; ∞ + anything stays ∞."],
   });
   return graphTool(root, {
-    head, algos: ALGORITHMS, complexity: COMPLEXITY, side, after, question,
+    key: "shortest-paths", head, algos: ALGORITHMS, complexity: COMPLEXITY, side, after, question,
     random: (r, algo, directed) => randomGraph(r, { directed, n: algo === "floyd" ? 5 : 6 + Math.floor(r() * 2), extra: 3, negative: algo === "bellman" && directed ? 0.2 : 0 }),
     defaults: { algo: "dijkstra", example: "clrsDijkstra" },
     examples: ["clrsDijkstra", "clrsBellman", "clrsFloyd", "negCycle", "cities"],

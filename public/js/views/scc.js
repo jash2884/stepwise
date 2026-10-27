@@ -76,7 +76,7 @@ export function render(root) {
     conventions: ["Vertices and their out-neighbours are taken in alphabetical order.", "Kosaraju's finish times tick on every discovery and finish, starting at 1. Tarjan's disc numbers start at 0.", "Components are numbered in the order they're found."],
   });
   return graphTool(root, {
-    head, algos: ALGORITHMS, complexity: COMPLEXITY, side, after, question,
+    key: "strongly-connected-components", head, algos: ALGORITHMS, complexity: COMPLEXITY, side, after, question,
     random: (r) => randomGraph(r, { directed: true, weighted: false, n: 7 + Math.floor(r() * 2), extra: 4 + Math.floor(r() * 3) }),
     defaults: { algo: "kosaraju", example: "clrsScc" },
     examples: ["clrsScc", "tarjan", "clrsDfs", "courses"],

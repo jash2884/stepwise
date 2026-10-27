@@ -80,7 +80,7 @@ export function render(root) {
     conventions: ["Edges with equal weights are taken in alphabetical order of their endpoints; Prim breaks ties between equal keys alphabetically.", "Union by rank; on equal ranks the alphabetically first root becomes the parent. FIND uses path compression.", "Kruskal stops as soon as the tree has V − 1 edges."],
   });
   return graphTool(root, {
-    head, algos: ALGORITHMS, complexity: COMPLEXITY, side, after, question,
+    key: "minimum-spanning-tree", head, algos: ALGORITHMS, complexity: COMPLEXITY, side, after, question,
     random: (r) => randomGraph(r, { n: 6 + Math.floor(r() * 3), extra: 4 + Math.floor(r() * 3) }),
     defaults: { algo: "kruskal", example: "clrsMst" },
     examples: ["clrsMst", "cities", "islands"],
