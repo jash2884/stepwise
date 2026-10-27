@@ -35,6 +35,10 @@ function art(kind) {
       [[24, 16, 56, 16], [56, 16, 40, 44], [40, 44, 24, 16], [56, 16, 98, 18], [98, 18, 126, 40], [126, 40, 98, 40], [98, 40, 98, 18]].map(([a, b, c, d]) => h("line", { x1: a, y1: b, x2: c, y2: d })),
       [[24, 16, 1], [56, 16, 1], [40, 44, 1], [98, 18, 2], [126, 40, 2], [98, 40, 2]].map(([x, y, k]) => h("circle", { cx: x, cy: y, r: 7, class: `c${k}` }))));
     case "bars": return h("div", { class: "art bars-art" }, [5, 9, 3, 7, 2, 8, 4, 6].map((v, i) => h("i", { style: `height:${v * 10}%`, class: i === 2 || i === 3 ? "hot" : "" })));
+    case "search": return h("div", { class: "art search-art" }, [3, 8, 12, 19, 23, 31, 40].map((v, i) => h("i", { class: i === 3 ? "hot" : i < 3 ? "out" : "" }, v)));
+    case "stack": return h("div", { class: "art stack-art" }, h("div", null, ["7", "3", "5"].map((v, i) => h("i", { class: i === 0 ? "hot" : "" }, v))), h("span", null, "a b c * +"));
+    case "list": return h("div", { class: "art list-art" }, ["4", "8", "15"].map((v, i) => [i ? h("b", { "aria-hidden": "true" }, "→") : null, h("i", { class: i === 1 ? "hot" : "" }, v)]), h("b", null, "→ ∅"));
+    case "dp": return h("div", { class: "art dp-art" }, Array.from({ length: 15 }, (_, i) => h("i", { class: i === 8 ? "hot" : i === 2 || i === 7 ? "dep" : [0, 6, 12].includes(i) ? "path" : "" })));
     case "states": return h("div", { class: "art states-art" }, h("svg", { viewBox: "0 0 150 54", "aria-hidden": "true" },
       h("path", { d: "M2,27 L14,27", class: "a" }), h("path", { d: "M44,27 L60,27", class: "a" }), h("path", { d: "M90,27 L106,27", class: "a" }), h("path", { d: "M117,13 C108,-6 140,-6 131,13", class: "a" }),
       h("circle", { cx: 29, cy: 27, r: 14 }), h("circle", { cx: 75, cy: 27, r: 14, class: "on" }), h("circle", { cx: 124, cy: 27, r: 14 }), h("circle", { cx: 124, cy: 27, r: 10 })));
