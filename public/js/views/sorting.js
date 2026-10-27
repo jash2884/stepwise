@@ -59,7 +59,7 @@ function countsGrid(step) {
 
 function bucketsRow(step) {
   if (!step.buckets) return null;
-  return h("div", { class: "buckets" }, step.buckets.map((b, d) => h("div", { class: `bucket${step.hotBucket === d ? " hot" : ""}` }, h("b", null, d), b.map((v) => h("span", null, v)))));
+  return h("div", { class: "rbuckets" }, step.buckets.map((b, d) => h("div", { class: `rbucket${step.hotBucket === d ? " hot" : ""}` }, h("b", null, d), b.map((v) => h("span", null, v)))));
 }
 
 export function render(root) {
