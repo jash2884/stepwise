@@ -61,7 +61,14 @@ async function route() {
       const view = await tool.load();
       if (id !== renderId) return;
       setMeta(`${tool.title}: step-by-step visualiser · ${SITE.name}`, tool.description, `/${tool.slug}`);
-      cleanup = view.render(main) ?? null;
+      // The tool renders into its own box; practice links sit under it.
+      const host = h("div");
+      main.replaceChildren(host);
+      cleanup = view.render(host) ?? null;
+      import("./elsewhere.js").then(({ practiceElsewhere }) => {
+        const card = id === renderId ? practiceElsewhere(tool.slug) : null;
+        if (card) main.append(card);
+      }).catch(() => {});
     }
   } catch (err) {
     console.error(err);

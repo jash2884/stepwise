@@ -1,0 +1,76 @@
+// Candidate practice problems for each tool. `node scripts/build-problems.js`
+// checks every link against the platform (LeetCode's API, CSES, HackerRank's
+// API, GeeksforGeeks pages), records the real title and difficulty, drops
+// anything that doesn't resolve or is premium-only, and writes
+// public/js/problems.js. Entries: lc:slug, cses:id, hr:slug, gfg:path.
+
+export const SOURCE = {
+  // Data structures & algorithms
+  "sorting": ["lc:sort-an-array", "lc:sort-colors", "lc:merge-intervals", "lc:kth-largest-element-in-an-array", "lc:largest-number", "lc:maximum-gap", "lc:sort-list", "lc:insertion-sort-list", "lc:relative-sort-array", "lc:count-of-smaller-numbers-after-self", "cses:1621", "cses:1084", "hr:quicksort1", "hr:countingsort1", "gfg:sorting-algorithms/"],
+  "searching": ["lc:binary-search", "lc:search-insert-position", "lc:find-first-and-last-position-of-element-in-sorted-array", "lc:search-in-rotated-sorted-array", "lc:find-minimum-in-rotated-sorted-array", "lc:find-peak-element", "lc:sqrtx", "lc:koko-eating-bananas", "lc:median-of-two-sorted-arrays", "cses:1620", "cses:1085", "gfg:binary-search/", "gfg:interpolation-search/", "gfg:jump-search/"],
+  "stacks-queues": ["lc:valid-parentheses", "lc:min-stack", "lc:implement-queue-using-stacks", "lc:implement-stack-using-queues", "lc:design-circular-queue", "lc:design-circular-deque", "lc:evaluate-reverse-polish-notation", "lc:basic-calculator", "lc:basic-calculator-ii", "lc:daily-temperatures", "lc:largest-rectangle-in-histogram", "lc:sliding-window-maximum", "cses:1645", "hr:balanced-brackets", "gfg:convert-infix-expression-to-postfix-expression/"],
+  "linked-list": ["lc:reverse-linked-list", "lc:reverse-linked-list-ii", "lc:linked-list-cycle", "lc:linked-list-cycle-ii", "lc:merge-two-sorted-lists", "lc:remove-nth-node-from-end-of-list", "lc:middle-of-the-linked-list", "lc:palindrome-linked-list", "lc:design-linked-list", "lc:reorder-list", "lc:lru-cache", "hr:reverse-a-doubly-linked-list", "hr:insert-a-node-into-a-sorted-doubly-linked-list"],
+  "dynamic-programming": ["lc:fibonacci-number", "lc:climbing-stairs", "lc:longest-common-subsequence", "lc:edit-distance", "lc:coin-change", "lc:coin-change-ii", "lc:longest-increasing-subsequence", "lc:partition-equal-subset-sum", "lc:burst-balloons", "lc:minimum-cost-to-cut-a-stick", "lc:house-robber", "lc:unique-paths", "cses:1633", "cses:1634", "cses:1635", "cses:1636", "cses:1639", "cses:1158", "cses:1145", "gfg:matrix-chain-multiplication-dp-8/", "gfg:0-1-knapsack-problem-dp-10/"],
+  "binary-search-tree": ["lc:search-in-a-binary-search-tree", "lc:insert-into-a-binary-search-tree", "lc:delete-node-in-a-bst", "lc:validate-binary-search-tree", "lc:kth-smallest-element-in-a-bst", "lc:lowest-common-ancestor-of-a-binary-search-tree", "lc:binary-tree-inorder-traversal", "lc:binary-tree-preorder-traversal", "lc:binary-tree-postorder-traversal", "lc:binary-tree-level-order-traversal", "lc:recover-binary-search-tree", "lc:construct-binary-search-tree-from-preorder-traversal", "hr:binary-search-tree-insertion", "hr:tree-height-of-a-binary-tree"],
+  "avl-tree": ["lc:balanced-binary-tree", "lc:balance-a-binary-search-tree", "lc:convert-sorted-array-to-binary-search-tree", "lc:convert-sorted-list-to-binary-search-tree", "hr:self-balancing-tree", "gfg:insertion-in-an-avl-tree/", "gfg:deletion-in-an-avl-tree/"],
+  "binary-heap": ["lc:kth-largest-element-in-a-stream", "lc:last-stone-weight", "lc:top-k-frequent-elements", "lc:merge-k-sorted-lists", "lc:find-median-from-data-stream", "lc:k-closest-points-to-origin", "lc:task-scheduler", "hr:qheap1", "hr:jesse-and-cookies", "gfg:binary-heap/"],
+  "trie": ["lc:implement-trie-prefix-tree", "lc:design-add-and-search-words-data-structure", "lc:word-search-ii", "lc:replace-words", "lc:longest-word-in-dictionary", "lc:search-suggestions-system", "lc:maximum-xor-of-two-numbers-in-an-array", "hr:contacts", "cses:1731"],
+  "union-find": ["lc:number-of-provinces", "lc:redundant-connection", "lc:accounts-merge", "lc:satisfiability-of-equality-equations", "lc:number-of-operations-to-make-network-connected", "lc:most-stones-removed-with-same-row-or-column", "lc:longest-consecutive-sequence", "cses:1676", "hr:components-in-graph"],
+  "graph-traversal": ["lc:number-of-islands", "lc:clone-graph", "lc:course-schedule", "lc:course-schedule-ii", "lc:is-graph-bipartite", "lc:rotting-oranges", "lc:word-ladder", "lc:shortest-path-in-binary-matrix", "lc:all-paths-from-source-to-target", "lc:find-eventual-safe-states", "lc:keys-and-rooms", "cses:1192", "cses:1193", "cses:1666", "cses:1667", "cses:1668", "cses:1669", "cses:1679", "hr:bfsshortreach"],
+  "minimum-spanning-tree": ["lc:min-cost-to-connect-all-points", "lc:find-critical-and-pseudo-critical-edges-in-minimum-spanning-tree", "cses:1675", "hr:kruskalmstrsub", "hr:primsmstsub", "gfg:kruskals-minimum-spanning-tree-algorithm-greedy-algo-2/", "gfg:prims-minimum-spanning-tree-mst-greedy-algo-5/"],
+  "shortest-paths": ["lc:network-delay-time", "lc:cheapest-flights-within-k-stops", "lc:path-with-minimum-effort", "lc:find-the-city-with-the-smallest-number-of-neighbors-at-a-threshold-distance", "lc:path-with-maximum-probability", "lc:number-of-ways-to-arrive-at-destination", "cses:1671", "cses:1672", "cses:1673", "cses:1197", "hr:dijkstrashortreach", "hr:floyd-city-of-blinding-lights"],
+  "strongly-connected-components": ["lc:critical-connections-in-a-network", "cses:1682", "cses:1683", "cses:1686", "gfg:strongly-connected-components/", "gfg:tarjan-algorithm-find-strongly-connected-components/"],
+  // Operating systems
+  "cpu-scheduling": ["lc:task-scheduler", "lc:single-threaded-cpu", "lc:process-tasks-using-servers", "lc:exclusive-time-of-functions", "gfg:cpu-scheduling-in-operating-systems/", "gfg:multilevel-feedback-queue-scheduling-mlfq-cpu-scheduling/"],
+  "page-replacement": ["lc:lru-cache", "lc:lfu-cache", "gfg:page-replacement-algorithms-in-operating-systems/", "gfg:second-chance-or-clock-page-replacement-policy/"],
+  "disk-scheduling": ["gfg:disk-scheduling-algorithms/", "gfg:scan-elevator-disk-scheduling-algorithms/", "gfg:c-scan-disk-scheduling-algorithm/"],
+  "bankers-algorithm": ["gfg:bankers-algorithm-in-operating-system-2/", "gfg:deadlock-prevention/"],
+  "deadlock-detection": ["lc:course-schedule", "gfg:deadlock-detection-recovery/", "gfg:resource-allocation-graph-rag-in-operating-system/"],
+  "semaphores": ["lc:print-in-order", "lc:print-foobar-alternately", "lc:print-zero-even-odd", "lc:building-h2o", "lc:fizz-buzz-multithreaded", "lc:the-dining-philosophers", "gfg:semaphores-in-process-synchronization/", "gfg:producer-consumer-problem-using-semaphores-set-1/", "gfg:readers-writers-problem-set-1-introduction-and-readers-preference-solution/"],
+  "memory-allocation": ["lc:design-memory-allocator", "gfg:partition-allocation-methods-in-memory-management/", "gfg:buddy-system-memory-allocation-technique/"],
+  "address-translation": ["gfg:paging-in-operating-system/", "gfg:translation-lookaside-buffer-tlb-in-paging/", "gfg:multilevel-paging-in-operating-system/", "gfg:segmentation-in-operating-system/"],
+  // Databases
+  "b-plus-tree": ["gfg:introduction-of-b-tree/", "gfg:insertion-in-a-b-tree/"],
+  "b-tree": ["gfg:introduction-of-b-tree-2/", "gfg:insert-operation-in-b-tree/", "gfg:delete-operation-in-b-tree/"],
+  "normalization": ["gfg:normal-forms-in-dbms/", "gfg:finding-attribute-closure-and-candidate-keys-using-functional-dependencies/", "gfg:minimal-cover-of-functional-dependencies/"],
+  "sql-joins": ["lc:combine-two-tables", "lc:employees-earning-more-than-their-managers", "lc:customers-who-never-order", "lc:department-highest-salary", "lc:replace-employee-id-with-the-unique-identifier", "lc:product-sales-analysis-i", "lc:students-and-examinations", "lc:confirmation-rate", "hr:asian-population", "hr:african-cities", "hr:average-population-of-each-continent", "hr:the-report"],
+  "query-processing": ["lc:second-highest-salary", "lc:rank-scores", "lc:department-top-three-salaries", "lc:trips-and-users", "gfg:query-optimization-in-relational-algebra/", "gfg:introduction-of-relational-algebra-in-dbms/"],
+  "serializability": ["gfg:conflict-serializability-in-dbms/", "gfg:view-serializability-in-dbms/", "gfg:precedence-graph-for-testing-conflict-serializability-in-dbms/"],
+  "concurrency-control": ["gfg:two-phase-locking-protocol/", "gfg:timestamp-based-concurrency-control/", "gfg:thomas-write-rule-in-dbms/"],
+  "recovery": ["gfg:log-based-recovery-in-dbms/", "gfg:checkpoints-in-dbms/", "gfg:aries-algorithm-in-dbms/"],
+  "hashing": ["lc:design-hashmap", "lc:design-hashset", "lc:two-sum", "lc:group-anagrams", "lc:contains-duplicate", "hr:ctci-ransom-note", "gfg:open-addressing-collision-handling-technique-in-hashing/", "gfg:extendible-hashing-dynamic-approach-to-dbms/"],
+  // Computer networks
+  "subnetting": ["lc:validate-ip-address", "lc:restore-ip-addresses", "lc:defanging-an-ip-address", "gfg:introduction-to-subnetting/", "gfg:variable-length-subnet-mask-vlsm/"],
+  "cidr-and-longest-prefix-match": ["gfg:classless-inter-domain-routing-cidr/", "gfg:longest-prefix-matching-in-routers/", "gfg:route-summarization-and-supernetting/"],
+  "sliding-window": ["gfg:sliding-window-protocol-set-1/", "gfg:sliding-window-protocol-set-2-receiver-side/", "gfg:stop-and-wait-arq/"],
+  "routing": ["lc:network-delay-time", "lc:cheapest-flights-within-k-stops", "gfg:distance-vector-routing-dvr-protocol/", "gfg:unicast-routing-link-state-routing/"],
+  "tcp-congestion-control": ["gfg:tcp-congestion-control/", "gfg:tcp-3-way-handshake-process/", "gfg:tcp-tahoe-and-tcp-reno/"],
+  "error-detection": ["lc:number-of-1-bits", "lc:hamming-distance", "lc:total-hamming-distance", "lc:utf-8-validation", "lc:reverse-bits", "gfg:modulo-2-binary-division/", "gfg:hamming-code-in-computer-network/", "gfg:error-detection-code-checksum/"],
+  "ip-fragmentation": ["gfg:fragmentation-network-layer/", "gfg:introduction-and-ipv4-datagram-header/"],
+  "mac-protocols": ["gfg:aloha-in-computer-network/", "gfg:carrier-sense-multiple-access-csma/", "gfg:back-off-algorithm-csmacd/"],
+  "traffic-shaping": ["gfg:leaky-bucket-algorithm/", "gfg:token-bucket-algorithm/"],
+  "dns-and-http": ["lc:subdomain-visit-count", "lc:encode-and-decode-tinyurl", "gfg:domain-name-system-dns-in-application-layer/", "gfg:http-non-persistent-persistent-connection/"],
+  // Theory of computation
+  "finite-automata": ["lc:valid-number", "lc:string-to-integer-atoi", "lc:regular-expression-matching", "lc:wildcard-matching", "gfg:introduction-of-finite-automata/", "gfg:designing-deterministic-finite-automata-set-1/"],
+  "nfa-to-dfa": ["lc:regular-expression-matching", "gfg:conversion-from-nfa-to-dfa/", "gfg:conversion-of-epsilon-nfa-to-nfa/"],
+  "dfa-minimization": ["gfg:minimization-of-dfa/"],
+  "regex-to-nfa": ["lc:regular-expression-matching", "lc:wildcard-matching", "gfg:regular-expression-to-nfa/"],
+  "dfa-to-regex": ["gfg:state-elimination-method-convert-dfa-nfa-e-nfa-into-regular-expression/", "gfg:ardens-theorem-in-theory-of-computation/"],
+  "pumping-lemma": ["gfg:pumping-lemma-in-theory-of-computation/"],
+  "pushdown-automata": ["lc:valid-parentheses", "lc:longest-valid-parentheses", "lc:check-if-word-is-valid-after-substitutions", "gfg:introduction-of-pushdown-automata/"],
+  "cfg-to-cnf": ["gfg:converting-context-free-grammar-chomsky-normal-form/", "gfg:converting-context-free-grammar-greibach-normal-form/"],
+  "cyk-parsing": ["lc:parsing-a-boolean-expression", "gfg:cyk-algorithm-for-context-free-grammar/"],
+  "turing-machine": ["gfg:turing-machine-in-toc/", "gfg:turing-machine-for-addition/"],
+  // Compiler design
+  "lexical-analysis": ["lc:valid-number", "lc:tag-validator", "lc:decode-string", "gfg:introduction-of-lexical-analysis/"],
+  "left-recursion": ["gfg:removing-direct-and-indirect-left-recursion-in-a-grammar/", "gfg:left-factoring/"],
+  "first-follow": ["gfg:first-set-in-syntax-analysis/", "gfg:follow-set-in-syntax-analysis/"],
+  "ll1-parsing": ["lc:basic-calculator", "lc:mini-parser", "lc:brace-expansion-ii", "gfg:construction-of-ll1-parsing-table/"],
+  "operator-precedence": ["lc:basic-calculator", "lc:basic-calculator-ii", "lc:evaluate-reverse-polish-notation", "lc:parsing-a-boolean-expression", "gfg:role-of-operator-precedence-parser/"],
+  "lr-parsing": ["lc:number-of-atoms", "lc:parse-lisp-expression", "gfg:slr-clr-and-lalr-parsers-set-3/", "gfg:lr-parser/"],
+  "syntax-directed-translation": ["lc:parse-lisp-expression", "lc:number-of-atoms", "gfg:syntax-directed-translation-in-compiler-design/"],
+  "three-address-code": ["lc:different-ways-to-add-parentheses", "lc:expression-add-operators", "gfg:three-address-code-compiler/", "gfg:directed-acyclic-graph-in-compiler-design-with-examples/"],
+  "code-optimisation": ["gfg:code-optimization-in-compiler-design/", "gfg:basic-blocks-in-compiler-design/"],
+  "register-allocation": ["lc:flower-planting-with-no-adjacent", "gfg:graph-coloring-applications/", "gfg:register-allocations-in-code-generation/", "gfg:liveliness-analysis-in-compiler-design/"],
+  "er-to-relational": ["gfg:mapping-from-er-model-to-relational-model/", "gfg:introduction-of-er-model/"],
+};
