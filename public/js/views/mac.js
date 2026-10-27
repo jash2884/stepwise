@@ -3,6 +3,7 @@ import { codePanel, traceLayout, varsPanel } from "../code.js";
 import { copyLink, fmt, h, morph, notice, page, readParams, rng, stepper, writeParams } from "../ui.js";
 import { choice, mountTabs, numberQuestion, stat } from "./kit.js";
 import { packet } from "./net.js";
+import { viewToggle } from "../three-kit.js";
 
 const pct = (x) => `${(x * 100).toFixed(1)}%`;
 
@@ -108,6 +109,26 @@ export function render(root) {
     bA: Number(p.get("ba") ?? 3), bC: Number(p.get("bc") ?? 5), rts: p.get("rts") !== "0",
   };
   let player = null;
+  // Optional 3D view (ALOHA and CSMA/CD): loaded only when chosen, rebuilt when the inputs change.
+  let d3 = null, gen = 0, live = null;
+  const drop3d = () => { gen++; d3?.dispose(); d3 = null; };
+  const toggle = viewToggle("mac-protocols", () => mount3d());
+  async function mount3d() {
+    drop3d();
+    if (!live) return;
+    const my = gen, { host, flat, pair } = live, mode = toggle.mode, on = mode !== "2d";
+    host.hidden = !on;
+    for (const el of flat) el.hidden = mode === "3d";
+    pair.classList.toggle("both", mode === "both");
+    if (!on) { host.replaceChildren(); return; }
+    try {
+      const { macScene } = await import("./mac-3d.js");
+      const sc = await macScene(host, { ...live.args, height: matchMedia("(max-width: 600px)").matches ? 300 : 400 });
+      if (my !== gen) { sc.dispose(); return; }
+      d3 = sc;
+      d3.show(player?.index ?? 0, true);
+    } catch (e) { host.replaceChildren(notice("error", `3D view unavailable: ${e.message}`)); }
+  }
   const head = page({
     subject: "Computer networks", title: "MAC protocols",
     lede: "How stations share one channel: pure and slotted ALOHA with their throughput curves, CSMA/CD's collisions and binary exponential backoff, and CSMA/CA with RTS/CTS.",
@@ -132,7 +153,8 @@ export function render(root) {
   };
   const msg = h("div"), out = h("div", { class: "output" });
 
-  function traceCard(title, steps, code, draw, extra = []) {
+  // three: arguments for the 3D scene, or null where there is no 3D view (CSMA/CA).
+  function traceCard(title, steps, code, draw, extra = [], three = null) {
     const c = codePanel(code), v = varsPanel();
     const stage = h("div", { class: "chart-wrap" }), below = h("div"), note = h("p", { class: "step-note", "aria-live": "polite" });
     player = stepper({ count: steps.length, label: "Step", interval: 1200, render: (i) => {
@@ -142,12 +164,19 @@ export function render(root) {
       c.show(steps[i].line); v.show(steps[i].vars);
       note.textContent = steps[i].note;
       note.className = `step-note${/COLLISION|collide|lost/.test(steps[i].note) ? " bad" : i === steps.length - 1 ? " good" : ""}`;
+      d3?.show(i);
     } });
-    return h("section", { class: "card" }, h("h2", null, title), player.el, note, traceLayout(h("div", null, stage, below), c, v), ...extra);
+    if (!three) return h("section", { class: "card" }, h("h2", null, title), player.el, note, traceLayout(h("div", null, stage, below), c, v), ...extra);
+    const host3d = h("div", { class: "d3-host", hidden: true });
+    const pair = h("div", { class: "view-pair" }, stage, host3d);
+    live = { host: host3d, flat: [stage], pair, args: three };
+    return h("section", { class: "card" }, h("div", { class: "d3-head" }, h("h2", null, title), toggle.el), player.el, note, traceLayout(h("div", null, pair, below), c, v), ...extra);
   }
 
   function update() {
     player?.destroy(); player = null;
+    drop3d();
+    live = null;
     writeParams({ m: state.mode, a: state.aloha, G: state.G, n: state.n, t: state.slots, s: state.seed, st: state.stations, f: state.frame, ba: state.bA, bc: state.bC, rts: state.rts ? 1 : 0 });
     for (const [k, el] of Object.entries(opts)) el.hidden = k !== state.mode;
     try {
@@ -165,7 +194,7 @@ export function render(root) {
           traceCard(`${state.aloha === "pure" ? "Pure" : "Slotted"} ALOHA: ${state.n} stations, G = ${state.G}`, r.steps, ALOHA_CODE[state.aloha], (st) => [alohaLanes(r, st.upto)], [
             h("div", { class: "stats-row" }, stat("Frames sent", r.frames.length), stat("Got through", r.successes), stat("Collided", r.collided), stat("Measured S", pct(r.S)), stat("Formula S", pct(throughput(r.offered, state.aloha)))),
             h("div", { class: "row" }, reroll, h("span", { class: "muted small" }, "A short run is noisy; the formula is what happens on average over a long run.")),
-          ]));
+          ], { r, mode: "aloha" }));
       } else if (state.mode === "csmacd") {
         const stations = parseStations(state.stations);
         const r = csmacd({ stations, frameSlots: state.frame, seed: state.seed });
@@ -175,7 +204,7 @@ export function render(root) {
             h("div", { class: "stats-row" }, stat("Slots used", r.slots), stat("Collisions", r.collisions), ...r.stations.map((s) => stat(`${s.name} collisions`, s.collisions))),
             h("div", { class: "row" }, reroll, h("span", { class: "muted small" }, "Each re-roll draws new random backoffs.")),
             h("p", { class: "muted small" }, "After the first collision two stations each pick 0 or 1, so they collide again with probability 1/2; after the second, 0–3, so 1/4; the range doubles each time, which is why contention clears quickly."),
-          ]),
+          ], { r, mode: "csmacd", names }),
           minFrameCard());
       } else {
         const r = csmaca({ backoffs: { A: state.bA, C: state.bC }, rtscts: state.rts, seed: state.seed });
@@ -184,6 +213,7 @@ export function render(root) {
           h("p", { class: "muted small" }, "Try equal backoffs to see a collision. Without RTS/CTS a collision wastes a whole DATA frame; with it, only the short RTS frames."),
         ]));
       }
+      if (live && toggle.mode !== "2d") mount3d();
     } catch (e) { msg.replaceChildren(notice("error", e.message)); out.replaceChildren(); }
   }
 
@@ -243,5 +273,5 @@ export function render(root) {
 
   mountTabs(root, head, visual, practice, newQuestion);
   update();
-  return () => player?.destroy();
+  return () => { player?.destroy(); drop3d(); };
 }

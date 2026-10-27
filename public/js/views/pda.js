@@ -4,6 +4,7 @@ import { codePanel, traceLayout, varsPanel } from "../code.js";
 import { stateDiagram, treeDiagram } from "../diagram.js";
 import { copyLink, h, morph, notice, page, readParams, rng, stepper, writeParams } from "../ui.js";
 import { choice, exampleSelect, inputStrip, mountTabs, numberQuestion, randomString, stat } from "./kit.js";
+import { viewToggle } from "../three-kit.js";
 
 const SLOT = 34, SHOWN = 14;
 
@@ -67,6 +68,26 @@ export function render(root) {
     w: p.get("w") ?? (p.get("mode") === "cfg" ? GRAMMARS.expr.input : EXAMPLES.wwr.input),
   };
   let players = [];
+  // Optional 3D view of the replayed branch: loaded only when chosen, rebuilt when the inputs change.
+  let d3 = null, gen = 0, live = null;
+  const drop3d = () => { gen++; d3?.dispose(); d3 = null; };
+  const toggle = viewToggle("pushdown-automata", () => mount3d());
+  async function mount3d() {
+    drop3d();
+    if (!live) return;
+    const my = gen, { host, flat, pair } = live, mode = toggle.mode, on = mode !== "2d";
+    host.hidden = !on;
+    for (const el of flat) el.hidden = mode === "3d";
+    pair.classList.toggle("both", mode === "both");
+    if (!on) { host.replaceChildren(); return; }
+    try {
+      const { pdaScene } = await import("./pda-3d.js");
+      const sc = await pdaScene(host, { ...live.args, height: matchMedia("(max-width: 600px)").matches ? 300 : 400 });
+      if (my !== gen) { sc.dispose(); return; }
+      d3 = sc;
+      d3.show(live.player?.index ?? 0, true);
+    } catch (e) { host.replaceChildren(notice("error", `3D view unavailable: ${e.message}`)); }
+  }
   const head = page({
     subject: "Theory of computation", title: "Pushdown automata",
     lede: "A finite automaton with a stack. Watch a nondeterministic PDA try every choice at once, then replay the branch that accepts with the stack pushing and popping.",
@@ -104,6 +125,8 @@ export function render(root) {
   function update() {
     players.forEach((x) => x.destroy());
     players = [];
+    drop3d();
+    live = null;
     writeParams(state.mode === "pda" ? { pda: state.pda, w: state.w } : { mode: "cfg", g: state.g, w: state.w });
     let pda, g = null, conv = null, tokens, res;
     try {
@@ -167,17 +190,21 @@ export function render(root) {
         note2.className = `step-note${last ? (res.accepted ? " good" : " bad") : ""}`;
         pathCode.show(!t ? 1 : last && res.accepted ? [6, 7, 4] : [6, 7]);
         pathVars.show({ state: c.state, read: t ? t.input : "–", pop: t ? t.pop : "–", push: t ? showPush(t.push) : "–", unread: res.rest(c.pos), "stack (top first)": res.stackText(c.stack) });
+        d3?.show(j);
       },
     });
     players.push(p2);
+    const stage2d = h("div", { class: "pda-stage" }, h("div", null, h("h3", { class: "small muted" }, "Stack"), stackBox), h("div", { class: "pda-side" }, h("h3", { class: "small muted" }, conv ? "Leftmost derivation so far" : "State diagram"), side));
+    const host3d = h("div", { class: "d3-host", hidden: true });
+    const pair = h("div", { class: "view-pair" }, stage2d, host3d);
 
     const sections = [
       h("section", { class: "card" }, h("h2", null, "Breadth-first search over configurations"), p1.el, note,
         traceLayout(h("div", null, treeBox, partial,
           h("div", { class: "legend-chips" }, h("span", null, h("i", { style: "--c:var(--muted)" }), "dashed: queued, not yet expanded"), h("span", null, h("i", { style: "--c:var(--bad)" }), "branch dies"), h("span", null, h("i", { style: "--c:var(--accent)" }), "accepting"))), code, vars),
         h("div", { class: "stats-row" }, stat("Configurations", res.configs.length), stat("Branch length", path.length - 1), stat("Deterministic", pda.deterministic ? "Yes" : "No"), stat("Result", verdictText))),
-      h("section", { class: "card" }, h("h2", null, res.accepted ? "The accepting branch, move by move" : "The branch that got furthest"), p2.el, strip,
-        traceLayout(h("div", { class: "pda-stage" }, h("div", null, h("h3", { class: "small muted" }, "Stack"), stackBox), h("div", { class: "pda-side" }, h("h3", { class: "small muted" }, conv ? "Leftmost derivation so far" : "State diagram"), side)), pathCode, pathVars, null),
+      h("section", { class: "card" }, h("div", { class: "d3-head" }, h("h2", null, res.accepted ? "The accepting branch, move by move" : "The branch that got furthest"), toggle.el), p2.el, strip,
+        traceLayout(pair, pathCode, pathVars, null),
         note2),
     ];
     if (conv) {
@@ -192,6 +219,8 @@ export function render(root) {
         h("p", { class: "muted small" }, `Accepts by ${pda.mode === "empty" ? "empty stack" : `final state (${pda.accept.join(", ")})`}. Initial stack symbol ${pda.bottom}. ${pda.deterministic ? "At most one move ever applies, so this PDA is deterministic." : "Some situations allow more than one move, so this PDA is nondeterministic."}`)));
     }
     out.replaceChildren(...sections);
+    live = { host: host3d, flat: [strip, stage2d], pair, player: p2, args: { res, pda, tokens } };
+    if (toggle.mode !== "2d") mount3d();
   }
 
   const visual = h("div", { class: "panel-body" },
@@ -235,5 +264,5 @@ export function render(root) {
   syncInputs();
   mountTabs(root, head, visual, practice, newQuestion);
   update();
-  return () => players.forEach((x) => x.destroy());
+  return () => { players.forEach((x) => x.destroy()); drop3d(); };
 }
