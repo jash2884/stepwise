@@ -9,6 +9,15 @@
 // - N-step SCAN splits the queue, in arrival order, into batches of N and runs
 //   SCAN on one batch at a time; requests in later batches wait their turn even
 //   if the head passes over them.
+// - F-SCAN keeps two queues. Requests can carry an arrival time ("98@12"; plain
+//   "98" means time 0). The head moves 1 cylinder per time unit and serving a
+//   request takes no extra time. At time 0 the active queue is every request
+//   that has arrived; it is frozen and served with SCAN (exactly as one N-step
+//   batch), while anything arriving meanwhile goes into the waiting queue, even
+//   if the head passes over its cylinder. When the active queue empties the two
+//   swap; a request arriving at that exact moment is included. If both are empty
+//   the head waits, without moving, for the next arrival. Direction carries over
+//   from one sweep to the next. Other algorithms ignore arrival times.
 
 const START = "head ← start; total ← 0";
 export const ALGORITHMS = {
@@ -19,22 +28,37 @@ export const ALGORITHMS = {
   look: { name: "LOOK", direction: true, code: [START, "serve the requests ahead, nearest first", "reverse at the last request  // no trip to the edge", "serve the remaining requests, nearest first"] },
   clook: { name: "C-LOOK", direction: true, circular: true, code: [START, "serve the requests ahead, nearest first", "jump back to the furthest pending request at the other end", "serve the rest, moving in the same direction as before"] },
   nstep: { name: "N-step SCAN", direction: true, batch: true, code: [START, "split the queue into batches of N, in arrival order", "for each batch B", "  serve B's requests ahead, nearest first", "  if B has requests behind then go to the end and reverse", "  serve the rest of B  // later batches wait, even if the head passes them"] },
+  fscan: { name: "F-SCAN", direction: true, batch: true, timed: true, code: ["head ← start; total ← 0; t ← 0  // the head moves 1 cylinder per time unit", "active ← requests arrived by t; waiting ← empty", "repeat until no requests remain", "  serve active's requests ahead, nearest first  // arrivals join waiting", "  if active has requests behind then go to the end and reverse", "  serve the rest of active  // waiting is frozen out, even if the head passes it", "  swap: active ← waiting; waiting ← empty  // idle until an arrival if both are empty"] },
 };
 
-export function parseRequests(text) {
-  const reqs = String(text).trim().split(/[\s,]+/).filter(Boolean).map(Number);
-  if (!reqs.length) throw new Error("Enter the request queue, e.g. 98 183 37 122.");
-  if (reqs.length > 30) throw new Error("Use at most 30 requests.");
-  return reqs;
+// Requests are cylinders, each optionally followed by @time: "98@0 183@12 37".
+export function parseArrivals(text) {
+  const tokens = String(text).trim().split(/[\s,]+/).filter(Boolean);
+  if (!tokens.length) throw new Error("Enter the request queue, e.g. 98 183 37 122.");
+  if (tokens.length > 30) throw new Error("Use at most 30 requests.");
+  const requests = [], arrivals = [];
+  for (const t of tokens) {
+    const m = /^(-?\d*\.?\d+)(?:@(\d+))?$/.exec(t);
+    if (!m) throw new Error(`Couldn't read "${t}". Write a cylinder, or cylinder@time for F-SCAN (e.g. 98@12).`);
+    requests.push(Number(m[1]));
+    arrivals.push(m[2] === undefined ? 0 : Number(m[2]));
+  }
+  if (arrivals.some((a) => a > 100000)) throw new Error("Arrival times must be whole numbers from 0 to 100000.");
+  return { requests, arrivals };
 }
 
-export function schedule(requests, head, algo, { cylinders = 200, direction = "up", countJump = true, n = 4 } = {}) {
+export const parseRequests = (text) => parseArrivals(text).requests;
+
+export const formatArrivals = (requests, arrivals = []) => requests.map((r, i) => (arrivals[i] ? `${r}@${arrivals[i]}` : String(r))).join(" ");
+
+export function schedule(requests, head, algo, { cylinders = 200, direction = "up", countJump = true, n = 4, arrivals = [] } = {}) {
   if (!ALGORITHMS[algo]) throw new Error(`Unknown algorithm ${algo}`);
   if (!Number.isInteger(cylinders) || cylinders < 2 || cylinders > 10000) throw new Error("Cylinders must be between 2 and 10000.");
   if (algo === "nstep" && !(Number.isInteger(n) && n >= 1 && n <= 30)) throw new Error("N must be a whole number from 1 to 30.");
   const max = cylinders - 1;
   for (const r of [head, ...requests]) if (!Number.isInteger(r) || r < 0 || r > max) throw new Error(`Cylinders must be whole numbers from 0 to ${max}.`);
 
+  if (algo === "fscan") return fscan(requests, head, { max: cylinders - 1, direction, arrivals });
   const path = [head];
   const moves = [];
   const pending = [...requests];
@@ -115,9 +139,83 @@ export function schedule(requests, head, algo, { cylinders = 200, direction = "u
   return { path, moves, total, order: served, average: total / requests.length, initial };
 }
 
+// F-SCAN: two queues. The active one is frozen and swept with SCAN while new
+// arrivals collect in the waiting one; when the active queue empties they swap.
+function fscan(requests, head, { max, direction, arrivals }) {
+  const at = requests.map((_, i) => arrivals[i] ?? 0);
+  if (at.some((a) => !Number.isInteger(a) || a < 0)) throw new Error("Arrival times must be whole numbers from 0 upwards.");
+  const reqs = requests.map((c, i) => ({ id: i, c, at: at[i] }));
+  const label = (q) => `${q.c}@${q.at}`;
+  const served = new Set();
+  let pos = head, t = 0, total = 0, dir = direction, active = [], sweep = 0;
+  const moves = [], path = [head];
+  const arrived = () => reqs.filter((q) => q.at <= t && !served.has(q.id));
+  const waiting = () => arrived().filter((q) => !active.includes(q));
+  const vars = (extra = {}) => ({
+    head: pos, t, total, direction: dir === "up" ? `towards ${max}` : "towards 0",
+    active: active.map(label), waiting: waiting().map(label),
+    "not arrived": reqs.filter((q) => q.at > t).map(label),
+    pending: reqs.filter((q) => !served.has(q.id)).map((q) => q.c), ...extra,
+  });
+  const snap = () => ({ active: active.map((q) => q.id), waiting: waiting().map((q) => q.id), later: reqs.filter((q) => q.at > t).map((q) => q.id), served: [...served] });
+  const step = (to, kind, note, line, req = null) => {
+    const from = pos, distance = Math.abs(to - from);
+    t += distance; total += distance; pos = to;
+    if (req) { served.add(req.id); active.splice(active.indexOf(req), 1); }
+    const fresh = reqs.filter((q) => q.at > t - distance && q.at <= t && !active.includes(q) && !served.has(q.id));
+    const lo = Math.min(from, to), hi = Math.max(from, to);
+    const passed = kind === "swap" ? [] : reqs.filter((q) => q.at <= t - distance && !served.has(q.id) && !active.includes(q) && q.c > lo && q.c < hi);
+    const skipped = passed.length ? ` On the way it passes ${passed.map((q) => q.c).join(", ")}, but ${passed.length === 1 ? "that request is" : "those requests are"} in the waiting queue, so the head doesn't stop.` : "";
+    const joined = kind !== "swap" && fresh.length ? ` Meanwhile ${fresh.map(label).join(", ")} arrived and joined the waiting queue: the active queue is frozen.` : "";
+    moves.push({ from, to, distance, kind, total, time: t, id: req?.id ?? null, note: note + skipped + joined, line, vars: vars(), queues: snap() });
+    path.push(to);
+  };
+  const swap = (first) => {
+    const idle = arrived().length ? 0 : Math.min(...reqs.filter((q) => !served.has(q.id)).map((q) => q.at)) - t;
+    t += idle;
+    active = arrived().sort((a, b) => a.at - b.at || a.id - b.id);
+    sweep++;
+    const names = active.map(label).join(", ");
+    if (first) return idle;
+    step(pos, "swap", `${idle ? `Both queues are empty, so the head waits at ${pos} until t = ${t}, when the next request arrives. ` : ""}The active queue is empty, so the queues swap: ${names} ${active.length === 1 ? "becomes" : "become"} the active queue for sweep ${sweep}, and a new empty waiting queue starts collecting arrivals.`, 7);
+    return idle;
+  };
+  const idle0 = swap(true);
+  const initial = {
+    line: [1, 2],
+    vars: vars(),
+    queues: snap(),
+    note: `The head starts at cylinder ${head}${idle0 ? `, but nothing has arrived until t = ${t}, so it waits there` : ""}, moving ${direction === "up" ? "towards higher cylinders" : "towards 0"}. The active queue is frozen as ${active.map(label).join(", ")}; anything that arrives from now on waits in the other queue.`,
+  };
+  while (served.size < reqs.length) {
+    if (!active.length) swap(false);
+    const up = dir === "up";
+    const a = active.filter((q) => (up ? q.c >= pos : q.c <= pos)).sort((x, y) => (up ? x.c - y.c : y.c - x.c) || x.id - y.id);
+    const be = active.filter((q) => (up ? q.c < pos : q.c > pos)).sort((x, y) => (up ? y.c - x.c : x.c - y.c) || x.id - y.id);
+    const k = sweep;
+    a.forEach((q, j) => step(q.c, "serve", `Move ${pos} → ${q.c} (${Math.abs(q.c - pos)} cylinders, now t = ${t + Math.abs(q.c - pos)}): sweep ${k} is going ${up ? "up" : "down"} and ${q.c} is the nearest active request ${up ? "above" : "below"} the head${a.length - j > 1 ? ` (the other active ones ahead: ${a.slice(j + 1).map((x) => x.c).join(", ")})` : ""}.`, j === 0 ? [3, 4] : 4, q));
+    if (be.length) {
+      const edge = up ? max : 0;
+      if (pos !== edge) step(edge, "edge", `Sweep ${k} still has ${be.map((q) => q.c).join(", ")} behind the head, so carry on to the end of the disk (${edge}) and reverse, as SCAN does.`, 5);
+      dir = up ? "down" : "up";
+      be.forEach((q) => step(q.c, "serve", `Move ${pos} → ${q.c} (${Math.abs(q.c - pos)} cylinders, now t = ${t + Math.abs(q.c - pos)}): the rest of sweep ${k}, now moving ${up ? "down" : "up"}.`, 6, q));
+    }
+  }
+  const order = moves.filter((m) => m.kind === "serve").map((m) => m.to);
+  return { path, moves, total, order, average: total / requests.length, initial, sweeps: sweep };
+}
+
 export function randomQueue(r = Math.random, cylinders = 200) {
   const n = 7 + Math.floor(r() * 4);
   return { requests: Array.from({ length: n }, () => Math.floor(r() * cylinders)), head: Math.floor(r() * cylinders) };
 }
 
 export const EXAMPLE = { requests: [98, 183, 37, 122, 14, 124, 65, 67], head: 53, cylinders: 200 };
+
+// Arrival times for F-SCAN: about half the queue is there at the start and the
+// rest trickles in, in multiples of 10, in the order listed.
+export const randomArrivals = (r = Math.random, n = 8) =>
+  Array.from({ length: n }, () => (r() < 0.5 ? 0 : 10 * (1 + Math.floor(r() * 20)))).sort((a, b) => a - b);
+
+// The Silberschatz queue with the last four requests arriving mid-sweep.
+export const FSCAN_EXAMPLE = { requests: [98, 183, 37, 122, 14, 124, 65, 67], arrivals: [0, 0, 0, 0, 20, 20, 60, 60], head: 53, cylinders: 200 };

@@ -1,5 +1,5 @@
 import { codePanel, traceLayout, varsPanel } from "../code.js";
-import { ALGORITHMS, EXAMPLE, parseRequests, randomQueue, schedule } from "../engines/disk.js";
+import { ALGORITHMS, EXAMPLE, FSCAN_EXAMPLE, formatArrivals, parseArrivals, randomArrivals, randomQueue, schedule } from "../engines/disk.js";
 import { copyLink, fmt, h, morph, notice, page, readParams, rng, stepper, tabs, writeParams } from "../ui.js";
 
 // Classic textbook chart: cylinders across the top, time going down.
@@ -44,6 +44,32 @@ function headStrip(result, cylinders, upto, requests) {
       h("text", { x: x(pos), y: 52, "text-anchor": "middle" }, pos)));
 }
 
+// F-SCAN's two queues (plus requests still to arrive and those served), with
+// each request gliding from row to row as it arrives, is swapped in and is served.
+const ROWS = [["active", "Active queue (frozen, being swept)"], ["waiting", "Waiting queue (new arrivals)"], ["later", "Not arrived yet"], ["served", "Served"]];
+function queueSvg(result, requests, arrivals, i) {
+  const PER = 7, TW = 44, TH = 38, GX = 6, GY = 6, W = PER * (TW + GX) + 10;
+  const all = [result.initial, ...result.moves].map((s) => s.queues);
+  const rows = ROWS.map(([k]) => Math.max(1, Math.ceil(Math.max(...all.map((q) => q[k].length)) / PER)));
+  const q = all[i], swapped = i > 0 && result.moves[i - 1].kind === "swap", just = i > 0 ? result.moves[i - 1].id : null;
+  const els = [];
+  let y = 0;
+  ROWS.forEach(([k, name], r) => {
+    els.push(h("text", { x: 4, y: y + 13, class: "pf-label" }, `${name}${k === "active" && swapped ? ": just swapped in" : ""}`));
+    y += 20;
+    els.push(h("rect", { x: 0, y: y - 3, width: W, height: rows[r] * (TH + GY) + 2, rx: 8, class: `fq-lane ${k}` }));
+    q[k].forEach((id, j) => {
+      const x = 5 + (j % PER) * (TW + GX), ty = y + Math.floor(j / PER) * (TH + GY);
+      els.push(h("g", { class: `fq-tok ${k}${id === just ? " now" : ""}`, "data-k": `q:${id}`, "data-x": x, "data-y": ty },
+        h("rect", { x, y: ty, width: TW, height: TH, rx: 7 }),
+        h("text", { x: x + TW / 2, y: ty + 17, "text-anchor": "middle", class: "fq-cyl" }, requests[id]),
+        h("text", { x: x + TW / 2, y: ty + 31, "text-anchor": "middle", class: "fq-at" }, `@${arrivals[id] ?? 0}`)));
+    });
+    y += rows[r] * (TH + GY) + 8;
+  });
+  return h("svg", { viewBox: `0 0 ${W} ${y}`, class: "fq-svg", role: "img", "aria-label": ROWS.map(([k, name]) => `${name}: ${q[k].map((id) => requests[id]).join(", ") || "empty"}`).join(". ") }, els);
+}
+
 function compare(requests, head, opts) {
   const rows = Object.entries(ALGORITHMS).map(([id, a]) => ({ id, name: id === "nstep" ? `${a.name} (N = ${opts.n})` : a.name, total: schedule(requests, head, id, opts).total }));
   const best = Math.min(...rows.map((r) => r.total));
@@ -77,9 +103,10 @@ export function render(root) {
         h("li", null, h("b", null, "SSTF"), " always goes to the nearest request. Short seeks, but distant requests can starve."),
         h("li", null, h("b", null, "SCAN"), " sweeps to one end of the disk, then reverses, like a lift. ", h("b", null, "LOOK"), " reverses at the last request instead of the edge."),
         h("li", null, h("b", null, "C-SCAN / C-LOOK"), " only serve in one direction, then jump back to the start for more uniform waiting times."),
-        h("li", null, h("b", null, "N-step SCAN"), " splits the queue into batches of N requests and SCANs one batch at a time. New requests can't keep pulling the head back to the same busy area (\u201carm stickiness\u201d), because they wait for a later batch. ", h("b", null, "F-SCAN"), " is the two-batch version: everything already queued is one batch, and anything that arrives during the sweep waits for the next.")),
+        h("li", null, h("b", null, "N-step SCAN"), " splits the queue into batches of N requests and SCANs one batch at a time. New requests can't keep pulling the head back to the same busy area (\u201carm stickiness\u201d), because they wait for a later batch."),
+        h("li", null, h("b", null, "F-SCAN"), " is the two-queue version. When a sweep starts, the active queue is frozen; anything that arrives during the sweep goes into the other queue. When the sweep has served the whole active queue, the two queues swap. Give requests arrival times (98@12) to see it.")),
       h("p", null, "Seek time is roughly proportional to the distance the arm travels, so every algorithm here is judged on ", h("b", null, "total head movement"), " in cylinders.")),
-    conventions: ["Cylinders are numbered 0 to (cylinders − 1).", "SSTF ties go to the request that arrived first.", "SCAN and C-SCAN go all the way to the edge; LOOK and C-LOOK turn at the last request.", "The C-SCAN/C-LOOK return jump counts as head movement unless you untick it (textbooks differ).", "N-step SCAN batches the queue in arrival order; within a batch it behaves like SCAN (to the edge before reversing)."],
+    conventions: ["Cylinders are numbered 0 to (cylinders − 1).", "A request can carry an arrival time, written cylinder@time (e.g. 98@12); a plain cylinder arrives at time 0. Only F-SCAN uses arrival times: every other algorithm treats the whole queue as present from the start.", "F-SCAN: the head moves 1 cylinder per time unit and serving a request takes no extra time. The active queue is frozen and swept with SCAN (to the edge before reversing, like one N-step batch); arrivals wait in the other queue even if the head passes their cylinder. When the active queue empties the queues swap, and a request arriving at that exact moment is included. If nothing is waiting, the head stays put until the next arrival. The direction carries over from one sweep to the next.", "SSTF ties go to the request that arrived first.", "SCAN and C-SCAN go all the way to the edge; LOOK and C-LOOK turn at the last request.", "The C-SCAN/C-LOOK return jump counts as head movement unless you untick it (textbooks differ).", "N-step SCAN batches the queue in arrival order; within a batch it behaves like SCAN (to the edge before reversing)."],
   });
 
   const reqIn = h("input", { type: "text", class: "wide", value: state.requests, "aria-label": "Request queue", oninput: (e) => { state.requests = e.target.value; update(); } });
@@ -98,28 +125,33 @@ export function render(root) {
     jumpBox.hidden = !ALGORITHMS[state.algo].circular;
     let requests, result;
     const opts = { cylinders: state.cylinders, direction: state.direction, countJump: state.countJump, n: state.n };
-    try { requests = parseRequests(state.requests); result = schedule(requests, state.head, state.algo, opts); } catch (e) { msg.replaceChildren(notice("error", e.message)); out.replaceChildren(); return; }
+    let arrivals;
+    try { ({ requests, arrivals } = parseArrivals(state.requests)); opts.arrivals = arrivals; result = schedule(requests, state.head, state.algo, opts); } catch (e) { msg.replaceChildren(notice("error", e.message)); out.replaceChildren(); return; }
     msg.replaceChildren();
     const stage = h("div", { class: "chart-wrap" }), note = h("p", { class: "step-note", "aria-live": "polite" }), running = h("p", { class: "muted small" });
     const strip = h("div", { class: "chart-wrap" });
+    const timed = ALGORITHMS[state.algo].timed;
+    const queues = timed ? h("div", { class: "chart-wrap fq-wrap" }) : null;
     const code = codePanel(ALGORITHMS[state.algo].code), vars = varsPanel();
     player = stepper({
       count: result.path.length, label: "Move", interval: 900,
       render: (i) => {
         stage.replaceChildren(chart(result, state.cylinders, i, requests, state.head));
         morph(strip, headStrip(result, state.cylinders, i, requests));
+        if (queues) morph(queues, queueSvg(result, requests, arrivals, i));
         const st = i === 0 ? result.initial : result.moves[i - 1];
         note.textContent = st.note;
         code.show(st.line);
         vars.show(st.vars);
-        running.textContent = `Head movement so far: ${i ? result.moves[i - 1].total : 0} cylinders.`;
+        running.textContent = `Head movement so far: ${i ? result.moves[i - 1].total : 0} cylinders.${timed ? ` Time t = ${st.vars.t}.` : ""}`;
       },
     });
     out.replaceChildren(
       h("section", { class: "card" }, h("h2", null, ALGORITHMS[state.algo].name), player.el, note,
-        traceLayout(h("div", null, strip, stage, running), code, vars),
+        traceLayout(h("div", null, queues, strip, stage, running), code, vars),
         h("div", { class: "stats-row" },
           h("div", { class: "stat" }, h("span", null, "Total head movement"), h("b", null, result.total)),
+          timed ? h("div", { class: "stat" }, h("span", null, "Sweeps"), h("b", null, result.sweeps)) : null,
           h("div", { class: "stat" }, h("span", null, "Average seek"), h("b", null, fmt(result.average))),
           h("div", { class: "stat wide-stat" }, h("span", null, "Service order"), h("b", { class: "mono order" }, result.order.join(" → "))))),
       compare(requests, state.head, opts));
@@ -127,16 +159,22 @@ export function render(root) {
 
   const visual = h("div", { class: "panel-body" },
     h("section", { class: "card inputs" },
-      h("label", { class: "stack" }, "Request queue (cylinders, in arrival order)", reqIn),
+      h("label", { class: "stack" }, "Request queue (cylinders in arrival order; add @time for F-SCAN, e.g. 14@20)", reqIn),
       h("div", { class: "row" }, num("head", "Head at", 0, 9999), num("cylinders", "Cylinders", 2, 10000), algoSel, dirSel, nIn, jumpBox),
       h("div", { class: "row" },
         h("button", { type: "button", class: "btn ghost", onclick: () => {
           const q = randomQueue(Math.random, state.cylinders);
+          const text = ALGORITHMS[state.algo].timed ? formatArrivals(q.requests, randomArrivals(Math.random, q.requests.length)) : q.requests.join(" ");
           player?.destroy();
-          writeParams({ r: q.requests.join(" "), h: q.head, c: state.cylinders, algo: state.algo, dir: state.direction, jump: state.countJump ? 1 : 0, n: state.n });
+          writeParams({ r: text, h: q.head, c: state.cylinders, algo: state.algo, dir: state.direction, jump: state.countJump ? 1 : 0, n: state.n });
           render(root);
         } }, "Random"),
         h("button", { type: "button", class: "btn ghost", onclick: () => { player?.destroy(); history.replaceState(null, "", location.pathname); render(root); } }, "Textbook example"),
+        h("button", { type: "button", class: "btn ghost", onclick: () => {
+          player?.destroy();
+          writeParams({ r: formatArrivals(FSCAN_EXAMPLE.requests, FSCAN_EXAMPLE.arrivals), h: FSCAN_EXAMPLE.head, c: FSCAN_EXAMPLE.cylinders, algo: "fscan", dir: "up", jump: 1, n: state.n });
+          render(root);
+        } }, "F-SCAN example"),
         h("button", { type: "button", class: "btn ghost", onclick: (e) => copyLink(e.currentTarget) }, "Copy link")),
       msg),
     out);
@@ -144,10 +182,13 @@ export function render(root) {
   const practice = h("div", { class: "panel-body" });
   function newQuestion() {
     const r = rng();
-    const algo = Object.keys(ALGORITHMS)[Math.floor(r() * 6)]; // N-step SCAN is left to the visualiser
+    // N-step SCAN is left to the visualiser; F-SCAN comes up as often as the others.
+    const algo = [...Object.keys(ALGORITHMS).slice(0, 6), "fscan"][Math.floor(r() * 7)];
     const direction = r() < 0.5 ? "up" : "down";
     const q = randomQueue(r);
-    const opts = { cylinders: 200, direction, countJump: true };
+    const timed = ALGORITHMS[algo].timed;
+    const arrivals = timed ? randomArrivals(r, q.requests.length) : [];
+    const opts = { cylinders: 200, direction, countJump: true, arrivals };
     const truth = schedule(q.requests, q.head, algo, opts);
     const totalIn = h("input", { type: "number", "aria-label": "Total head movement" });
     const orderIn = h("input", { type: "text", class: "wide mono", placeholder: "e.g. 65 67 37 14", "aria-label": "Service order" });
@@ -156,7 +197,8 @@ export function render(root) {
     practice.replaceChildren(h("section", { class: "card" },
       h("div", { class: "row" }, h("button", { type: "button", class: "btn ghost", onclick: newQuestion }, "New question")),
       h("h2", null, `${ALGORITHMS[algo].name}${ALGORITHMS[algo].direction ? `, moving ${direction === "up" ? "towards higher cylinders" : "towards 0"}` : ""}`),
-      h("p", null, "Queue: ", h("b", { class: "mono" }, q.requests.join(", ")), ` · head at ${q.head} · cylinders 0–199${ALGORITHMS[algo].circular ? " · count the return jump" : ""}.`),
+      h("p", null, "Queue: ", h("b", { class: "mono" }, timed ? q.requests.map((c, i) => `${c}@${arrivals[i]}`).join(", ") : q.requests.join(", ")), ` · head at ${q.head} · cylinders 0–199${ALGORITHMS[algo].circular ? " · count the return jump" : ""}.`),
+      timed ? h("p", { class: "muted small" }, "cylinder@time is the arrival time. The head moves 1 cylinder per time unit; a request that arrives during a sweep waits for the next one, and the queues swap when the active one is empty.") : null,
       h("div", { class: "qa" }, h("label", null, "Total head movement", totalIn), h("label", null, "Order the requests are served", orderIn)),
       h("div", { class: "row" },
         h("button", { type: "button", class: "btn primary", onclick: () => {
@@ -168,8 +210,13 @@ export function render(root) {
         } }, "Check"),
         h("button", { type: "button", class: "btn ghost", onclick: () => {
           const stage = h("div", { class: "chart-wrap" }), note = h("p", { class: "step-note" });
-          const pl = stepper({ count: truth.path.length, label: "Move", render: (i) => { stage.replaceChildren(chart(truth, 200, i, q.requests, q.head)); note.textContent = i ? truth.moves[i - 1].note : `Start at ${q.head}.`; } });
-          solution.replaceChildren(h("section", { class: "card" }, h("h2", null, `Solution: ${truth.total} cylinders`), pl.el, stage, note));
+          const lanes = timed ? h("div", { class: "chart-wrap fq-wrap" }) : null;
+          const pl = stepper({ count: truth.path.length, label: "Move", render: (i) => {
+            stage.replaceChildren(chart(truth, 200, i, q.requests, q.head));
+            if (lanes) morph(lanes, queueSvg(truth, q.requests, arrivals, i));
+            note.textContent = i ? truth.moves[i - 1].note : timed ? truth.initial.note : `Start at ${q.head}.`;
+          } });
+          solution.replaceChildren(h("section", { class: "card" }, h("h2", null, `Solution: ${truth.total} cylinders`), pl.el, note, lanes, stage));
         } }, "Show solution")),
       feedback), solution);
   }
