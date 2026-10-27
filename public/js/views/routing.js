@@ -2,6 +2,9 @@ import { dijkstra, DIJKSTRA_CODE, distanceVector, DV_CODE, EXAMPLES, flood, FLOO
 import { codePanel, traceLayout, varsPanel } from "../code.js";
 import { copyLink, h, morph, notice, page, readParams, rng, stepper, tabs, writeParams } from "../ui.js";
 import { packet } from "./net.js";
+import { view3d } from "../view3d.js";
+
+const scene3d = (g) => (box) => import("../net3d.js").then((m) => m.routingScene(box, g));
 
 const inf = (c) => (c === Infinity ? "∞" : c);
 const same = (l, a, b) => (l.a === a && l.b === b) || (l.a === b && l.b === a);
@@ -53,6 +56,7 @@ export function render(root) {
     change: p.get("chg") ?? "", poison: p.get("pr") === "1",
   };
   let player = null;
+  const v3 = view3d("routing");
   const head = page({
     subject: "Computer networks", title: "Routing algorithms",
     lede: "How routers find least-cost paths: link-state flooding and Dijkstra's algorithm, and the distance-vector algorithm with its count-to-infinity problem.",
@@ -82,24 +86,28 @@ export function render(root) {
 
   function forwardingCard(g, r) {
     const stage = h("div", { class: "chart-wrap" }), hops = h("ol", { class: "notes" });
+    const st3 = v3.stage(stage, scene3d(g));
     const reachable = r.table.filter((t) => t.path);
     const send = (dest) => {
       const t = r.table.find((x) => x.dest === dest);
       for (const b of picker.children) b.classList.toggle("on", b.dataset.dest === dest);
       morph(stage, networkSvg(g, { done: g.nodes, path: t.path, route: t.path }));
+      st3.show({ done: t.path, path: t.path, route: t.path, statusTone: { [dest]: "good" },
+        status: Object.fromEntries(t.path.map((x, i) => [x, i === t.path.length - 1 ? "destination" : `next hop → ${t.path[i + 1]}`])) });
       hops.replaceChildren(...t.path.slice(0, -1).map((x, i) => h("li", null, `At ${x}: the forwarding table says the next hop towards ${dest} is ${t.path[i + 1]}${i === 0 ? ` (total cost ${t.cost})` : ""}.`)), h("li", null, `The packet reaches ${dest}.`));
     };
     const picker = h("div", { class: "row" }, h("span", { class: "muted small" }, "Send a packet to:"), reachable.map((t) => h("button", { type: "button", class: "btn ghost small", "data-dest": t.dest, onclick: () => send(t.dest) }, t.dest)));
     const card = h("section", { class: "card" }, h("h2", null, `${state.source}'s forwarding table`), h("div", { class: "table-wrap" }, h("table", null,
       h("thead", null, h("tr", null, ["Destination", "Cost", "Next hop", "Path"].map((t) => h("th", { scope: "col" }, t)))),
       h("tbody", null, r.table.map((t) => h("tr", null, h("th", { scope: "row" }, t.dest), h("td", null, inf(t.cost)), h("td", null, t.next ?? "unreachable"), h("td", { class: "mono" }, t.path ? t.path.join(" → ") : "–")))))),
-    picker, h("div", { class: "grid-2 tight" }, stage, hops));
+    picker, h("div", { class: "grid-2 tight" }, st3.el, hops));
     if (reachable.length) queueMicrotask(() => send(reachable.at(-1).dest));
     return card;
   }
 
   function update() {
     player?.destroy();
+    v3.disposeAll();
     writeParams({ algo: state.algo, g: state.text.split("\n").map((l) => l.trim()).filter(Boolean).join(";"), src: state.source, chg: state.change, pr: state.poison ? 1 : 0 });
     lsOpts.hidden = state.algo === "dv"; dvOpts.hidden = state.algo !== "dv";
     let g;
@@ -108,6 +116,8 @@ export function render(root) {
     srcSel.replaceChildren(...g.nodes.map((n) => h("option", { value: n, selected: n === state.source }, n)));
     msg.replaceChildren();
     const stage = h("div", { class: "chart-wrap" }), table = h("div"), note = h("p", { class: "step-note", "aria-live": "polite" });
+    const st3 = v3.stage(stage, scene3d(g));
+    const shown = st3.el;
     if (state.algo === "ls") {
       const r = dijkstra(g, state.source);
       const code = codePanel(DIJKSTRA_CODE), vars = varsPanel();
@@ -115,6 +125,9 @@ export function render(root) {
         const s = r.steps[i];
         const tree = Object.entries(s.prev).filter(([n, v]) => v && (s.done.includes(n) || s.final)).map(([n, v]) => [n, v]);
         morph(stage, networkSvg(g, { current: s.current, done: s.done, tree, edge: s.edge, packets: s.edge ? [{ from: s.edge[0], to: s.edge[1], label: String(s.vars["D[u] + c"]), cls: "probe" }] : [] }));
+        st3.show({ current: s.current, done: s.done, tree, edge: s.edge,
+          status: Object.fromEntries(g.nodes.map((n) => [n, `D = ${inf(s.dist[n])}`])), statusTone: Object.fromEntries(s.done.map((n) => [n, "good"])),
+          packets: s.edge ? [{ from: s.edge[0], to: s.edge[1], kind: "probe", label: `${s.vars["D[u] + c"]}` }] : [] });
         table.replaceChildren(h("div", { class: "table-wrap" }, h("table", null,
           h("thead", null, h("tr", null, h("th", { scope: "col" }, "Router"), h("th", { scope: "col" }, "D"), h("th", { scope: "col" }, "prev"), h("th", { scope: "col" }, "In N′?"))),
           h("tbody", null, g.nodes.map((n) => h("tr", { class: n === s.current ? "current" : s.edge?.[1] === n ? "hot-row" : null }, h("th", { scope: "row" }, n), h("td", null, inf(s.dist[n])), h("td", null, s.prev[n] ?? "–"), h("td", null, s.done.includes(n) ? "✓" : "")))))));
@@ -123,7 +136,7 @@ export function render(root) {
         note.className = `step-note${s.final ? " good" : ""}`;
       } });
       out.replaceChildren(
-        h("section", { class: "card" }, h("h2", null, `Dijkstra from ${state.source}`), player.el, note, traceLayout(h("div", null, stage, table), code, vars)),
+        h("section", { class: "card" }, h("h2", null, `Dijkstra from ${state.source}`), player.el, note, traceLayout(h("div", null, shown, table), code, vars)),
         forwardingCard(g, r));
     } else if (state.algo === "flood") {
       const r = flood(g, state.source);
@@ -132,6 +145,9 @@ export function render(root) {
         const s = r.steps[i];
         morph(stage, networkSvg(g, { done: s.have, current: i === 0 ? state.source : null, changed: s.arriving.filter((m) => !m.dup).map((m) => m.to), drops: s.arriving.filter((m) => m.dup),
           packets: s.sending.map((m) => ({ from: m.from, to: m.to, label: `LSP ${state.source}`, cls: "lsp" })) }));
+        st3.show({ done: s.have, current: i === 0 ? state.source : null, changed: s.arriving.filter((m) => !m.dup).map((m) => m.to), changedTone: "good",
+          drops: s.arriving.filter((m) => m.dup), packets: s.sending.map((m) => ({ from: m.from, to: m.to, kind: "lsp" })),
+          status: Object.fromEntries(s.have.map((n) => [n, n === state.source ? "origin" : `got LSP t=${r.arrivedAt[n]}`])), statusTone: Object.fromEntries(s.have.map((n) => [n, "good"])) });
         table.replaceChildren(h("div", { class: "table-wrap" }, h("table", null,
           h("thead", null, h("tr", null, ["Router", `Has ${state.source}'s LSP?`, "Got it at"].map((t) => h("th", { scope: "col" }, t)))),
           h("tbody", null, g.nodes.map((n) => h("tr", null, h("th", { scope: "row" }, n), h("td", null, s.have.includes(n) ? "✓" : ""), h("td", null, s.have.includes(n) ? `t = ${r.arrivedAt[n]}` : "–")))))));
@@ -140,7 +156,7 @@ export function render(root) {
         note.className = `step-note${i === r.steps.length - 1 ? " good" : ""}`;
       } });
       const E = g.links.length, N = r.reached.length;
-      out.replaceChildren(h("section", { class: "card" }, h("h2", null, `Flooding ${state.source}'s link-state packet`), player.el, note, traceLayout(h("div", null, stage, table), code, vars),
+      out.replaceChildren(h("section", { class: "card" }, h("h2", null, `Flooding ${state.source}'s link-state packet`), player.el, note, traceLayout(h("div", null, shown, table), code, vars),
         h("div", { class: "stats-row" },
           h("div", { class: "stat" }, h("span", null, "Transmissions"), h("b", null, r.transmissions)),
           h("div", { class: "stat" }, h("span", null, "Duplicates dropped"), h("b", null, r.duplicates)),
@@ -163,6 +179,10 @@ export function render(root) {
         // Each round, every router sends its vector to each neighbour.
         const packets = i === 0 ? [] : g.links.flatMap((l) => [{ from: l.a, to: l.b, label: `D${l.a}`, cls: "dv" }, { from: l.b, to: l.a, label: `D${l.b}`, cls: "dv" }]);
         morph(stage, networkSvg(gNow, { changed: [...new Set(round.changes.map((c) => c.x))], packets }));
+        const perRouter = {};
+        for (const c of round.changes) (perRouter[c.x] ??= []).push(`to ${c.y}: ${inf(c.from)}→${inf(c.to)}`);
+        st3.show({ links: gNow.links, changed: Object.keys(perRouter), packets: packets.map((m) => ({ from: m.from, to: m.to, kind: "dv" })),
+          status: Object.fromEntries(Object.entries(perRouter).map(([x, list]) => [x, list.length > 2 ? `${list.slice(0, 2).join(", ")} +${list.length - 2}` : list.join(", ")])) });
         table.replaceChildren(h("div", { class: "table-wrap" }, h("table", { class: "dv" },
           h("thead", null, h("tr", null, h("th", { scope: "col" }, "From ↓ / to →"), g.nodes.map((n) => h("th", { scope: "col" }, n)))),
           h("tbody", null, g.nodes.map((x) => h("tr", null, h("th", { scope: "row" }, x), g.nodes.map((y) => {
@@ -174,14 +194,14 @@ export function render(root) {
         note.className = `step-note${i === r.rounds.length - 1 && r.finalStable ? " good" : ""}`;
       } });
       out.replaceChildren(h("section", { class: "card" }, h("h2", null, `Distance vector${change ? `, then ${change.a}-${change.b} becomes ${change.cost}` : ""}${state.poison ? " (poisoned reverse)" : ""}`), player.el, note,
-        traceLayout(h("div", null, stage, table), code, vars),
+        traceLayout(h("div", null, shown, table), code, vars),
         h("p", { class: "muted small" }, r.changedAt ? `Converged after ${r.convergedAt} round${r.convergedAt === 1 ? "" : "s"}; after the link change it took ${r.settledAt ? r.settledAt - r.changedAt : "more than 80"} more round${r.settledAt - r.changedAt === 1 ? "" : "s"} to settle.` : `Converged after ${r.convergedAt} round${r.convergedAt === 1 ? "" : "s"}. Each cell shows cost (next hop); highlighted cells changed this round.`)));
     }
   }
 
   const visual = h("div", { class: "panel-body" },
     h("section", { class: "card inputs" },
-      h("div", { class: "row" }, algoSel, exampleSel, lsOpts,
+      h("div", { class: "row" }, algoSel, exampleSel, lsOpts, v3.el,
         h("button", { type: "button", class: "btn ghost", onclick: () => { state.text = randomNetwork(); netIn.value = state.text; update(); } }, "Random network"),
         h("button", { type: "button", class: "btn ghost", onclick: (e) => copyLink(e.currentTarget) }, "Copy link")),
       dvOpts,
@@ -237,5 +257,5 @@ export function render(root) {
   root.replaceChildren(head, tab.el, panels);
   tab.select("visual");
   update();
-  return () => player?.destroy();
+  return () => { player?.destroy(); v3.disposeAll(); };
 }
