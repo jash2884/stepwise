@@ -112,17 +112,32 @@ export function render(root) {
       empty.hidden = shown > 0;
     },
   });
+  const stage = h("div", { class: "hero-3d", "aria-hidden": "true" });
+  const facts = h("ul", { class: "hero-facts" },
+    h("li", null, h("b", null, TOOLS.length), " visualisers"),
+    h("li", null, h("b", null, SUBJECTS.length), " subjects"),
+    h("li", null, h("b", null, "Pseudocode"), " + live variables"),
+    h("li", null, h("b", null, "AI tutor"), " on every step"));
   root.replaceChildren(
-    h("section", { class: "hero" },
+    h("div", { class: "hero-wrap" }, h("section", { class: "hero" },
       h("p", { class: "eyebrow" }, `${TOOLS.length} CS visualisers: DSA, OS, DBMS, networks, theory, compilers`),
       h("h1", null, "See every step."),
       h("p", { class: "lede" }, "The algorithms in your data structures, operating systems, databases, networks, theory of computation and compiler design exams, animated one step at a time beside the pseudocode, with the line being run highlighted, the variables live and the reasoning written out. Then practise on fresh questions that check every answer."),
-      search),
+      search, facts), stage),
     empty,
     ...sections,
     h("section", { class: "why" },
       h("div", null, h("h3", null, "Built for exams"), h("p", null, "Every tool states the conventions it uses (tie-breaking, split rules, what counts as head movement) so your answers match what your examiner expects.")),
       h("div", null, h("h3", null, "Practice that checks you"), h("p", null, "Fresh questions every time, with each answer marked and the full working one click away.")),
       h("div", null, h("h3", null, "Share any example"), h("p", null, "Every input is in the link, so you can send a classmate the exact question you're stuck on."))));
-  return () => {};
+  let disposeHero = null, gone = false;
+  const start = () => import("../hero3d.js").then(async ({ mountHero }) => {
+    const { webglAvailable } = await import("../three-kit.js");
+    if (gone || !webglAvailable()) { stage.hidden = !webglAvailable(); return; }
+    disposeHero = await mountHero(stage);
+    if (gone) disposeHero();
+  }).catch(() => { stage.hidden = true; });
+  (window.requestIdleCallback ?? ((f) => setTimeout(f, 200)))(start);
+  return () => { gone = true; disposeHero?.(); };
+
 }

@@ -201,6 +201,7 @@ export async function scene3d(container, opts = {}) {
     onTheme: (fn) => { themeFns.push(fn); fn(getComputedStyle(document.documentElement).colorScheme === "dark"); },
     colour: (name) => token(THREE, name),
     tween, travel, label, dispose,
+    render: () => renderer.render(scene, camera),
     setAutoRotate: (v) => { autoRotate = reducedMotion() ? 0 : v; },
     lookAt: (x, y, z, radius) => { target.set(x, y, z); if (radius) sph.radius = radius; place(); },
   };

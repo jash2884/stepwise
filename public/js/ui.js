@@ -39,6 +39,8 @@ export function stepper({ count, render, label = "Step", interval = 900, start =
     range.value = i;
     counter.textContent = `${label} ${i + 1} / ${count}`;
     render(i);
+    // Replay the note's entrance so each step visibly changes.
+    for (const n of bar.closest(".card")?.querySelectorAll(".step-note") ?? []) { n.classList.remove("note-in"); void n.offsetWidth; n.classList.add("note-in"); }
     if (i === count - 1) pause();
   }
   function play() {
