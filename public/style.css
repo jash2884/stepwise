@@ -1870,9 +1870,9 @@ h3.sub { font-size: 16px; margin: 16px 0 8px; }
 .elsewhere-group ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
 .elsewhere-group li { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding: 5px 8px; border-radius: 8px; }
 .elsewhere-group li:hover { background: var(--surface-2); }
-.elsewhere-group a { text-decoration: none; font-weight: 500; overflow-wrap: anywhere; }
+.elsewhere-group a { display: inline; text-decoration: none; font-weight: 500; overflow-wrap: anywhere; }
 .elsewhere-group a:hover { text-decoration: underline; }
-.elsewhere-group .ext { color: var(--muted); font-size: 12px; }
+.elsewhere-group .ext-ico { color: var(--muted); font-size: 12px; }
 .diff { flex: none; font: 600 11.5px var(--body); border-radius: 999px; padding: 1px 8px; background: var(--surface-2); color: var(--muted); }
 .diff.easy { background: var(--good-soft); color: var(--good); }
 .diff.medium { background: var(--warn-soft); color: color-mix(in srgb, var(--series-4) 70%, var(--text)); }

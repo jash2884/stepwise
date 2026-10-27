@@ -21,6 +21,6 @@ export function practiceElsewhere(slug) {
     h("div", { class: "elsewhere-grid" }, groups.map(([platform, xs]) => h("div", { class: "elsewhere-group" },
       h("h3", null, platform, h("span", { class: "muted small" }, ` · ${ABOUT[platform]}`)),
       h("ul", null, xs.map((x) => h("li", null,
-        h("a", { href: x.u, target: "_blank", rel: "noopener" }, x.t, h("span", { class: "ext", "aria-hidden": "true" }, " ↗")),
+        h("a", { href: x.u, target: "_blank", rel: "noopener" }, x.t, h("span", { class: "ext-ico", "aria-hidden": "true" }, "\u00a0↗")),
         x.d ? h("span", { class: `diff ${x.d.toLowerCase()}` }, x.d) : null)))))));
 }
