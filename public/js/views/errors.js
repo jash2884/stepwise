@@ -1,4 +1,5 @@
-import { checksum, crc, crcCheck, GENERATORS, hammingCheck, hammingEncode, randomBits } from "../engines/errors.js";
+import { checksum, CHECKSUM_CODE, crc, CRC_CODE, crcCheck, GENERATORS, HAMMING_CHECK_CODE, HAMMING_ENCODE_CODE, hammingCheck, hammingEncode, randomBits } from "../engines/errors.js";
+import { codePanel, traceLayout, varsPanel } from "../code.js";
 import { copyLink, h, notice, page, readParams, rng, stepper, tabs, writeParams } from "../ui.js";
 
 // Long division laid out as on paper: each XOR under the bits it works on.
@@ -17,19 +18,34 @@ function division(padded, steps, upto, gen) {
   return h("pre", { class: "division", "aria-label": "Long division steps" }, lines);
 }
 
-function hammingTable(word, highlight = [], bad = null) {
-  const n = word.length;
+function hammingTable(word, highlight = [], bad = null, parity = null) {
+  const n = word.length, width = Math.max(1, n.toString(2).length);
+  const cell = (i, kids) => h("td", { class: `mono${highlight.includes(i + 1) ? " covered" : ""}${parity === i + 1 ? " pbit" : ""}${bad === i + 1 ? " bad" : ""}` }, kids);
   return h("div", { class: "table-wrap" }, h("table", { class: "hamming" },
     h("thead", null, h("tr", null, h("th", { scope: "col" }, "Position"), Array.from({ length: n }, (_, i) => h("th", { scope: "col" }, i + 1)))),
     h("tbody", null,
+      h("tr", null, h("th", { scope: "row" }, "Binary"), Array.from({ length: n }, (_, i) => cell(i, (i + 1).toString(2).padStart(width, "0")))),
       h("tr", null, h("th", { scope: "row" }, "Role"), Array.from({ length: n }, (_, i) => h("td", { class: ((i + 1) & i) === 0 ? "parity" : "data" }, ((i + 1) & i) === 0 ? `P${i + 1}` : "D"))),
-      h("tr", null, h("th", { scope: "row" }, "Bit"), [...word].map((b, i) => h("td", { class: `mono${highlight.includes(i + 1) ? " covered" : ""}${bad === i + 1 ? " bad" : ""}` }, b))))));
+      h("tr", null, h("th", { scope: "row" }, "Bit"), [...word].map((b, i) => cell(i, b))))));
 }
 
 export function render(root) {
   const p = readParams();
   const state = { mode: ["crc", "hamming", "checksum"].includes(p.get("mode")) ? p.get("mode") : "crc", data: p.get("d") ?? "1101011111", gen: p.get("g") ?? "10011", hdata: p.get("hd") ?? "1011", received: p.get("rx") ?? "0110111", words: p.get("w") ?? "0110011001100000 0101010101010101 1000111100001100" };
-  let player = null;
+  let players = [];
+  // A stepper over engine steps, with the drawing beside the pseudocode and variables.
+  const traced = (steps, lines, label, interval, draw) => {
+    const code = codePanel(lines), vars = varsPanel();
+    const stage = h("div", { class: "chart-wrap" }), note = h("p", { class: "step-note", "aria-live": "polite" });
+    const pl = stepper({ count: steps.length, label, interval, render: (i) => {
+      stage.replaceChildren(draw(steps[i], i));
+      code.show(steps[i].line); vars.show(steps[i].vars);
+      note.textContent = steps[i].note;
+      note.className = `step-note${steps[i].fails ? " bad" : i === steps.length - 1 ? " good" : ""}`;
+    } });
+    players.push(pl);
+    return h("div", null, pl.el, note, traceLayout(stage, code, vars));
+  };
   const head = page({
     subject: "Computer networks", title: "Error detection & correction",
     lede: "CRC long division, Hamming codes that find and fix a flipped bit, and the Internet checksum, each worked step by step.",
@@ -49,22 +65,21 @@ export function render(root) {
   const msg = h("div"), out = h("div", { class: "output" });
 
   function update() {
-    player?.destroy();
+    players.forEach((x) => x.destroy()); players = [];
     writeParams({ mode: state.mode, d: state.data, g: state.gen, hd: state.hdata, rx: state.received, w: state.words });
     crcBox.hidden = state.mode !== "crc"; hamBox.hidden = state.mode !== "hamming"; sumBox.hidden = state.mode !== "checksum";
     try {
       msg.replaceChildren();
       if (state.mode === "crc") {
         const r = crc(state.data, state.gen);
-        const stage = h("div", { class: "chart-wrap" }), note = h("p", { class: "step-note", "aria-live": "polite" });
-        player = stepper({ count: r.steps.length, label: "Step", interval: 800, render: (i) => { stage.replaceChildren(division(r.padded, r.steps, i, r.gen)); note.textContent = r.steps[i].note; } });
+        const t = traced(r.steps, CRC_CODE, "Step", 1000, (st, i) => division(r.padded, r.steps, i, r.gen));
         const rx = h("input", { type: "text", class: "mono wide", value: r.codeword, "aria-label": "Received frame" });
         const verdict = h("div");
         const check = () => { try { const c = crcCheck(rx.value, r.gen); verdict.replaceChildren(notice(c.ok ? "good" : "bad", c.ok ? `Remainder ${c.remainder}: no error detected.` : `Remainder ${c.remainder} is not zero: ERROR detected.`)); } catch (e) { verdict.replaceChildren(notice("error", e.message)); } };
         rx.addEventListener("input", check);
         check();
         out.replaceChildren(
-          h("section", { class: "card" }, h("h2", null, `Divide ${r.data} + ${r.r} zeros by ${r.gen}`), player.el, stage, note,
+          h("section", { class: "card" }, h("h2", null, `Divide ${r.data} + ${r.r} zeros by ${r.gen}`), t,
             h("div", { class: "stats-row" },
               h("div", { class: "stat" }, h("span", null, "Remainder (CRC)"), h("b", { class: "mono" }, r.remainder)),
               h("div", { class: "stat wide-stat" }, h("span", null, "Transmitted frame"), h("b", { class: "mono order" }, h("span", null, r.data), h("span", { class: "crc-bits" }, r.remainder))))),
@@ -73,18 +88,17 @@ export function render(root) {
       } else if (state.mode === "hamming") {
         const e = hammingEncode(state.hdata);
         const c = hammingCheck(state.received);
-        const encStage = h("div"), encNote = h("p", { class: "step-note" });
-        player = stepper({ count: e.steps.length, label: "Parity bit", interval: 1100, render: (i) => { encStage.replaceChildren(hammingTable(e.codeword, [e.steps[i].parity, ...e.steps[i].covered])); encNote.textContent = e.steps[i].note; } });
+        const word = state.received.replace(/\s/g, "");
+        const enc = traced(e.steps, HAMMING_ENCODE_CODE, "Parity bit", 1300, (st) => hammingTable([...e.codeword].map((b, k) => (((k + 1) & k) === 0 && k + 1 > st.parity ? "?" : b)).join(""), [st.parity, ...st.covered], null, st.parity));
+        const chk = traced(c.steps, HAMMING_CHECK_CODE, "Check", 1300, (st) => hammingTable(word, st.verdict ? [] : [...st.covered], st.verdict && c.syndrome ? c.syndrome : null, st.parity));
         out.replaceChildren(
-          h("section", { class: "card" }, h("h2", null, `Encode ${e.data}: ${e.parityBits} parity bits, ${e.n}-bit codeword`), player.el, encStage, encNote,
+          h("section", { class: "card" }, h("h2", null, `Encode ${e.data}: ${e.parityBits} parity bits, ${e.n}-bit codeword`), enc,
             h("p", { class: "big-answer" }, "Codeword: ", h("b", null, e.codeword))),
-          h("section", { class: "card" }, h("h2", null, `Check received ${state.received.trim()}`), hammingTable(state.received.replace(/\s/g, ""), [], c.syndrome || null),
-            h("ol", { class: "notes" }, c.steps.map((s) => h("li", { class: s.fails ? "bad-text" : null }, s.note))),
-            notice(c.syndrome ? "bad" : "good", c.note)));
+          h("section", { class: "card" }, h("h2", null, `Check received ${state.received.trim()}`), chk, notice(c.syndrome ? "bad" : "good", c.note)));
       } else {
         const r = checksum(state.words);
-        out.replaceChildren(h("section", { class: "card" }, h("h2", null, "One's complement sum"),
-          h("ol", { class: "notes mono-notes" }, r.steps.map((s) => h("li", null, s.note))),
+        const t = traced(r.steps, CHECKSUM_CODE, "Step", 1300, (st, i) => h("ol", { class: "notes mono-notes" }, r.steps.slice(0, i + 1).map((x, k) => h("li", { class: k === i ? "hot" : null }, x.note))));
+        out.replaceChildren(h("section", { class: "card" }, h("h2", null, "One's complement sum"), t,
           h("div", { class: "stats-row" },
             h("div", { class: "stat wide-stat" }, h("span", null, "Checksum (binary)"), h("b", { class: "mono order" }, r.binary)),
             h("div", { class: "stat" }, h("span", null, "Hex"), h("b", { class: "mono" }, `0x${r.hex}`))),
@@ -140,5 +154,5 @@ export function render(root) {
   root.replaceChildren(head, tab.el, panels);
   tab.select("visual");
   update();
-  return () => player?.destroy();
+  return () => players.forEach((x) => x.destroy());
 }

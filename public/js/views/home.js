@@ -21,6 +21,10 @@ function art(kind) {
     case "cwnd": return h("div", { class: "art disk-art" }, h("svg", { viewBox: "0 0 120 50", "aria-hidden": "true" }, h("polyline", { points: "6,46 18,42 30,32 42,14 54,11 66,8 78,5 84,46 96,40 108,28 116,20" })));
     case "crc": return h("div", { class: "art fd-art" }, h("span", null, "1101011111 0000"), h("span", null, "÷ 10011"), h("span", { class: "hot" }, "remainder 0010"));
     case "frag": return h("div", { class: "art frag-art" }, h("i", { style: "flex:37" }), h("i", { style: "flex:37" }), h("i", { style: "flex:26" }));
+    case "lpm": return h("div", { class: "art fd-art" }, h("span", null, "200.23.24.170"), h("span", null, "/21 ✓  /24 ✓  /0 ✓"), h("span", { class: "hot" }, "longest: /24 → if 1"));
+    case "aloha": return h("div", { class: "art disk-art aloha-art" }, h("svg", { viewBox: "0 0 120 50", "aria-hidden": "true" }, h("path", { d: "M4,46 C20,16 34,10 44,12 C64,16 88,34 116,42", class: "s" }), h("path", { d: "M4,46 C14,30 22,26 28,26 C46,28 80,42 116,45", class: "p" })));
+    case "bucket": return h("div", { class: "art bucket-art" }, h("div", { class: "b" }, h("i"), h("i"), h("i"), h("i")), h("span", null, "→ ▪ ▪ ▪"));
+    case "dns": return h("div", { class: "art fd-art" }, h("span", null, "gaia.cs.umass.edu ?"), h("span", null, "root → .edu → umass"), h("span", { class: "hot" }, "→ A record, cached"));
     case "bars": return h("div", { class: "art bars-art" }, [5, 9, 3, 7, 2, 8, 4, 6].map((v, i) => h("i", { style: `height:${v * 10}%`, class: i === 2 || i === 3 ? "hot" : "" })));
     case "states": return h("div", { class: "art states-art" }, h("svg", { viewBox: "0 0 150 54", "aria-hidden": "true" },
       h("path", { d: "M2,27 L14,27", class: "a" }), h("path", { d: "M44,27 L60,27", class: "a" }), h("path", { d: "M90,27 L106,27", class: "a" }), h("path", { d: "M117,13 C108,-6 140,-6 131,13", class: "a" }),

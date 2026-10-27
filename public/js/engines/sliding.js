@@ -10,11 +10,57 @@
 // k arrived"); a timeout resends every outstanding frame.
 // SR: one timer per frame; the receiver buffers out-of-order frames inside its
 // window and ACKs each frame individually; a timeout resends only that frame.
+// Every tick names the pseudocode lines that ran (`line`) and the protocol's
+// variables at the end of the tick (`vars`).
 
 export const PROTOCOLS = {
-  sw: { name: "Stop-and-Wait", window: false },
-  gbn: { name: "Go-Back-N", window: true },
-  sr: { name: "Selective Repeat", window: true },
+  sw: {
+    name: "Stop-and-Wait", window: false,
+    code: [
+      "send frame next; start the timer  // one frame at a time",
+      "wait for its ACK (ignore stale ACKs)",
+      "on ACK of frame base: base ← base + 1; stop the timer",
+      "on timeout: resend frame base; restart the timer",
+      "receiver, on frame k:",
+      "  if k = expected then deliver it; expected ← expected + 1",
+      "  else it's a duplicate: discard it",
+      "  ACK the last frame received in order",
+    ],
+    lines: { send: 1, wait: 2, dupack: 2, ack: 3, done: 3, timeout: 4, resend: 4, deliver: [5, 6, 8], discard: [5, 7, 8] },
+  },
+  gbn: {
+    name: "Go-Back-N", window: true,
+    code: [
+      "if next < base + W then",
+      "  send frame next; next ← next + 1",
+      "  if the timer isn't running, start it",
+      "else the window is full: wait",
+      "on ACK k (cumulative): base ← k + 1",
+      "  restart the timer if frames are still outstanding",
+      "on timeout: next ← base  // go back: resend base … next−1",
+      "receiver, on frame k:",
+      "  if k = expected then deliver; ACK k; expected ← expected + 1",
+      "  else discard it; resend ACK expected − 1",
+    ],
+    lines: { send: [1, 2, 3], resend: [1, 2], wait: 4, ack: [5, 6], dupack: 5, done: 5, timeout: 7, deliver: [8, 9], discard: [8, 10] },
+  },
+  sr: {
+    name: "Selective Repeat", window: true,
+    code: [
+      "if a timed-out frame is queued then resend it; restart its timer",
+      "else if next < base + W then",
+      "  send frame next; start its own timer; next ← next + 1",
+      "else the window is full: wait",
+      "on ACK k: mark frame k acknowledged",
+      "  while frame base is acknowledged: base ← base + 1",
+      "on frame k's timer expiring: queue frame k for resending",
+      "receiver, on frame k:",
+      "  if expected ≤ k < expected + W then buffer it; send ACK k",
+      "    while expected is buffered: deliver it; expected ← expected + 1",
+      "  else if k < expected then send ACK k again  // its ACK was lost",
+    ],
+    lines: { resend: 1, send: [2, 3], wait: 4, ack: [5, 6], dupack: 5, done: [5, 6], timeout: 7, buffer: [8, 9], deliver: [8, 9, 10], duplicate: [8, 11] },
+  },
 };
 
 export function parseLosses(text) {
@@ -59,47 +105,60 @@ export function simulate({ protocol = "gbn", frames = 6, window = 4, delay = 1, 
     return s;
   };
 
+  const P = PROTOCOLS[protocol];
+  const snapTick = (t, notes, kinds) => {
+    const line = [...new Set(kinds.flatMap((k) => [P.lines[k] ?? []].flat()))].sort((a, b) => a - b);
+    const timer = timerStart === null ? "off" : `${Math.max(0, T - (t - timerStart))} ticks left`;
+    const vars = protocol === "sw" ? { t, base, expected, timer }
+      : protocol === "gbn" ? { t, W, base, next, expected, timer, outstanding: next - base }
+        : { t, W, base, next, expected, buffered: [...buffer].sort((a, b) => a - b), resendQueue: [...retransmit] };
+    return { t, base, next, expected, buffer: [...buffer], acked: [...acked], notes, note: notes.join(" "), line: line.length ? line : null, vars };
+  };
+
   for (let t = 0; t < 400 && done === null; t++) {
-    const notes = [];
+    const notes = [], kinds = [];
+    const say = (kind, text) => { notes.push(text); if (kind) kinds.push(kind); };
     // 1. ACKs reaching the sender.
     for (const s of inFlight.filter((x) => x.arrive === t && x.kind === "A")) {
-      if (s.lost) { notes.push(`ACK ${s.n} was lost on the way back.`); continue; }
+      if (s.lost) { say(null, `ACK ${s.n} was lost on the way back, so the sender never sees it.`); continue; }
       if (protocol === "sr") {
-        if (!acked.has(s.n)) { acked.add(s.n); notes.push(`Sender gets ACK ${s.n}.`); }
+        if (!acked.has(s.n)) { acked.add(s.n); say("ack", `Sender gets ACK ${s.n} and marks frame ${s.n} acknowledged, which stops its timer.`); }
         while (acked.has(base)) base++;
       } else if (s.n >= base) {
         base = s.n + 1;
         timerStart = base < next ? t : null;
-        notes.push(`Sender gets ACK ${s.n}: frames up to ${s.n} are confirmed, window slides to start at ${base}.`);
-      } else notes.push(`Sender gets a duplicate ACK ${s.n} and ignores it.`);
+        say("ack", protocol === "sw" ? `Sender gets ACK ${s.n}: frame ${s.n} is confirmed, so it can move on to frame ${base}.` : `Sender gets ACK ${s.n}. ACKs are cumulative, so every frame up to ${s.n} is confirmed and the window slides to start at ${base}.`);
+      } else say("dupack", `Sender gets a duplicate ACK ${s.n}. Everything up to ${s.n} is already confirmed, so it ignores it.`);
     }
-    if (base >= frames) { done = t; ticks.push({ t, base, next, expected, buffer: [...buffer], acked: [...acked], notes: [...notes, `All ${frames} frames are acknowledged.`] }); break; }
+    if (base >= frames) { done = t; say("done", `All ${frames} frames are acknowledged: the transfer is complete.`); ticks.push(snapTick(t, notes, kinds)); break; }
 
     // 2. Frames reaching the receiver.
     for (const s of inFlight.filter((x) => x.arrive === t && x.kind === "F")) {
-      if (s.lost) { notes.push(`Frame ${s.n} was lost on the way.`); continue; }
+      if (s.lost) { say(null, `Frame ${s.n} was lost on the way, so the receiver never sees it.`); continue; }
       if (protocol === "sr") {
         if (s.n >= expected && s.n < expected + W) {
           buffer.add(s.n);
           const before = expected;
           while (buffer.has(expected)) { delivered.push(expected); buffer.delete(expected); expected++; }
           s.result = expected > before ? "delivered" : "buffered";
-          notes.push(expected > before ? `Receiver gets frame ${s.n} and delivers ${before === expected - 1 ? before : `${before}–${expected - 1}`} in order; sends ACK ${s.n}.` : `Receiver buffers out-of-order frame ${s.n} (waiting for ${expected}); sends ACK ${s.n}.`);
+          say(expected > before ? "deliver" : "buffer", expected > before
+            ? `Receiver gets frame ${s.n} and can now deliver ${before === expected - 1 ? before : `${before}–${expected - 1}`} to the layer above, in order; it sends ACK ${s.n}.`
+            : `Receiver gets frame ${s.n} early (it still needs ${expected}), so it buffers it instead of throwing it away, and sends ACK ${s.n}.`);
           send(t, "A", s.n);
         } else if (s.n < expected) {
           s.result = "duplicate";
-          notes.push(`Receiver already has frame ${s.n} (its ACK must have been lost); sends ACK ${s.n} again.`);
+          say("duplicate", `Receiver already has frame ${s.n}, so its ACK must have been lost; it sends ACK ${s.n} again so the sender can move on.`);
           send(t, "A", s.n);
         }
       } else if (s.n === expected) {
         delivered.push(expected);
         expected++;
         s.result = "delivered";
-        notes.push(`Receiver gets frame ${s.n} in order, delivers it and sends ACK ${s.n}.`);
+        say("deliver", `Receiver gets frame ${s.n}, the one it was expecting, delivers it and sends ACK ${s.n}.`);
         send(t, "A", s.n);
       } else {
         s.result = "discarded";
-        notes.push(`Receiver expected frame ${expected} but got ${s.n}: discards it${expected > 0 ? ` and repeats ACK ${expected - 1}` : ""}.`);
+        say("discard", `Receiver expected frame ${expected} but got ${s.n}. ${s.n < expected ? "It already has that one" : "It keeps no buffer for out-of-order frames"}, so it discards it${expected > 0 ? ` and repeats ACK ${expected - 1}` : ""}.`);
         if (expected > 0) send(t, "A", expected - 1);
       }
     }
@@ -107,10 +166,10 @@ export function simulate({ protocol = "gbn", frames = 6, window = 4, delay = 1, 
     // 3. Timeouts.
     if (protocol === "sr") {
       for (let k = base; k < next; k++) {
-        if (!acked.has(k) && t - sentAt.get(k) >= T && !retransmit.includes(k)) { retransmit.push(k); notes.push(`Timer for frame ${k} expires: resend frame ${k} only.`); }
+        if (!acked.has(k) && t - sentAt.get(k) >= T && !retransmit.includes(k)) { retransmit.push(k); say("timeout", `Frame ${k}'s timer expires (no ACK within ${T} ticks): queue frame ${k}, and only frame ${k}, for resending.`); }
       }
     } else if (timerStart !== null && t - timerStart >= T && base < next) {
-      notes.push(`Timer expires for frame ${base}: go back and resend frames ${base}${next - 1 > base ? `–${next - 1}` : ""}.`);
+      say("timeout", protocol === "sw" ? `The timer expires: no ACK for frame ${base} within ${T} ticks, so it will be sent again.` : `The timer for frame ${base} expires: go back and resend frames ${base}${next - 1 > base ? `–${next - 1}` : ""}, because the receiver discarded everything after the gap.`);
       next = base;
       timerStart = null;
     }
@@ -120,18 +179,18 @@ export function simulate({ protocol = "gbn", frames = 6, window = 4, delay = 1, 
       const k = retransmit.shift();
       sentAt.set(k, t);
       const s = send(t, "F", k);
-      notes.push(`Sender resends frame ${k}${s.lost ? " (lost again)" : ""}.`);
+      say("resend", `Sender resends frame ${k}${s.lost ? " (it will be lost again)" : ""} and restarts its timer.`);
     } else if (next < Math.min(base + W, frames)) {
       const k = next++;
       const again = (attempts.get(k) ?? 0) > 0;
       sentAt.set(k, t);
       const s = send(t, "F", k);
       if (timerStart === null && protocol !== "sr") timerStart = t;
-      notes.push(`Sender ${again ? "resends" : "sends"} frame ${k}${s.lost ? " (it will be lost)" : ""}.`);
+      say(again ? "resend" : "send", `Sender ${again ? "resends" : "sends"} frame ${k}${s.lost ? " (it will be lost)" : ""}.`);
     } else if (base < frames && next >= Math.min(base + W, frames)) {
-      notes.push(`Window [${base}–${base + W - 1}] is full: sender waits.`);
+      say("wait", protocol === "sw" ? `Frame ${base} is still unacknowledged, so the sender waits.` : `Window [${base}–${base + W - 1}] is full (every frame in it is sent), so the sender waits for an ACK.`);
     }
-    ticks.push({ t, base, next, expected, buffer: [...buffer], acked: [...acked], notes });
+    ticks.push(snapTick(t, notes, kinds));
   }
   if (done === null) {
     // A deterministic loss pattern can line up with the retry pattern forever.
