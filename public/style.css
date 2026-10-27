@@ -2069,3 +2069,9 @@ body { background:
   .menu summary { padding: 7px 7px; font-size: 13.5px; }
   .menu summary::after { font-size: 10px; }
 }
+/* 3D: graphs */
+.g-view-bar { display: flex; justify-content: flex-end; margin: 0 0 8px; }
+.g-stage3d { min-width: 0; }
+.g-stage3d .three-stage { height: 400px !important; border: 1px solid var(--line); }
+.g-stage3d .three-hint { background: color-mix(in srgb, var(--surface) 75%, transparent); padding: 2px 8px; border-radius: 999px; }
+@media (max-width: 600px) { .g-stage3d .three-stage { height: 300px !important; } }

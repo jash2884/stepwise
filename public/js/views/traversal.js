@@ -91,7 +91,7 @@ export function render(root) {
     conventions: ["Neighbours are visited in alphabetical order, and outer loops go through the vertices alphabetically.", "DFS times start at 1 and tick on every discovery and every finish (as in CLRS).", "Kahn's queue is first-in first-out, starting with the in-degree-0 vertices in alphabetical order.", "Components and the bipartite check ignore edge directions."],
   });
   return graphTool(root, {
-    head, algos: ALGORITHMS, complexity: COMPLEXITY, side, random, question,
+    key: "graph-traversal", head, algos: ALGORITHMS, complexity: COMPLEXITY, side, random, question,
     defaults: { algo: "bfs", example: "clrsBfs" },
     examples: ["clrsBfs", "clrsDfs", "clothes", "courses", "bipartite", "oddCycle", "islands", "clrsScc"],
     legend: (algo) => LEGENDS[algo],
