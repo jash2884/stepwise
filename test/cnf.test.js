@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { CODE, EXAMPLES, isCNF, languageUpTo, toCNF, withoutEmpty } from "../public/js/engines/cnf.js";
+import { CODE, EXAMPLES, GNF_CODE, isCNF, isGNF, languageUpTo, toCNF, toGNF, withoutEmpty } from "../public/js/engines/cnf.js";
 import { cnfProblems, cyk, parseGrammar, toText } from "../public/js/engines/grammar.js";
 
 const G = (k) => parseGrammar(EXAMPLES[k].text);
@@ -89,4 +89,74 @@ test("fuzz: the CNF grammar generates exactly the same strings up to length 5, a
     for (const w of [...a].slice(0, 6)) if (w) assert.ok(cyk(c, w.split(" ")).accepted, `${w} via CYK`);
     for (const w of ["a b a b a", "b b", "a a a"]) assert.equal(cyk(c, w.split(" ")).accepted, a.has(w), `${w} via CYK`);
   }
+});
+
+// --- Greibach normal form ---------------------------------------------------------
+
+// Every rule is A → a α with α only variables (or start → ε, start never on a right side).
+function assertGNF(g) {
+  const onRight = g.prods.some((p) => p.rhs.includes(g.start));
+  for (const p of g.prods) {
+    if (!p.rhs.length) { assert.equal(p.lhs, g.start); assert.ok(!onRight); continue; }
+    assert.ok(!g.isNT(p.rhs[0]), `${p.lhs} → ${p.rhs.join(" ")} must start with a terminal`);
+    assert.ok(p.rhs.slice(1).every((s) => g.isNT(s)), `${p.lhs} → ${p.rhs.join(" ")}: only variables after the terminal`);
+  }
+  assert.ok(isGNF(g));
+}
+const bodies = (g, A) => g.prods.filter((p) => p.lhs === A).map((p) => p.rhs.join(" ")).sort();
+
+// Hopcroft & Ullman (1979), Example 4.10: A1 → A2A3, A2 → A3A1 | b, A3 → A1A2 | a.
+// Their result has 24 rules: A3 → bA3A2B3 | aB3 | bA3A2 | a, A2 → … (5), A1 → … (5)
+// and B3 → A1A3A2 | A1A3A2B3 with A1 substituted (10).
+test("GNF: Hopcroft & Ullman Example 4.10 gives the textbook's 24 rules", () => {
+  const g = G("hu"), r = toGNF(g);
+  assert.ok(r.ready, "already in CNF, used as it is");
+  assert.deepEqual(r.bs, ["B3"]);
+  assert.deepEqual(bodies(r.grammar, "A3"), ["a", "a B3", "b A3 A2", "b A3 A2 B3"]);
+  assert.deepEqual(bodies(r.grammar, "A2"), ["a A1", "a B3 A1", "b", "b A3 A2 A1", "b A3 A2 B3 A1"]);
+  assert.deepEqual(bodies(r.grammar, "A1"), ["a A1 A3", "a B3 A1 A3", "b A3", "b A3 A2 A1 A3", "b A3 A2 B3 A1 A3"]);
+  const a1 = bodies(r.grammar, "A1");
+  assert.deepEqual(bodies(r.grammar, "B3"), a1.flatMap((x) => [`${x} A3 A2`, `${x} A3 A2 B3`]).sort());
+  assert.equal(r.grammar.prods.length, 24);
+  assertGNF(r.grammar);
+  // The intermediate grammar after ORDER: A3 → A3A1A3A2 | bA3A2 | a, as in the book.
+  const lr = r.steps.find((s) => s.phase === "LEFTREC");
+  assert.deepEqual(lr.removed.map((p) => p.rhs.join(" ")), ["A3 A1 A3 A2"]);
+  assert.deepEqual(languageUpTo(g, 5), languageUpTo(r.grammar, 5));
+});
+
+test("GNF: every example is in GNF and generates the same strings (where it fits)", () => {
+  for (const k of Object.keys(EXAMPLES)) {
+    const g = G(k);
+    let r;
+    try { r = toGNF(g); } catch (e) { assert.match(e.message, /more than 300 rules/); continue; }
+    assertGNF(r.grammar);
+    assert.deepEqual([...languageUpTo(r.grammar, 5)].sort(), [...languageUpTo(g, 5)].sort(), k);
+    for (const s of r.steps) {
+      for (const l of [s.line].flat()) assert.ok(l >= 1 && l <= GNF_CODE.length, `${k} line ${l}`);
+      assert.ok(s.note.length > 20 && s.vars.phase);
+    }
+    assert.equal(r.steps.at(-1).phase, "done");
+  }
+});
+
+test("GNF: ε in the language is kept as start → ε only", () => {
+  const r = toGNF(G("anbn"));
+  assertGNF(r.grammar);
+  assert.ok(r.grammar.prods.some((p) => p.lhs === r.grammar.start && !p.rhs.length));
+  assert.deepEqual([...languageUpTo(r.grammar, 6)].sort(), ["", "a a a b b b", "a a b b", "a b"].sort());
+});
+
+test("fuzz: GNF rules are all A → a α and the language is unchanged up to length 5", () => {
+  seed = 99;
+  let done = 0;
+  for (let k = 0; k < 200; k++) {
+    const g = randomGrammar();
+    let r;
+    try { r = toGNF(g); } catch (e) { assert.match(e.message, /more than 300 rules/); continue; }
+    done++;
+    assertGNF(r.grammar);
+    assert.deepEqual([...languageUpTo(r.grammar, 5)].sort(), [...languageUpTo(g, 5)].sort(), toText(g));
+  }
+  assert.ok(done >= 60, `only ${done} grammars converted`);
 });
