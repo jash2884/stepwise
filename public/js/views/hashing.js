@@ -1,5 +1,6 @@
 import { bits, CODE, EXAMPLE, EXTENDIBLE_EXAMPLE, extendible, hashTable, parseKeys, randomKeys, STRATEGIES } from "../engines/hashing.js";
 import { codePanel, traceLayout, varsPanel } from "../code.js";
+import { viewToggle } from "../three-kit.js";
 import { copyLink, fmt, h, notice, page, readParams, rng, stepper, tabs, writeParams } from "../ui.js";
 
 function tableView(step, m, strategy) {
@@ -37,6 +38,31 @@ export function render(root) {
     extKeys: p.get("ek") ?? EXTENDIBLE_EXAMPLE.keys, size: Number(p.get("b") ?? EXTENDIBLE_EXAMPLE.size),
   };
   let player = null;
+  // Optional 3D view: loaded only when chosen, rebuilt when the inputs change.
+  let d3 = null, gen = 0, live = null;
+  const drop3d = () => { gen++; d3?.dispose(); d3 = null; };
+  const toggle = viewToggle("hashing", () => mount3d());
+  async function mount3d() {
+    drop3d();
+    if (!live) return;
+    const my = gen, { host, flat, pair } = live, mode = toggle.mode, on = mode !== "2d";
+    host.hidden = !on;
+    flat.hidden = mode === "3d";
+    pair.classList.toggle("both", mode === "both");
+    if (!on) { host.replaceChildren(); return; }
+    try {
+      const { hashScene } = await import("./hash-3d.js");
+      if (my !== gen) return;
+      const sc = await hashScene(host, { ...live.args, height: matchMedia("(max-width: 600px)").matches ? 300 : 400 });
+      if (my !== gen) { sc.dispose(); return; }
+      d3 = sc;
+      d3.show(player?.index ?? 0, true);
+    } catch (e) { host.replaceChildren(notice("error", `3D view unavailable: ${e.message}`)); }
+  }
+  const viewPair = (stage) => {
+    const host = h("div", { class: "d3-host", hidden: true });
+    return { host, flat: stage, pair: h("div", { class: "view-pair" }, stage, host) };
+  };
   const head = page({
     subject: "Databases", title: "Hashing & indexing",
     lede: "Hash a key to a slot, then deal with collisions. Compare chaining and the open-addressing strategies, and watch an extendible hash index grow.",
@@ -62,6 +88,8 @@ export function render(root) {
 
   function update() {
     player?.destroy();
+    drop3d();
+    live = null;
     writeParams({ mode: state.mode, k: state.keys, m: state.m, st: state.strategy, ek: state.extKeys, b: state.size });
     tableInputs.hidden = state.mode !== "table";
     extInputs.hidden = state.mode !== "extendible";
@@ -71,10 +99,11 @@ export function render(root) {
         const r = hashTable(keys, state.m, state.strategy);
         msg.replaceChildren();
         const stage = h("div"), note = h("p", { class: "step-note", "aria-live": "polite" });
-        const code = codePanel(CODE[state.strategy]), vars = varsPanel();
+        const code = codePanel(CODE[state.strategy]), vars = varsPanel(), vp = viewPair(stage);
         player = stepper({ count: r.trace.length, label: "Step", interval: 900, render: (i) => {
           const s = r.trace[i];
           stage.replaceChildren(tableView(s, state.m, state.strategy));
+          d3?.show(i);
           code.show(s.line);
           vars.show(s.vars);
           note.textContent = s.note;
@@ -82,7 +111,7 @@ export function render(root) {
         } });
         const compare = Object.entries(STRATEGIES).map(([id, st]) => { const x = hashTable(keys, state.m, id); return [st.name, x.collisions, x.steps.filter((s) => s.failed).length]; });
         out.replaceChildren(
-          h("section", { class: "card" }, h("h2", null, STRATEGIES[state.strategy].name), player.el, note, traceLayout(stage, code, vars),
+          h("section", { class: "card" }, h("div", { class: "d3-head" }, h("h2", null, STRATEGIES[state.strategy].name), toggle.el), player.el, note, traceLayout(vp.pair, code, vars),
             h("div", { class: "stats-row" },
               h("div", { class: "stat" }, h("span", null, "Collisions"), h("b", null, r.collisions)),
               h("div", { class: "stat" }, h("span", null, "Load factor α"), h("b", null, fmt(r.loadFactor))),
@@ -91,26 +120,30 @@ export function render(root) {
             h("div", { class: "table-wrap" }, h("table", null,
               h("thead", null, h("tr", null, ["Strategy", "Collisions", "Failed inserts"].map((t) => h("th", { scope: "col" }, t)))),
               h("tbody", null, compare.map(([n, c, f]) => h("tr", null, h("th", { scope: "row" }, n), h("td", null, c), h("td", null, f))))))));
+        live = { ...vp, args: { mode: "table", trace: r.trace, m: state.m, strategy: state.strategy } };
       } else {
         const keys = parseKeys(state.extKeys, 24);
         const r = extendible(keys, state.size);
         msg.replaceChildren();
         const stage = h("div"), note = h("p", { class: "step-note", "aria-live": "polite" });
-        const code = codePanel(CODE.extendible), vars = varsPanel();
+        const code = codePanel(CODE.extendible), vars = varsPanel(), vp = viewPair(stage);
         player = stepper({ count: r.steps.length, label: "Step", interval: 1200, render: (i) => {
           const s = r.steps[i];
           stage.replaceChildren(extendibleView(s, s.bucket));
+          d3?.show(i);
           code.show(s.line);
           vars.show(s.vars);
           note.textContent = s.note;
           note.className = `step-note${s.doubled || s.split ? " warn" : ""}`;
         } });
-        out.replaceChildren(h("section", { class: "card" }, h("h2", null, `Extendible hashing, bucket size ${state.size}`), player.el, note, traceLayout(stage, code, vars),
+        out.replaceChildren(h("section", { class: "card" }, h("div", { class: "d3-head" }, h("h2", null, `Extendible hashing, bucket size ${state.size}`), toggle.el), player.el, note, traceLayout(vp.pair, code, vars),
           h("div", { class: "stats-row" },
             h("div", { class: "stat" }, h("span", null, "Global depth"), h("b", null, r.global)),
             h("div", { class: "stat" }, h("span", null, "Directory entries"), h("b", null, r.dir.length)),
             h("div", { class: "stat" }, h("span", null, "Buckets"), h("b", null, r.buckets.length)))));
+        live = { ...vp, args: { mode: "extendible", steps: r.steps, size: state.size } };
       }
+      if (toggle.mode !== "2d") mount3d();
     } catch (e) { msg.replaceChildren(notice("error", e.message)); out.replaceChildren(); }
   }
 
@@ -177,5 +210,5 @@ export function render(root) {
   root.replaceChildren(head, tab.el, panels);
   tab.select("visual");
   update();
-  return () => player?.destroy();
+  return () => { player?.destroy(); drop3d(); };
 }
