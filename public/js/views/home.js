@@ -25,6 +25,18 @@ function art(kind) {
     case "states": return h("div", { class: "art states-art" }, h("svg", { viewBox: "0 0 150 54", "aria-hidden": "true" },
       h("path", { d: "M2,27 L14,27", class: "a" }), h("path", { d: "M44,27 L60,27", class: "a" }), h("path", { d: "M90,27 L106,27", class: "a" }), h("path", { d: "M117,13 C108,-6 140,-6 131,13", class: "a" }),
       h("circle", { cx: 29, cy: 27, r: 14 }), h("circle", { cx: 75, cy: 27, r: 14, class: "on" }), h("circle", { cx: 124, cy: 27, r: 14 }), h("circle", { cx: 124, cy: 27, r: 10 })));
+    case "bst": case "avl": {
+      const pts = [[75, 12], [42, 32], [108, 32], [24, 52], [58, 52], [92, 52]], links = [[0, 1], [0, 2], [1, 3], [1, 4], [2, 5]];
+      return h("div", { class: `art dt-art ${kind}-art` }, h("svg", { viewBox: "0 0 150 64", "aria-hidden": "true" },
+        links.map(([a, b]) => h("line", { x1: pts[a][0], y1: pts[a][1], x2: pts[b][0], y2: pts[b][1] })),
+        pts.map(([x, y], i) => h("circle", { cx: x, cy: y, r: 8, class: (kind === "bst" ? [0, 1, 4] : [2, 5]).includes(i) ? "on" : "" })),
+        kind === "avl" ? [[0, "+1"], [1, "0"], [2, "−1"]].map(([i, t]) => h("text", { x: pts[i][0] + 10, y: pts[i][1] - 4 }, t)) : null));
+    }
+    case "heap": return h("div", { class: "art heap-art" }, [2, 5, 3, 9, 7, 4].map((v, i) => h("i", { class: i === 0 ? "hot" : "" }, v)));
+    case "trie": return h("div", { class: "art fd-art" }, h("span", null, "insert car, card, cat"), h("span", null, "c → a → r◎ → d◎, a → t◎"), h("span", { class: "hot" }, "prefix \"ca\" → car, card, cat"));
+    case "uf": return h("div", { class: "art dt-art uf-art" }, h("svg", { viewBox: "0 0 150 64", "aria-hidden": "true" },
+      [[40, 14, 22, 50], [40, 14, 58, 50], [112, 14, 112, 50]].map(([x1, y1, x2, y2]) => h("line", { x1, y1, x2, y2 })),
+      [[40, 14, "on"], [22, 50], [58, 50], [112, 14, "on"], [112, 50]].map(([x, y, c]) => h("circle", { cx: x, cy: y, r: 8, class: c ?? "" }))));
     case "subset": return h("div", { class: "art fd-art" }, h("span", null, "ε-closure({0}) = A"), h("span", null, "move(A, a) = {3, 8}"), h("span", { class: "hot" }, "→ new state B"));
     case "partition": return h("div", { class: "art part-art" }, ["A C", "B", "D", "E"].map((x, i) => h("span", { style: `--c:var(--series-${i + 1})` }, x)));
     case "thompson": return h("div", { class: "art fd-art" }, h("span", null, "(a|b)*abb"), h("span", null, "postfix ab|*a·b·b·"), h("span", { class: "hot" }, "→ 11-state ε-NFA"));

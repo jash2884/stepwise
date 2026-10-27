@@ -763,3 +763,78 @@ button.linkish { font: inherit; background: none; border: 0; color: var(--accent
 .bars-art { align-items: flex-end; justify-content: center; gap: 5px; }
 .bars-art i { width: 14px; border-radius: 3px 3px 0 0; background: var(--series-1); }
 .bars-art i.hot { background: var(--series-4); }
+
+/* DSA: trees, heaps, tries, union-find */
+svg.dsa-tree { display: block; width: 100%; height: auto; margin: 0 auto; overflow: visible; }
+.dt-stage { min-height: 120px; }
+.dt-edge { stroke: var(--muted); stroke-width: 1.6; transition: stroke 0.25s, stroke-width 0.25s; }
+.dt-edge.lit { stroke: var(--accent); stroke-width: 2.6; }
+.dt-arrowhead { fill: var(--muted); }
+.dt-elabel { fill: var(--text); font: 700 13px var(--mono); paint-order: stroke; stroke: var(--surface-2); stroke-width: 5px; stroke-linejoin: round; }
+.dt-elabel.lit { fill: var(--accent); }
+.dt-node circle { fill: var(--surface); stroke: var(--muted); stroke-width: 1.8; transition: fill 0.3s, stroke 0.3s, stroke-width 0.3s; }
+.dt-node circle.ring { fill: none; stroke-width: 1.4; }
+.dt-node .dt-label { fill: var(--text); font: 700 13px var(--mono); }
+.dt-node .dt-badge { fill: var(--muted); font: 700 11px var(--mono); paint-order: stroke; stroke: var(--surface-2); stroke-width: 4px; stroke-linejoin: round; }
+.dt-node .dt-badge.lean { fill: var(--series-1); }
+.dt-node .dt-badge.bad { fill: var(--bad); font-size: 13px; }
+.dt-node .dt-badge.word { font: 600 10.5px var(--mono); }
+.dt-node .dt-sub { fill: var(--muted); font: 600 10.5px var(--mono); paint-order: stroke; stroke: var(--surface-2); stroke-width: 4px; stroke-linejoin: round; }
+.dt-node.path circle { stroke: var(--series-1); stroke-width: 2.6; }
+.dt-node.cur circle { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 3.2; }
+.dt-node.found circle, .dt-node.new circle { fill: var(--good-soft); stroke: var(--good); stroke-width: 3; }
+.dt-node.bad circle { fill: var(--bad-soft); stroke: var(--bad); stroke-width: 3; }
+.dt-node.succ circle { fill: color-mix(in srgb, var(--series-4) 22%, var(--surface)); stroke: var(--series-4); stroke-width: 3; }
+.dt-node.queued circle { stroke: var(--series-7); stroke-width: 2.6; stroke-dasharray: 4 3; }
+.dt-node.done circle { fill: var(--surface-2); }
+.dt-node.done .dt-label { fill: var(--muted); }
+.dt-node.rot circle { fill: color-mix(in srgb, var(--series-7) 20%, var(--surface)); stroke: var(--series-7); stroke-width: 3; }
+.dt-node.cmp circle { stroke: var(--series-4); stroke-width: 3; }
+.dt-node.best circle { fill: color-mix(in srgb, var(--series-3) 20%, var(--surface)); stroke: var(--series-3); stroke-width: 3; }
+.dt-node.swap circle { fill: color-mix(in srgb, var(--series-8) 20%, var(--surface)); stroke: var(--series-8); stroke-width: 3; }
+.dt-node.root circle { stroke-width: 2.4; }
+.trie .dt-node.root .dt-label { font-size: 10px; fill: var(--muted); }
+.trie .dt-node.end circle:not(.ring) { stroke: var(--text); }
+.trie .dt-node.end.found circle, .trie .dt-node.end.new circle { stroke: var(--good); }
+.dt-cell rect { fill: var(--surface); stroke: var(--line); stroke-width: 1.5; transition: fill 0.3s, stroke 0.3s; }
+.dt-cell text { fill: var(--text); font: 700 13px var(--mono); }
+.dt-cell.cur rect { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 2.6; }
+.dt-cell.cmp rect { stroke: var(--series-4); stroke-width: 2.6; }
+.dt-cell.best rect { fill: color-mix(in srgb, var(--series-3) 20%, var(--surface)); stroke: var(--series-3); stroke-width: 2.6; }
+.dt-cell.swap rect { fill: color-mix(in srgb, var(--series-8) 20%, var(--surface)); stroke: var(--series-8); stroke-width: 2.6; }
+.dt-cell.new rect, .dt-cell.found rect { fill: var(--good-soft); stroke: var(--good); stroke-width: 2.6; }
+.dt-cell.bad rect { fill: var(--bad-soft); stroke: var(--bad); }
+.dt-cell.done rect { stroke: var(--good); }
+.dt-cell.outside { opacity: 0.4; }
+.dt-cell.out rect { fill: var(--warn-soft); stroke: var(--series-4); stroke-width: 2.6; stroke-dasharray: 5 3; }
+.dt-cell.changed rect { fill: color-mix(in srgb, var(--series-4) 25%, var(--surface)); stroke: var(--series-4); stroke-width: 2.6; }
+.dt-cell.changed text { animation: d-pop 0.4s ease-out both; transform-box: fill-box; transform-origin: center; }
+.dt-cell.probe rect { fill: var(--accent); stroke: var(--accent); }
+.dt-cell.probe text { fill: var(--surface); }
+.dt-idx { fill: var(--muted); font: 500 10.5px var(--mono); }
+.dt-rowlabel { fill: var(--muted); font: 700 12px var(--mono); }
+.dt-empty { fill: var(--muted); font: 600 14px var(--body); }
+.dt-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; margin: 10px 0 0; font: 600 13px var(--mono); }
+.dt-chips-label { font: 600 12.5px var(--body); color: var(--muted); margin-right: 4px; }
+.dt-chips i { font-style: normal; padding: 2px 9px; border-radius: 999px; background: var(--surface); border: 1.5px solid var(--line); }
+.dt-chips.visit i { border-color: var(--good); }
+.dt-chips.stack i { border-color: var(--series-7); }
+.dt-chips.queue i { border-color: var(--series-7); border-style: dashed; }
+.dt-chips i.last { animation: d-pop 0.35s ease-out; background: var(--accent-soft); }
+.dt-chips em { color: var(--muted); font: italic 500 13px var(--body); }
+.dt-word { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 10px; }
+.dt-word span { min-width: 26px; padding: 3px 6px; text-align: center; border: 1.5px solid var(--line); border-radius: 6px; background: var(--surface); font: 700 14px var(--mono); }
+.dt-word span.done { border-color: var(--series-1); color: var(--series-1); }
+.dt-word span.now { border-color: var(--accent); background: var(--accent-soft); }
+table.dt-ops td.left { white-space: normal; min-width: 220px; font-family: var(--body); }
+.sub-h { font-size: 16px; margin: 16px 0 8px; }
+.dt-art svg { width: 100%; height: 100%; }
+.dt-art line { stroke: var(--muted); stroke-width: 2; }
+.dt-art circle { fill: var(--surface); stroke: var(--muted); stroke-width: 2; }
+.dt-art circle.on { fill: var(--accent-soft); stroke: var(--accent); }
+.avl-art circle.on { fill: color-mix(in srgb, var(--series-7) 25%, var(--surface)); stroke: var(--series-7); }
+.dt-art text { fill: var(--muted); font: 700 9px var(--mono); }
+.heap-art { justify-content: center; gap: 0; }
+.heap-art i { width: 34px; height: 36px; display: grid; place-items: center; font: 700 14px var(--mono); font-style: normal; border: 2px solid var(--line); background: var(--surface); margin-left: -2px; }
+.heap-art i.hot { border-color: var(--series-3); background: color-mix(in srgb, var(--series-3) 20%, var(--surface)); position: relative; z-index: 1; }
+@media (prefers-reduced-motion: reduce) { .dt-chips i.last, .dt-cell.changed text { animation: none; } }
