@@ -54,3 +54,74 @@ test("every move names a pseudocode line and explains itself", () => {
     }
   }
 });
+
+// --- F-SCAN: two queues and arrival times -------------------------------------
+import { FSCAN_EXAMPLE, parseArrivals, parseRequests, randomArrivals } from "../public/js/engines/disk.js";
+
+test("cylinder@time parses; plain cylinders arrive at 0", () => {
+  assert.deepEqual(parseArrivals("98 183@12, 37@0"), { requests: [98, 183, 37], arrivals: [0, 12, 0] });
+  assert.deepEqual(parseRequests("98@5 183"), [98, 183]);
+  assert.throws(() => parseArrivals("98@x"), /cylinder@time/);
+  assert.equal(schedule([98, 183], 53, "sstf", { arrivals: [0, 500] }).total, schedule([98, 183], 53, "sstf").total, "only F-SCAN reads arrival times");
+});
+
+test("F-SCAN: the Silberschatz queue with four late arrivals", () => {
+  const { requests: q, arrivals, head: h } = FSCAN_EXAMPLE;
+  const r = schedule(q, h, "fscan", { arrivals, direction: "up" });
+  // Sweep 1 (t = 0): 98 183 37 122 frozen; 14, 124 arrive at 20 and 65, 67 at 60 and wait.
+  // The head passes 124 at t = 71 but doesn't stop. Then the queues swap at t = 308.
+  assert.deepEqual(r.path, [53, 98, 122, 183, 199, 37, 37, 14, 0, 65, 67, 124]);
+  assert.deepEqual(r.order, [98, 122, 183, 37, 14, 65, 67, 124]);
+  assert.equal(r.total, 469);
+  assert.equal(r.sweeps, 2);
+  const swap = r.moves.find((m) => m.kind === "swap");
+  assert.equal(swap.time, 308);
+  assert.equal(swap.line, 7);
+  assert.deepEqual(swap.queues.active, [4, 5, 6, 7]);
+  assert.deepEqual(r.moves[0].queues.waiting, [4, 5]);
+  assert.match(r.moves[2].note, /passes 124/);
+  assert.deepEqual(r.initial.queues, { active: [0, 1, 2, 3], waiting: [], later: [4, 5, 6, 7], served: [] });
+});
+
+test("F-SCAN: all arrivals at 0 is plain SCAN, and the head idles when nothing has arrived", () => {
+  for (const direction of ["up", "down"]) {
+    assert.deepEqual(run("fscan", { direction }).path, run("scan", { direction }).path);
+    assert.deepEqual(run("fscan", { direction }).path, run("nstep", { direction, n: 8 }).path, "same as one N-step batch");
+  }
+  const r = schedule([10, 50], 0, "fscan", { arrivals: [5, 100] });
+  assert.deepEqual(r.path, [0, 10, 10, 50]);
+  assert.equal(r.total, 50);
+  assert.equal(r.moves[1].time, 100, "waits from t = 10 to t = 100");
+  assert.match(r.initial.note, /waits/);
+  // An arrival at the exact moment of the swap joins the new active queue.
+  const s = schedule([10, 20, 5], 0, "fscan", { arrivals: [0, 5, 10] });
+  assert.deepEqual(s.order, [10, 20, 5]);
+  assert.deepEqual(s.moves[1].queues.active, [1, 2]);
+});
+
+test("fuzz: F-SCAN serves every request once, after it arrives, and the total is the sum of the moves", () => {
+  let seed = 31;
+  const rand = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  for (let k = 0; k < 400; k++) {
+    const q = randomQueue(rand), arrivals = randomArrivals(rand, q.requests.length);
+    const direction = rand() < 0.5 ? "up" : "down";
+    const r = schedule(q.requests, q.head, "fscan", { arrivals, direction });
+    const served = r.moves.filter((m) => m.kind === "serve");
+    assert.deepEqual(served.map((m) => m.id).sort((a, b) => a - b), q.requests.map((_, i) => i), "each request exactly once");
+    assert.deepEqual([...r.order].sort((a, b) => a - b), [...q.requests].sort((a, b) => a - b));
+    assert.equal(r.total, r.moves.reduce((s, m) => s + m.distance, 0));
+    assert.deepEqual(r.path.slice(1), r.moves.map((m) => m.to));
+    let t = 0, active = new Set(r.initial.queues.active);
+    for (const m of r.moves) {
+      assert.ok(m.time >= t + m.distance, "1 cylinder per time unit");
+      t = m.time;
+      if (m.kind === "swap") { assert.equal(active.size, 0, "swap only when the active queue is empty"); active = new Set(m.queues.active); }
+      if (m.kind === "serve") {
+        assert.ok(active.has(m.id), "only frozen, active requests are served");
+        assert.ok(arrivals[m.id] <= m.time);
+        active.delete(m.id);
+      }
+      assert.ok([m.line].flat().every((l) => l >= 1 && l <= ALGORITHMS.fscan.code.length) && m.note);
+    }
+  }
+});

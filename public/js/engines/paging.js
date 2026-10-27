@@ -1,5 +1,5 @@
-// Page replacement simulator: FIFO, LRU, Optimal (Belady's MIN), LFU, MFU and
-// Second Chance (the clock algorithm), plus the working-set model.
+// Page replacement simulator: FIFO, LRU, Optimal (Belady's MIN), LFU, MFU,
+// Second Chance (the clock algorithm) and NRU, plus the working-set model.
 // Each reference becomes one step with the frame contents, the reasoning, the
 // pseudocode line being executed and the variables at that moment.
 //
@@ -9,6 +9,17 @@
 // and break ties by evicting the page loaded earliest. Clock: a page's reference
 // bit is set to 1 when it is loaded and on every hit; the hand starts at frame 1
 // and moves to the frame after each page it loads.
+//
+// NRU (Tanenbaum, Modern Operating Systems, 3.4.2): every frame has a referenced
+// bit R and a modified bit M. A reference sets R; a write ("7w") also sets M. A
+// loaded page starts with R = 1 and M = 1 only if the loading reference is a
+// write. Every k references (default 4) a clock tick clears every R bit; the
+// tick happens just before references k + 1, 2k + 1, ... M is never cleared
+// while the page stays in memory (it must be written back when evicted). On a
+// fault with no free frame, each page is in class 2R + M (0: R0 M0, 1: R0 M1,
+// 2: R1 M0, 3: R1 M1) and the victim comes from the lowest non-empty class.
+// Tanenbaum picks at random within the class; here the lowest-numbered frame
+// in that class goes, so every run is reproducible.
 
 const HEAD = ["for each page p in the reference string"];
 const MISS = ["  else faults ← faults + 1", "    if a frame is free then load p into it"];
@@ -53,22 +64,52 @@ export const ALGORITHMS = {
       "    replace the page at hand with p; ref ← 1; hand ← hand + 1"],
     at: { hit: 2, fault: 3, free: 4, choose: [5, 6], replace: 7 },
   },
+  nru: {
+    name: "NRU (Not Recently Used)",
+    code: [...HEAD, "  if k references have passed since the last tick then R ← 0 in every frame  // clock tick",
+      "  if p is in a frame then hit; R[p] ← 1; if p is written then M[p] ← 1", ...MISS,
+      "    else class[q] ← 2·R[q] + M[q] for every page q in memory",
+      "      victim ← lowest-numbered frame in the lowest non-empty class",
+      "      replace victim with p  // a victim with M = 1 is written back first",
+      "    R[p] ← 1; M[p] ← 1 if p is written, else 0"],
+    at: { tick: 2, hit: 3, fault: 4, free: [5, 9], choose: [6, 7], replace: [8, 9] },
+  },
 };
 
-export function parseRefs(text) {
-  const refs = String(text).trim().split(/[\s,]+/).filter(Boolean).map(Number);
-  if (!refs.length) throw new Error("Enter a reference string, e.g. 7 0 1 2 0 3 0 4.");
-  if (refs.length > 40) throw new Error("Use at most 40 references.");
-  if (refs.some((n) => !Number.isInteger(n) || n < 0 || n > 99)) throw new Error("Pages must be whole numbers from 0 to 99.");
-  return refs;
+export const NRU_TICK = 4;
+export const CLASS_NAMES = ["class 0: not referenced, not modified", "class 1: not referenced, modified", "class 2: referenced, not modified", "class 3: referenced, modified"];
+
+// A reference is a page number, optionally followed by w (a write) or r (a
+// read, the default): "7w 0 1 2w". Only NRU looks at the writes.
+export function parseAccesses(text) {
+  const tokens = String(text).trim().split(/[\s,]+/).filter(Boolean);
+  if (!tokens.length) throw new Error("Enter a reference string, e.g. 7 0 1 2 0 3 0 4.");
+  if (tokens.length > 40) throw new Error("Use at most 40 references.");
+  const refs = [], writes = [];
+  for (const t of tokens) {
+    const m = /^(\d+)([rw]?)$/i.exec(t);
+    const n = m ? Number(m[1]) : NaN;
+    if (!m || n > 99) throw new Error("Pages must be whole numbers from 0 to 99, optionally followed by w for a write (e.g. 7w).");
+    refs.push(n);
+    writes.push(m[2].toLowerCase() === "w");
+  }
+  return { refs, writes };
 }
+
+export const parseRefs = (text) => parseAccesses(text).refs;
+
+// The reference string back as text, with writes marked.
+export const formatAccesses = (refs, writes = []) => refs.map((p, i) => `${p}${writes[i] ? "w" : ""}`).join(" ");
 
 const list = (m, frames) => frames.filter((p) => p !== null).map((p) => `${p}:${m.get(p)}`);
 
-export function replace(refs, frameCount, algo) {
+export function replace(refs, frameCount, algo, { writes = [], tick = NRU_TICK } = {}) {
   const spec = ALGORITHMS[algo];
   if (!spec) throw new Error(`Unknown algorithm ${algo}`);
   if (!Number.isInteger(frameCount) || frameCount < 1 || frameCount > 8) throw new Error("Frames must be between 1 and 8.");
+  if (algo === "nru" && !(Number.isInteger(tick) && tick >= 1 && tick <= 40)) throw new Error("The clock tick k must be a whole number from 1 to 40.");
+  const R = Array(frameCount).fill(0), M = Array(frameCount).fill(0);
+  const cls = (k) => (frames[k] === null ? null : 2 * R[k] + M[k]);
   const frames = Array(frameCount).fill(null);
   const loadedAt = new Map(), lastUsed = new Map(), count = new Map();
   const ref = Array(frameCount).fill(0);
@@ -84,11 +125,33 @@ export function replace(refs, frameCount, algo) {
     if (algo === "lru") v["last[ ]"] = list(lastUsed, frames);
     if (algo === "lfu" || algo === "mfu") v["count[ ]"] = list(count, frames);
     if (algo === "clock") { v.hand = `frame ${hand + 1}`; v["ref[ ]"] = frames.map((x, k) => (x === null ? "–" : `${x}:${ref[k]}`)); }
+    if (algo === "nru") {
+      v.k = tick;
+      v["R M[ ]"] = frames.map((x, k) => (x === null ? "–" : `${x}:${R[k]}${M[k]}`));
+      v["class[ ]"] = frames.map((x, k) => (x === null ? "–" : `${x}:${cls(k)}`));
+    }
     return { ...v, ...extra };
   };
 
   refs.forEach((page, i) => {
+    const write = !!writes[i];
+    // NRU: the clock tick before references k + 1, 2k + 1, ... clears every R bit.
+    const ticked = algo === "nru" && i > 0 && i % tick === 0;
+    if (ticked) R.fill(0);
+    const nru = algo === "nru" ? { write, tick: ticked, before: frames.map((_, k) => cls(k)) } : {};
+    const tickNote = ticked ? `Clock tick (every ${tick} references): every R bit is cleared to 0. ` : "";
+    const nruBits = () => (algo === "nru" ? { R: [...R], M: [...M], classes: frames.map((_, k) => cls(k)) } : {});
+    const nruLines = (...keys) => (ticked ? [spec.at.tick, ...lines(...keys)] : lines(...keys));
     const slot = frames.indexOf(page);
+    if (algo === "nru" && slot !== -1) {
+      const was = cls(slot);
+      R[slot] = 1;
+      if (write) M[slot] = 1;
+      const now = cls(slot);
+      steps.push({ page, frames: [...frames], hit: true, slot, victim: null, ref: [...ref], hand, ...nru, ...nruBits(), line: nruLines("hit"), vars: state(page),
+        note: `${tickNote}Page ${page} is already in frame ${slot + 1}: a hit. ${write ? "It is written, so R and M are both set" : "It is read, so R is set"}${was === now ? ` (it stays in class ${now})` : `, moving it from class ${was} to class ${now}`}. The hardware sets these bits on every access; the OS only reads them at a fault.` });
+      return;
+    }
     if (slot !== -1) {
       lastUsed.set(page, i);
       count.set(page, count.get(page) + 1);
@@ -107,6 +170,14 @@ export function replace(refs, frameCount, algo) {
     }
     faults++;
     const empty = frames.indexOf(null);
+    if (algo === "nru" && empty !== -1) {
+      frames[empty] = page;
+      R[empty] = 1;
+      M[empty] = write ? 1 : 0;
+      steps.push({ page, frames: [...frames], hit: false, slot: empty, victim: null, ref: [...ref], hand, ...nru, ...nruBits(), line: nruLines("fault", "free"), vars: state(page),
+        note: `${tickNote}Page fault: ${page} isn't in memory, but frame ${empty + 1} is still empty, so it goes straight in with R = 1, M = ${M[empty]} (class ${cls(empty)})${write ? ", since this reference writes to it" : ""}.` });
+      return;
+    }
     if (empty !== -1) {
       frames[empty] = page;
       loadedAt.set(page, i);
@@ -142,6 +213,17 @@ export function replace(refs, frameCount, algo) {
       const tied = frames.map((p, k) => [p, k]).filter(([p]) => count.get(p) === target);
       victimSlot = tied.reduce((a, b) => (loadedAt.get(b[0]) < loadedAt.get(a[0]) ? b : a))[1];
       reason = `${frames[victimSlot]} (${algo === "lfu" ? "smallest" : "largest"} count, ${target}${tied.length > 1 ? `, tied with ${tied.filter(([, k]) => k !== victimSlot).map(([p]) => p).join(", ")}, so the one loaded earliest goes` : ""}). ${algo === "lfu" ? "A page used rarely is assumed not to be needed" : "MFU's bet: a page with a big count has had its turn, while a page with a small count was probably only just brought in"}`;
+    } else if (algo === "nru") {
+      const lowest = Math.min(...nru.before);
+      victimSlot = nru.before.indexOf(lowest);
+      const inClass = frames.filter((_, k) => nru.before[k] === lowest);
+      const all = frames.map((p, k) => `${p} class ${nru.before[k]}`).join(", ");
+      const why = ["it hasn't been used since the last clock tick and is clean, so it can be dropped without a disk write",
+        "no page is in class 0; this one hasn't been used since the last tick, so Tanenbaum's rule prefers it to any recently used page, even though it is dirty",
+        "every page has been used since the last tick, and this one is at least clean, so no write-back is needed",
+        "every page has been used since the last tick and written to, so there is no better choice"][lowest];
+      reason = `${frames[victimSlot]} from frame ${victimSlot + 1}, the lowest non-empty class, class ${lowest} (${all})${inClass.length > 1 ? `. ${inClass.join(" and ")} share class ${lowest}, so the lowest-numbered frame goes` : ""}: ${why}`;
+      extra = { "lowest class": lowest };
     } else {
       const chances = [];
       while (ref[hand] === 1) {
@@ -164,7 +246,10 @@ export function replace(refs, frameCount, algo) {
     count.set(page, 1);
     ref[victimSlot] = 1;
     if (algo === "clock") hand = (victimSlot + 1) % frameCount;
-    steps.push({ page, frames: [...frames], hit: false, slot: victimSlot, victim, ref: [...ref], hand, sweep, line: lines("fault", "choose", "replace"), vars: state(page, { victim, ...extra }), note: `Page fault: all ${frameCount} frames are full, so evict ${reason}. ${page} takes frame ${victimSlot + 1}.` });
+    const dirty = M[victimSlot];
+    if (algo === "nru") { R[victimSlot] = 1; M[victimSlot] = write ? 1 : 0; }
+    steps.push({ page, frames: [...frames], hit: false, slot: victimSlot, victim, ref: [...ref], hand, sweep, ...nru, ...nruBits(), line: algo === "nru" ? nruLines("fault", "choose", "replace") : lines("fault", "choose", "replace"),
+      vars: state(page, { victim, ...extra }), note: `${tickNote}Page fault: all ${frameCount} frames are full, so evict ${reason}. ${algo === "nru" && dirty ? `${victim} is modified, so it is written back to disk first. ` : ""}${page} takes frame ${victimSlot + 1}${algo === "nru" ? ` with R = 1, M = ${M[victimSlot]}` : ""}.` });
   });
   return { steps, faults, hits: refs.length - faults, hitRatio: (refs.length - faults) / refs.length };
 }
@@ -188,6 +273,9 @@ export function workingSet(refs, delta) {
   });
   return { rows, max: Math.max(...rows.map((r) => r.size)), average: rows.reduce((s, r) => s + r.size, 0) / rows.length };
 }
+
+// Random writes for NRU: roughly a third of references write.
+export const randomWrites = (r = Math.random, length = 12) => Array.from({ length }, () => r() < 0.3);
 
 export function randomRefs(r = Math.random, length = 12 + Math.floor(r() * 4)) {
   const pages = 5 + Math.floor(r() * 3);

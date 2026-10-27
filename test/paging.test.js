@@ -89,3 +89,75 @@ test("fuzz: lines, variables and the clock hand stay in range", () => {
     }
   }
 });
+
+// --- NRU (Tanenbaum, Modern Operating Systems, 3.4.2) ---------------------------
+import { formatAccesses, parseAccesses } from "../public/js/engines/paging.js";
+
+test("reference strings: w marks a write, plain pages stay reads", () => {
+  assert.deepEqual(parseAccesses("7w 0 1 2W 3r"), { refs: [7, 0, 1, 2, 3], writes: [true, false, false, true, false] });
+  assert.deepEqual(parseRefs("7w 0 1"), [7, 0, 1], "every other algorithm just sees the pages");
+  assert.equal(formatAccesses([7, 0], [true, false]), "7w 0");
+  assert.throws(() => parseAccesses("7x"), /w for a write/);
+  const plain = replace(BOOK, 3, "lru").faults;
+  assert.equal(replace(BOOK, 3, "lru", { writes: BOOK.map(() => true) }).faults, plain, "writes don't change LRU");
+});
+
+test("NRU: the four classes, the clock tick and the lowest-frame tie-break", () => {
+  const { refs, writes } = parseAccesses("1 2w 3 4 2 5 3w 1 6 7");
+  const r = replace(refs, 3, "nru", { writes, tick: 4 });
+  assert.deepEqual(r.steps.map((s) => s.victim), [null, null, null, 1, null, 4, null, 5, 1, 2]);
+  assert.equal(r.faults, 8);
+  // Ref 4: 1 and 3 are class 2, 2 is class 3 (written). Tie in class 2 → frame 1.
+  assert.deepEqual(r.steps[3].before, [2, 3, 2]);
+  // The tick before ref 5 clears R: 4 → class 0, 2 (dirty) → class 1, 3 → class 0.
+  assert.equal(r.steps[4].tick, true);
+  assert.deepEqual(r.steps[4].before, [0, 1, 0]);
+  assert.deepEqual([r.steps[4].R, r.steps[4].M], [[0, 1, 0], [0, 1, 0]]);
+  assert.equal(r.steps[4].hit, true);
+  assert.deepEqual(r.steps[6].classes, [2, 3, 3], "3w is a write hit: R and M both set");
+  // Last ref: no class 0, so the dirty-but-idle class 1 page goes before the clean, busy class 2 one.
+  assert.deepEqual(r.steps[9].before, [2, 1, 1]);
+  assert.equal(r.steps[9].slot, 1);
+  assert.match(r.steps[9].note, /class 1/);
+  assert.match(r.steps[9].note, /written back/);
+  assert.match(r.steps[8].note, /Clock tick/);
+  assert.ok(r.steps[8].line.includes(2), "the tick line is lit");
+  assert.equal(r.steps[9].vars["lowest class"], 1);
+});
+
+test("NRU: with all reads and k = 1 every page is class 0 at a fault, so it evicts frame 1", () => {
+  const { steps } = replace([1, 2, 3, 4, 5], 3, "nru", { tick: 1 });
+  assert.deepEqual(steps.map((s) => s.slot), [0, 1, 2, 0, 0]);
+  assert.throws(() => replace([1], 1, "nru", { tick: 0 }), /clock tick/);
+});
+
+test("fuzz: NRU always evicts from the lowest non-empty class, lowest frame first", () => {
+  let seed = 23;
+  const rand = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  for (let k = 0; k < 400; k++) {
+    const refs = randomRefs(rand), writes = refs.map(() => rand() < 0.35);
+    const frames = 1 + Math.floor(rand() * 5), tick = 1 + Math.floor(rand() * 6);
+    const r = replace(refs, frames, "nru", { writes, tick });
+    // Recompute the bits independently.
+    const R = Array(frames).fill(0), M = Array(frames).fill(0), mem = Array(frames).fill(null);
+    r.steps.forEach((s, i) => {
+      assert.equal(s.tick, i > 0 && i % tick === 0);
+      if (s.tick) R.fill(0);
+      const before = mem.map((p, f) => (p === null ? null : 2 * R[f] + M[f]));
+      assert.deepEqual(s.before, before);
+      const at = mem.indexOf(refs[i]);
+      if (at !== -1) { assert.ok(s.hit); R[at] = 1; if (writes[i]) M[at] = 1; return; }
+      assert.ok(!s.hit);
+      const free = mem.indexOf(null);
+      if (free !== -1) assert.equal(s.slot, free);
+      else {
+        const lowest = Math.min(...before);
+        assert.equal(before[s.slot], lowest, "victim is in the lowest non-empty class");
+        assert.equal(s.slot, before.indexOf(lowest), "and in the lowest-numbered frame of that class");
+        assert.equal(s.victim, mem[s.slot]);
+      }
+      mem[s.slot] = refs[i]; R[s.slot] = 1; M[s.slot] = writes[i] ? 1 : 0;
+      assert.deepEqual([s.R, s.M], [[...R], [...M]]);
+    });
+  }
+});

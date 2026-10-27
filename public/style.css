@@ -1863,3 +1863,28 @@ h3.sub { font-size: 16px; margin: 16px 0 8px; }
 @media (prefers-reduced-motion: reduce) { .bus-line { transition: none; } }
 .mv.arrive, .mv.drip { animation: cn-fade 0.3s 0.75s forwards; }
 @keyframes cn-fade { to { opacity: 0; } }
+/* F-SCAN queues */
+.fq-wrap { margin-bottom: 8px; }
+svg.fq-svg { display: block; width: 100%; max-width: 520px; height: auto; margin: 0 auto; }
+.fq-svg .pf-label { fill: var(--muted); font: 600 12px var(--body); }
+.fq-lane { fill: var(--surface); stroke: var(--line); }
+.fq-lane.active { stroke: var(--series-1); }
+.fq-tok rect { fill: var(--surface); stroke: var(--muted); stroke-width: 1.5; }
+.fq-tok text.fq-cyl { fill: var(--text); font: 700 14px var(--mono); }
+.fq-tok text.fq-at { fill: var(--muted); font: 600 10px var(--mono); }
+.fq-tok.active rect { fill: var(--series-1); stroke: var(--series-1); }
+.fq-tok.active text { fill: #fff; }
+.fq-tok.waiting rect { fill: var(--warn-soft); stroke: var(--series-4); stroke-width: 2; }
+.fq-tok.later rect { stroke-dasharray: 4 3; }
+.fq-tok.later text { fill: var(--muted); }
+.fq-tok.served rect { fill: var(--good-soft); stroke: var(--good); }
+.fq-tok.now rect { stroke: var(--accent); stroke-width: 3; }
+/* NRU: R/M bits and the four classes */
+table.frames.nru td small.rm { display: block; font: 600 10px var(--mono); color: var(--muted); letter-spacing: 1px; }
+table.frames.nru th .tick { display: block; font-size: 11px; line-height: 1; }
+.pf-svg .pf-bits { fill: var(--muted); font: 600 10.5px var(--mono); }
+svg.nru-svg { max-width: 360px; margin-top: 6px; }
+.nru-bucket { fill: var(--surface); stroke: var(--line); stroke-width: 1.5; }
+.nru-bucket.lowest { stroke: var(--bad); stroke-width: 2.5; }
+.pf-tok.small text { font-size: 13px; }
+.pf-tok.evicted-pick rect { fill: var(--bad); }
