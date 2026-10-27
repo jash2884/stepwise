@@ -66,6 +66,10 @@ function art(kind) {
     case "ll1": return h("div", { class: "art matrix-art" }, cells(15, [4, 6, 13]));
     case "lr": return h("div", { class: "art fd-art" }, h("span", null, "I0 —id→ I5"), h("span", null, "s5  r6  acc"), h("span", { class: "hot" }, "shift/reduce on ="));
     case "dag": return h("div", { class: "art fd-art" }, h("span", null, "t1 = minus c"), h("span", null, "t2 = b * t1"), h("span", { class: "hot" }, "t3 = t2 + t2  ← shared"));
+    case "btree": return h("div", { class: "art tree-art btree-art" }, h("i", { class: "r" }, "P"), h("div", null, h("i", null, "C G"), h("i", { class: "hot" }, "T X")));
+    case "locks": return h("div", { class: "art locks-art" }, h("div", null, h("b", null, "A"), h("i", { class: "x" }, "T1 X"), h("i", { class: "q" }, "T2 S")), h("div", null, h("b", null, "B"), h("i", null, "T2 S"), h("i", null, "T3 S")));
+    case "algebra": return h("div", { class: "art fd-art algebra-art" }, h("span", null, "π σ (R × S × T)"), h("span", null, "→ σ(R) ⋈ S ⋈ T"), h("span", { class: "hot" }, "2.4 × 10⁹ → 1,777 tuples"));
+    case "log": return h("div", { class: "art fd-art log-art" }, h("span", null, "<T2, A, 500, 400>"), h("span", { class: "hot" }, "⚡ crash"), h("span", null, "undo T2 → A = 500"));
     default: return h("div", { class: "art fd-art" }, h("span", null, "AB → C"), h("span", null, "C → D"), h("span", { class: "hot" }, "AB⁺ = ABCD"));
   }
 }

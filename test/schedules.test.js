@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { analyse, EXAMPLES, parseSchedule } from "../public/js/engines/schedules.js";
+import { analyse, CODE, EXAMPLES, parseSchedule, randomSchedule } from "../public/js/engines/schedules.js";
 
 const ex = (name) => EXAMPLES.find(([n]) => n.startsWith(name))[1];
 
@@ -44,4 +44,22 @@ test("parsing is forgiving about case and separators, strict about mistakes", ()
   assert.throws(() => parseSchedule("R1"), /needs a data item/);
   assert.throws(() => parseSchedule("R1(A) C1 W1(A)"), /after it commits/);
   assert.throws(() => parseSchedule("R1(A) hello"), /Can't read/);
+});
+
+test("traced test: one step per conflict, then the cycle or Kahn's order, with valid lines", () => {
+  const r = analyse(ex("Conflict-serialisable"));
+  assert.equal(r.trace.filter((s) => s.pair).length, r.pairs.length);
+  assert.match(r.trace[1].note, /read–write conflict/);
+  assert.deepEqual(r.trace.at(-1).order, [1, 2]);
+  const lost = analyse(ex("Not serialisable")).trace.at(-1);
+  assert.equal(lost.bad, true);
+  assert.match(lost.note, /NOT conflict-serialisable/);
+  let seed = 11;
+  const rand = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  for (let k = 0; k < 200; k++) {
+    const res = analyse(randomSchedule(rand));
+    for (const s of res.trace) for (const l of [s.line].flat()) assert.ok(l >= 1 && l <= CODE.length);
+    if (res.conflictSerializable) assert.deepEqual(res.trace.at(-1).order, res.order);
+    assert.deepEqual(res.trace.at(-1).edges, res.edges);
+  }
 });

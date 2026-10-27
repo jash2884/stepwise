@@ -1,17 +1,19 @@
-import { bits, EXAMPLE, EXTENDIBLE_EXAMPLE, extendible, hashTable, parseKeys, randomKeys, STRATEGIES } from "../engines/hashing.js";
+import { bits, CODE, EXAMPLE, EXTENDIBLE_EXAMPLE, extendible, hashTable, parseKeys, randomKeys, STRATEGIES } from "../engines/hashing.js";
+import { codePanel, traceLayout, varsPanel } from "../code.js";
 import { copyLink, fmt, h, notice, page, readParams, rng, stepper, tabs, writeParams } from "../ui.js";
 
 function tableView(step, m, strategy) {
   const probes = new Map(step.probes.map((s, i) => [s, i + 1]));
+  const now = step.slot == null ? step.probes.at(-1) : null;
   return h("ol", { class: "hash-table", start: 0 }, Array.from({ length: m }, (_, i) => {
     const v = step.table[i];
-    const cls = [step.slot === i ? (step.failed ? "fail" : "landed") : probes.has(i) ? "probed" : "", v === null || (Array.isArray(v) && !v.length) ? "empty" : ""].join(" ").trim();
+    const cls = [step.slot === i ? (step.failed ? "fail" : "landed") : probes.has(i) ? "probed" : "", i === now ? "now" : "", v === null || (Array.isArray(v) && !v.length) ? "empty" : ""].join(" ").trim();
     return h("li", { class: cls || null },
       h("span", { class: "idx" }, i),
       strategy === "chaining"
         ? h("span", { class: "chain" }, v.length ? v.map((k) => h("b", { class: k === step.key && step.slot === i ? "new" : null }, k)) : h("span", { class: "muted" }, "—"))
         : h("span", { class: "val" }, v ?? ""),
-      probes.has(i) && strategy !== "chaining" ? h("small", { class: "probe-no" }, `probe ${probes.get(i)}`) : null);
+      probes.has(i) && strategy !== "chaining" ? h("small", { class: "probe-no" }, i === now ? `${step.key}? probe ${probes.get(i) - 1}` : `probe ${probes.get(i) - 1}`) : null);
   }));
 }
 
@@ -69,15 +71,18 @@ export function render(root) {
         const r = hashTable(keys, state.m, state.strategy);
         msg.replaceChildren();
         const stage = h("div"), note = h("p", { class: "step-note", "aria-live": "polite" });
-        player = stepper({ count: r.steps.length, label: "Key", interval: 1000, render: (i) => {
-          const s = r.steps[i];
+        const code = codePanel(CODE[state.strategy]), vars = varsPanel();
+        player = stepper({ count: r.trace.length, label: "Step", interval: 900, render: (i) => {
+          const s = r.trace[i];
           stage.replaceChildren(tableView(s, state.m, state.strategy));
-          note.textContent = `Insert ${s.key}: ${s.note}`;
-          note.className = `step-note${s.failed ? " bad" : ""}`;
+          code.show(s.line);
+          vars.show(s.vars);
+          note.textContent = s.note;
+          note.className = `step-note${s.failed ? " bad" : s.slot != null ? " good" : ""}`;
         } });
         const compare = Object.entries(STRATEGIES).map(([id, st]) => { const x = hashTable(keys, state.m, id); return [st.name, x.collisions, x.steps.filter((s) => s.failed).length]; });
         out.replaceChildren(
-          h("section", { class: "card" }, h("h2", null, STRATEGIES[state.strategy].name), player.el, stage, note,
+          h("section", { class: "card" }, h("h2", null, STRATEGIES[state.strategy].name), player.el, note, traceLayout(stage, code, vars),
             h("div", { class: "stats-row" },
               h("div", { class: "stat" }, h("span", null, "Collisions"), h("b", null, r.collisions)),
               h("div", { class: "stat" }, h("span", null, "Load factor α"), h("b", null, fmt(r.loadFactor))),
@@ -91,13 +96,16 @@ export function render(root) {
         const r = extendible(keys, state.size);
         msg.replaceChildren();
         const stage = h("div"), note = h("p", { class: "step-note", "aria-live": "polite" });
+        const code = codePanel(CODE.extendible), vars = varsPanel();
         player = stepper({ count: r.steps.length, label: "Step", interval: 1200, render: (i) => {
           const s = r.steps[i];
           stage.replaceChildren(extendibleView(s, s.bucket));
+          code.show(s.line);
+          vars.show(s.vars);
           note.textContent = s.note;
           note.className = `step-note${s.doubled || s.split ? " warn" : ""}`;
         } });
-        out.replaceChildren(h("section", { class: "card" }, h("h2", null, `Extendible hashing, bucket size ${state.size}`), player.el, stage, note,
+        out.replaceChildren(h("section", { class: "card" }, h("h2", null, `Extendible hashing, bucket size ${state.size}`), player.el, note, traceLayout(stage, code, vars),
           h("div", { class: "stats-row" },
             h("div", { class: "stat" }, h("span", null, "Global depth"), h("b", null, r.global)),
             h("div", { class: "stat" }, h("span", null, "Directory entries"), h("b", null, r.dir.length)),

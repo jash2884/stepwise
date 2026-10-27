@@ -1,4 +1,5 @@
-import { analyse, EXAMPLES, opText, randomSchedule } from "../engines/schedules.js";
+import { analyse, CODE, EXAMPLES, opText, randomSchedule } from "../engines/schedules.js";
+import { codePanel, traceLayout, varsPanel } from "../code.js";
 import { copyLink, h, notice, page, readParams, rng, stepper, tabs, writeParams } from "../ui.js";
 
 // The textbook layout: one column per transaction, time going down.
@@ -11,7 +12,7 @@ function grid(r, highlight = []) {
 }
 
 // Precedence graph with transactions on a circle; edges appear as they're found.
-export function precedenceSvg(txns, edges, { cycle = null, latest = null } = {}) {
+export function precedenceSvg(txns, edges, { cycle = null, latest = null, done = [], pick = null } = {}) {
   const W = 300, Hh = 230, cx = W / 2, cy = Hh / 2, R = txns.length > 2 ? 80 : 70;
   const pos = new Map(txns.map((t, i) => {
     const a = -Math.PI / 2 + (2 * Math.PI * i) / txns.length;
@@ -27,9 +28,9 @@ export function precedenceSvg(txns, edges, { cycle = null, latest = null } = {})
       const dx = b.x - a.x, dy = b.y - a.y, len = Math.hypot(dx, dy) || 1, ox = back ? (-dy / len) * 8 : 0, oy = back ? (dx / len) * 8 : 0;
       const r = 22;
       return h("line", { x1: a.x + (dx / len) * r + ox, y1: a.y + (dy / len) * r + oy, x2: b.x - (dx / len) * r + ox, y2: b.y - (dy / len) * r + oy,
-        class: `pg-edge${inCycle(e) ? " cycle" : ""}${latest && latest.from === e.from && latest.to === e.to ? " latest" : ""}`, "marker-end": "url(#pg-arrow)" });
+        class: `pg-edge${inCycle(e) ? " cycle" : ""}${latest && latest.from === e.from && latest.to === e.to ? " latest" : ""}${done.includes(e.from) ? " gone" : ""}`, "marker-end": "url(#pg-arrow)" });
     }),
-    txns.map((t) => { const { x, y } = pos.get(t); return h("g", { class: `pg-node${cycle?.includes(t) ? " cycle" : ""}` }, h("circle", { cx: x, cy: y, r: 22 }), h("text", { x, y: y + 5, "text-anchor": "middle" }, `T${t}`)); }));
+    txns.map((t) => { const { x, y } = pos.get(t); return h("g", { class: `pg-node${cycle?.includes(t) ? " cycle" : ""}${t === pick ? " pick" : done.includes(t) ? " gone" : ""}` }, h("circle", { cx: x, cy: y, r: 22 }), h("text", { x, y: y + 5, "text-anchor": "middle" }, `T${t}`)); }));
 }
 
 const verdict = (ok, yes, no) => h("li", { class: ok ? "ok" : "no" }, h("b", null, ok ? `✓ ${yes}` : `✗ ${no}`));
@@ -60,26 +61,27 @@ export function render(root) {
     try { r = analyse(state.text); } catch (e) { msg.replaceChildren(notice("error", e.message)); out.replaceChildren(); return; }
     msg.replaceChildren();
     const sched = h("div"), graph = h("div", { class: "chart-wrap" }), note = h("p", { class: "step-note", "aria-live": "polite" });
-    const count = r.steps.length + 1;
+    const order = h("div", { class: "sg-order", "aria-label": "Serial order so far" });
+    const code = codePanel(CODE, { title: "Conflict-serialisability test" }), vars = varsPanel();
+    const steps = r.trace;
     player = stepper({
-      count, label: "Step", interval: 1100,
+      count: steps.length, label: "Step", interval: 1100,
       render: (i) => {
-        const shown = r.steps.slice(0, i);
-        const edges = [];
-        for (const s of shown) if (!edges.some((e) => e.from === s.pair.from && e.to === s.pair.to)) edges.push({ from: s.pair.from, to: s.pair.to });
-        const last = shown.at(-1);
-        sched.replaceChildren(grid(r, last ? [last.pair.a.i, last.pair.b.i] : []));
-        const done = i === count - 1;
-        graph.replaceChildren(precedenceSvg(r.txns, edges, { cycle: done ? r.cycle : null, latest: last?.pair }));
-        note.textContent = i === 0 ? (r.pairs.length ? "Scan every pair of operations for conflicts." : "No two operations conflict, so the graph has no edges.") : last.note;
-        if (done) note.textContent += r.cycle ? ` Done: the cycle ${r.cycle.map((t) => `T${t}`).join(" → ")} means it is NOT conflict-serialisable.` : ` Done: no cycle, so it is conflict-serialisable as ${r.order.map((t) => `T${t}`).join(" → ")}.`;
-        note.className = `step-note${done ? (r.cycle ? " bad" : " good") : ""}`;
+        const s = steps[i];
+        sched.replaceChildren(grid(r, s.pair ? [s.pair.a.i, s.pair.b.i] : []));
+        const finished = s.order ?? [];
+        graph.replaceChildren(precedenceSvg(r.txns, s.edges, { cycle: s.cycle ?? null, latest: s.latest, done: finished.filter((t) => t !== s.pick), pick: s.pick ?? null }));
+        order.replaceChildren(h("span", { class: "muted small" }, "Serial order: "), ...(finished.length ? finished.map((t, k) => h("b", { class: k === finished.length - 1 && s.pick === t ? "new" : null }, `T${t}`)) : [h("span", { class: "muted small" }, r.cycle ? "none (cycle)" : "…")]));
+        code.show(s.line);
+        vars.show(s.vars);
+        note.textContent = s.note;
+        note.className = `step-note${s.done ? (s.bad ? " bad" : " good") : ""}`;
       },
     });
     const rec = r.recovery;
     out.replaceChildren(
-      h("section", { class: "card" }, h("h2", null, "Conflicts and the precedence graph"), player.el,
-        h("div", { class: "grid-2 tight" }, sched, graph), note),
+      h("section", { class: "card" }, h("h2", null, "Conflicts and the precedence graph"), player.el, note,
+        traceLayout(h("div", null, h("div", { class: "grid-2 tight" }, sched, h("div", null, graph, order))), code, vars)),
       h("section", { class: "card" }, h("h2", null, "Verdict"),
         h("ul", { class: "ladder" },
           verdict(r.conflictSerializable, `Conflict-serialisable: equivalent to ${r.order?.map((t) => `T${t}`).join(" → ")}`, `Not conflict-serialisable (cycle ${r.cycle?.map((t) => `T${t}`).join(" → ")})`),

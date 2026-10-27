@@ -28,6 +28,17 @@ export function parseSchedule(text) {
   return { ops, txns };
 }
 
+export const CODE = [
+  "for each pair of operations p (earlier) and q (later)",
+  "  if p, q are in different transactions Tᵢ, Tⱼ, on the same item,",
+  "     and at least one of them is a write then",
+  "    add edge Tᵢ → Tⱼ  // Tᵢ must come before Tⱼ in any equivalent serial order",
+  "if the precedence graph has a cycle then",
+  "  not conflict-serialisable",
+  "else repeat: output a transaction with no incoming edges, delete it",
+  "  // the output order is an equivalent serial schedule",
+];
+
 export const opText = (o) => (o.item ? `${o.kind}${o.t}(${o.item})` : `${o.kind}${o.t}`);
 
 export function conflicts(ops) {
@@ -112,7 +123,45 @@ export function analyse(text) {
   }
   const blindWrites = data.some((o) => o.kind === "W" && !data.some((r) => r.kind === "R" && r.t === o.t && r.item === o.item && r.i < o.i));
 
-  return { ops, txns, pairs, edges, steps, cycle, order, conflictSerializable, viewSerializable: !!viewOrder, viewOrder, blindWrites, recovery: recoverability(ops, txns) };
+  return { ops, txns, pairs, edges, steps, cycle, order, conflictSerializable, viewSerializable: !!viewOrder, viewOrder, blindWrites, recovery: recoverability(ops, txns), trace: traceGraph(txns, pairs, cycle) };
+}
+
+// The whole test as steps for the view: every conflict found, the cycle check,
+// then Kahn's algorithm picking the serial order. Each step carries the edges
+// drawn so far, the pseudocode line and the variables.
+const kindName = (o) => (o.kind === "W" ? "writes" : "reads");
+function traceGraph(txns, pairs, cycle) {
+  const edges = [], steps = [];
+  const T = (t) => `T${t}`;
+  steps.push({ line: 1, edges: [], note: pairs.length ? `Scan every pair of operations, earlier one first, looking for conflicts. There are ${pairs.length} conflicting pair${pairs.length === 1 ? "" : "s"}.` : "No two operations conflict (different transactions, same item, at least one write), so the precedence graph has no edges.", vars: { conflicts: pairs.length } });
+  for (const p of pairs) {
+    const isNew = !edges.some((e) => e.from === p.from && e.to === p.to);
+    if (isNew) edges.push({ from: p.from, to: p.to });
+    const kind = p.a.kind === "W" && p.b.kind === "W" ? "write–write" : p.a.kind === "W" ? "write–read" : "read–write";
+    const risk = p.b.kind === "R" ? `the value ${T(p.b.t)} reads` : p.a.kind === "R" ? `the value ${T(p.a.t)} reads` : `which write leaves the final value of ${p.a.item}`;
+    steps.push({
+      line: isNew ? [2, 3, 4] : [2, 3], pair: p, latest: isNew ? { from: p.from, to: p.to } : null, edges: [...edges],
+      note: `${opText(p.a)} then ${opText(p.b)}: ${T(p.a.t)} ${kindName(p.a)} ${p.a.item} before ${T(p.b.t)} ${kindName(p.b)} it, a ${kind} conflict. Swapping them could change ${risk}, so ${T(p.a.t)} must stay before ${T(p.b.t)}. ${isNew ? `Add edge ${T(p.from)} → ${T(p.to)}.` : `(Edge ${T(p.from)} → ${T(p.to)} is already there.)`}`,
+      vars: { p: opText(p.a), q: opText(p.b), item: p.a.item, edge: `${T(p.from)}→${T(p.to)}`, edges: edges.length },
+    });
+  }
+  if (cycle) {
+    steps.push({ line: [5, 6], edges: [...edges], cycle, done: true, bad: true, note: `The graph has a cycle ${cycle.map(T).join(" → ")}: each transaction in it would have to come before itself, so no serial order exists. The schedule is NOT conflict-serialisable.`, vars: { cycle: cycle.map(T) } });
+    return steps;
+  }
+  steps.push({ line: [5, 7], edges: [...edges], note: "No cycle, so the schedule is conflict-serialisable. Find an order by repeatedly taking a transaction with no incoming edges (lowest number first).", vars: { cycle: "none" } });
+  const indeg = new Map(txns.map((t) => [t, 0]));
+  for (const e of edges) indeg.set(e.to, indeg.get(e.to) + 1);
+  const order = [], left = new Set(txns);
+  while (left.size) {
+    const ready = [...left].filter((t) => !indeg.get(t)).sort((a, b) => a - b);
+    const pick = ready[0];
+    order.push(pick); left.delete(pick);
+    for (const e of edges) if (e.from === pick) indeg.set(e.to, indeg.get(e.to) - 1);
+    steps.push({ line: 7, edges: [...edges], pick, order: [...order], note: `${ready.map(T).join(", ")} ${ready.length > 1 ? "have" : "has"} no incoming edges from unfinished transactions${ready.length > 1 ? `; take the lowest, ${T(pick)}` : `, so ${T(pick)} goes next`}. Delete it and its outgoing edges.`, vars: { ready: ready.map(T), pick: T(pick), order: order.map(T) } });
+  }
+  steps.push({ line: 8, edges: [...edges], order, done: true, note: `Equivalent serial schedule: ${order.map(T).join(" → ")}. Running the transactions one after another in this order gives the same result as the interleaved schedule.`, vars: { order: order.map(T) } });
+  return steps;
 }
 
 // Recoverable ⊇ cascadeless ⊇ strict. Needs commit/abort points to judge.

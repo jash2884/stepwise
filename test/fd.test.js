@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { candidateKeys, closure, decomposeBCNF, minimalCover, normalForm, parseAttrs, parseFds, synthesize3NF } from "../public/js/engines/fd.js";
+import { ALGOS, candidateKeys, closure, CODE, decomposeBCNF, minimalCover, normalForm, parseAttrs, parseFds, randomSchema, synthesize3NF, trace } from "../public/js/engines/fd.js";
 
 const schema = (attrs, fds) => { const a = parseAttrs(attrs); return [a, parseFds(fds, a)]; };
 
@@ -51,4 +51,33 @@ test("parsing errors are explained", () => {
   assert.throws(() => parseAttrs("123"), /attributes/);
   assert.throws(() => parseFds("A -> Z", "ABC"), /isn't in the relation/);
   assert.throws(() => parseFds("ABC", "ABC"), /Can't read/);
+});
+
+test("traced closure: Silberschatz's R(A,B,C,G,H,I) example gives (AG)+ = ABCGHI", () => {
+  // Database System Concepts, section 7.4: F = {A → B, A → C, CG → H, CG → I, B → H}.
+  const [a, f] = schema("ABCGHI", "A -> B; A -> C; CG -> H; CG -> I; B -> H");
+  const steps = trace("closure", a, f, "AG");
+  assert.equal(steps.at(-1).vars.result, "ABCGHI");
+  assert.match(steps.at(-1).note, /superkey/);
+  assert.ok(trace("closure", a, f, "G").some((s) => /CG → H: C isn't in G yet/.test(s.note)), "explains why an FD can't fire yet");
+  assert.ok(steps.some((s) => s.added === "BC" || s.added === "B"));
+});
+
+test("traced algorithms agree with the direct ones on random schemas, with valid lines", () => {
+  let seed = 7;
+  const rand = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  for (let k = 0; k < 150; k++) {
+    const { attrs, fds } = randomSchema(rand);
+    const runs = Object.fromEntries(Object.keys(ALGOS).map((algo) => [algo, trace(algo, attrs, fds, attrs.slice(0, 2))]));
+    for (const [algo, steps] of Object.entries(runs)) {
+      assert.ok(steps.length >= 2 && steps.at(-1).done, algo);
+      for (const s of steps) for (const l of [s.line].flat()) assert.ok(l >= 1 && l <= CODE[algo].length, `${algo} line ${l}`);
+    }
+    assert.equal(runs.closure.at(-1).vars.result, closure(attrs.slice(0, 2), fds).closure);
+    assert.deepEqual(runs.keys.at(-1).vars.keys, candidateKeys(attrs, fds).keys);
+    assert.equal(runs.nf.at(-1).vars.form, normalForm(attrs, fds).form);
+    assert.deepEqual(runs.cover.at(-1).vars.cover, minimalCover(fds).cover.map((x) => `${x.lhs} → ${x.rhs}`));
+    assert.deepEqual(runs.three.at(-1).vars.relations, synthesize3NF(attrs, fds).relations);
+    assert.deepEqual([...runs.bcnf.at(-1).vars.result].sort(), [...decomposeBCNF(attrs, fds).relations].sort());
+  }
 });
