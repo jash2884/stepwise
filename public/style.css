@@ -1693,3 +1693,173 @@ table.ra-ranges td.left { color: var(--text); font-size: 13px; }
 @keyframes tcd-push { from { opacity: 0; transform: translateY(-14px) scale(0.85); } }
 @keyframes tcd-pop { 0% { opacity: 0.9; } 55% { opacity: 0; transform: translateY(-14px); max-width: 140px; } 100% { opacity: 0; transform: translateY(-14px); max-width: 0; min-width: 0; padding: 0; margin-left: -3px; border-width: 0; } }
 @media (prefers-reduced-motion: reduce) { .ll-stack span.push, .ll-stack span.ghost { animation: none; } .ll-stack span.ghost { display: none; } }
+/* CN depth */
+/* Moving packets (views/net.js) */
+.pkt rect { fill: var(--surface); stroke: var(--accent); stroke-width: 2; }
+.pkt text { fill: var(--text); font: 700 10.5px var(--mono); }
+.pkt.frame rect, .pkt.data rect, .pkt.syn rect, .pkt.query rect, .pkt.get rect, .pkt.lsp rect { stroke: var(--series-1); fill: color-mix(in srgb, var(--series-1) 16%, var(--surface)); }
+.pkt.ack rect, .pkt.answer rect, .pkt.resp rect, .pkt.ok rect, .pkt.cts rect { stroke: var(--series-3); fill: color-mix(in srgb, var(--series-3) 16%, var(--surface)); }
+.pkt.referral rect, .pkt.fin rect, .pkt.probe rect, .pkt.dv rect, .pkt.rts rect { stroke: var(--series-4); fill: color-mix(in srgb, var(--series-4) 18%, var(--surface)); }
+.pkt.doomed rect, .pkt.bad rect, .pkt.collide rect { stroke: var(--bad); fill: var(--bad-soft); }
+.pkt.sig rect { rx: 7; stroke-width: 0; opacity: 0.75; }
+.pkt.sig.ok rect { fill: var(--series-1); }
+.pkt.sig.bad rect { fill: var(--bad); }
+.timeline.seq { min-width: 0; }
+.timeline .msg.syn line, .timeline .msg.query line, .timeline .msg.get line, .timeline .msg.data line { stroke: var(--series-1); }
+.timeline .msg.answer line, .timeline .msg.resp line, .timeline .msg.cts line { stroke: var(--series-3); }
+.timeline .msg.ack line { stroke: var(--series-3); }
+.timeline .msg.referral line, .timeline .msg.fin line, .timeline .msg.rts line { stroke: var(--series-4); }
+.timeline .msg.live line { stroke-dasharray: 3 4; opacity: 0.55; }
+.timeline .msg-label { paint-order: stroke; stroke: var(--surface-2); stroke-width: 4px; stroke-linejoin: round; }
+.seq-mark { fill: var(--muted); font: 600 10.5px var(--mono); }
+.seq-mark.now { fill: var(--accent); font-weight: 800; }
+.seq-span rect { fill: var(--series-7); opacity: 0.6; }
+.seq-span text { fill: var(--muted); font: 600 10.5px var(--mono); }
+
+/* Subnetting trace */
+.bits-row.hot .bits-label { color: var(--accent); font-weight: 700; }
+.bits i.oct { outline: 2px solid var(--accent); outline-offset: -1px; }
+.bits i.miss { background: var(--bad-soft); color: var(--bad); font-weight: 800; }
+.bits i.pending { color: var(--muted); }
+svg.space-svg { width: 100%; height: auto; display: block; }
+.space-bg { fill: var(--surface); stroke: var(--line); }
+.space-blk rect { fill: var(--c); }
+.space-blk text { fill: #fff; font: 700 12px var(--body); }
+
+/* Routing */
+.net-link.path line { stroke: var(--series-1); stroke-width: 5; }
+.net-link.hot line { stroke: var(--series-4); stroke-width: 4; stroke-dasharray: 7 4; }
+.net-drop { fill: var(--bad); font: 800 15px var(--body); }
+tr.hot-row td, tr.hot-row th { background: var(--warn-soft); }
+tr.win-row td, tr.win-row th { background: var(--good-soft); }
+tr.current td, tr.current th { background: var(--accent-soft); }
+
+/* TCP */
+.cwnd-chart .wmax line { stroke: var(--series-7); stroke-dasharray: 2 4; }
+.cwnd-chart .wmax text { fill: var(--series-7); }
+.cwnd-chart .now-dot { fill: none; stroke: var(--accent); stroke-width: 2.5; }
+.cwnd-chart .now-dot.pure { stroke: var(--series-2); }
+.cwnd-chart .line.pure { stroke: var(--series-2); }
+.cwnd-chart .g-now { stroke: var(--accent); stroke-dasharray: 3 4; }
+.cwnd-chart .peak circle { fill: var(--surface); stroke: var(--series-1); stroke-width: 2.5; }
+.cwnd-chart .peak.pure circle { stroke: var(--series-2); }
+.cwnd-chart .peak text { fill: var(--text); font: 600 11px var(--body); }
+.pipe-wrap { margin-top: 8px; }
+svg.pipe { width: 100%; min-width: 420px; height: auto; display: block; }
+.pipe-bg { fill: var(--surface); stroke: var(--line); }
+.seg-pkt rect { fill: var(--series-1); }
+.seg-pkt.lost rect { fill: var(--bad); }
+.pipe-end, .pipe-more { fill: var(--muted); font: 600 11px var(--body); }
+
+/* Error detection, fragmentation */
+table.hamming td.pbit { outline: 2.5px solid var(--series-2); outline-offset: -2px; }
+.notes li.hot { color: var(--accent); font-weight: 700; }
+svg.frag-svg { width: 100%; min-width: 520px; height: auto; display: block; }
+.frag-title { fill: var(--muted); font: 600 11.5px var(--body); }
+.frag-link { stroke: var(--muted); stroke-dasharray: 4 4; }
+.frag-hdr rect { fill: var(--surface); stroke: var(--text); stroke-width: 1.5; }
+.frag-hdr text { fill: var(--text); font: 700 11px var(--mono); }
+.frag-piece rect { fill: color-mix(in srgb, var(--c) 30%, var(--surface)); stroke: var(--c); stroke-width: 1.5; }
+.frag-piece.now rect { stroke-width: 3; }
+.frag-piece text, .frag-mf { fill: var(--text); font: 600 11px var(--mono); }
+
+/* MAC protocols */
+svg.lanes, svg.bus, svg.bucket, svg.flow, svg.router, svg.blocks { width: 100%; height: auto; display: block; }
+svg.lanes, svg.bus, svg.bucket { min-width: 480px; }
+.lanes .slot-line { stroke: var(--line); stroke-width: 1.5; }
+.lanes .grid { stroke: var(--line); stroke-dasharray: 2 4; }
+.lanes .tick { fill: var(--muted); font: 500 10px var(--mono); }
+.lanes .lane-name { fill: var(--text); font: 700 12px var(--mono); }
+.lanes .now-band { fill: var(--accent-soft); opacity: 0.6; }
+.lanes .now-line { stroke: var(--accent); stroke-width: 2; stroke-dasharray: 4 3; }
+.frame-bar rect { stroke-width: 1.5; }
+.frame-bar.ok rect { fill: color-mix(in srgb, var(--series-3) 30%, var(--surface)); stroke: var(--series-3); }
+.frame-bar.bad rect { fill: var(--bad-soft); stroke: var(--bad); }
+.frame-bar rect.chan { opacity: 0.55; }
+.bus-line { stroke: var(--text); stroke-width: 5; stroke-linecap: round; transition: stroke 0.3s; }
+.bus-line.busy { stroke: var(--series-1); }
+.bus-line.jam { stroke: var(--bad); }
+.bus-st rect { fill: var(--surface); stroke: var(--muted); stroke-width: 2; }
+.bus-st.tx rect { fill: var(--accent-soft); stroke: var(--series-1); stroke-width: 3; }
+.bus-st.coll rect { fill: var(--bad-soft); stroke: var(--bad); stroke-width: 3; }
+.bus-st .tap { stroke: var(--muted); stroke-width: 2; }
+.bus-st .st-name { fill: var(--text); font: 700 15px var(--mono); }
+.bus .st-state { fill: var(--muted); font: 600 10.5px var(--body); }
+.burst circle { fill: var(--bad); }
+.burst text { fill: #fff; font: 800 14px var(--body); }
+.burst text.st-state { fill: var(--bad); }
+table.slot-grid { border-collapse: collapse; font: 600 11.5px var(--mono); }
+table.slot-grid th, table.slot-grid td { border: 1px solid var(--line); padding: 4px 5px; min-width: 30px; white-space: nowrap; }
+table.slot-grid th.now { color: var(--accent); }
+table.slot-grid td.now { outline: 2px solid var(--accent); outline-offset: -2px; }
+table.slot-grid td.tx { background: color-mix(in srgb, var(--series-1) 25%, var(--surface)); }
+table.slot-grid td.collide { background: var(--bad-soft); color: var(--bad); }
+table.slot-grid td.wait { background: var(--warn-soft); }
+table.slot-grid td.backoff { background: repeating-linear-gradient(45deg, var(--surface-2), var(--surface-2) 4px, color-mix(in srgb, var(--series-7) 20%, var(--surface)) 4px, color-mix(in srgb, var(--series-7) 20%, var(--surface)) 8px); }
+table.slot-grid td.done { color: var(--good); }
+table.slot-grid td.gave-up { color: var(--bad); }
+.ca-bar rect { stroke-width: 1.5; }
+.ca-bar text { fill: var(--text); font: 700 10.5px var(--mono); }
+.ca-bar.difs rect, .ca-key.difs i { fill: var(--surface-2); background: var(--surface-2); stroke: var(--muted); stroke-dasharray: 3 2; }
+.ca-bar.backoff rect, .ca-key.backoff i { fill: color-mix(in srgb, var(--series-7) 22%, var(--surface)); background: color-mix(in srgb, var(--series-7) 22%, var(--surface)); stroke: var(--series-7); }
+.ca-bar.rts rect, .ca-bar.cts rect, .ca-key.rts i { fill: color-mix(in srgb, var(--series-4) 30%, var(--surface)); background: color-mix(in srgb, var(--series-4) 30%, var(--surface)); stroke: var(--series-4); }
+.ca-bar.data rect, .ca-key.data i { fill: color-mix(in srgb, var(--series-1) 28%, var(--surface)); background: color-mix(in srgb, var(--series-1) 28%, var(--surface)); stroke: var(--series-1); }
+.ca-bar.ack rect, .ca-key.ack i { fill: color-mix(in srgb, var(--series-3) 30%, var(--surface)); background: color-mix(in srgb, var(--series-3) 30%, var(--surface)); stroke: var(--series-3); }
+.ca-bar.nav rect, .ca-key.nav i { fill: var(--warn-soft); background: var(--warn-soft); stroke: var(--series-4); stroke-dasharray: 4 3; }
+.ca-bar.collide rect, .ca-key.collide i { fill: var(--bad-soft); background: var(--bad-soft); stroke: var(--bad); }
+.ca-bar .nav-label { font: 700 9px var(--mono); fill: var(--muted); }
+.ca-key i { display: inline-block; width: 14px; height: 12px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; border: 1.5px solid var(--muted); }
+.ca-key.data i { border-color: var(--series-1); }
+.ca-key.collide i { border-color: var(--bad); }
+
+/* Traffic shaping */
+.bucket-wall { fill: none; stroke: var(--text); stroke-width: 4; stroke-linejoin: round; }
+.bucket-label { fill: var(--muted); font: 600 11.5px var(--body); }
+.bucket .wire { stroke: var(--line); stroke-width: 3; }
+.bucket .hole { fill: var(--surface-2); }
+.bucket .tap { fill: var(--muted); }
+.in-bucket { fill: color-mix(in srgb, var(--series-1) 35%, var(--surface)); stroke: var(--series-1); stroke-width: 1.5; }
+.bucket .token { fill: var(--series-4); stroke: var(--surface); stroke-width: 1.5; }
+.bucket .queued { fill: var(--warn-soft); stroke: var(--series-4); stroke-width: 1.5; }
+.mv.pkt rect { fill: var(--series-1); }
+.mv.token circle { fill: var(--series-4); }
+.mv.drop rect { fill: var(--bad); }
+.mv.sent rect { fill: var(--series-3); }
+.flow .in { fill: color-mix(in srgb, var(--muted) 45%, transparent); }
+.flow .out { fill: var(--series-1); }
+.flow .later { opacity: 0.12; }
+.flow .now rect { stroke: var(--accent); stroke-width: 1.5; }
+.flow .drop-mark { fill: var(--bad); font: 800 11px var(--body); }
+.flow .tick, .flow text { fill: var(--muted); font: 500 10px var(--mono); }
+.flow .grid { stroke: var(--line); }
+
+/* DNS & HTTP */
+h3.sub { font-size: 16px; margin: 16px 0 8px; }
+
+/* CIDR */
+.router .wire { stroke: var(--muted); stroke-width: 3; }
+.router .iface line { stroke: var(--line); stroke-width: 3; }
+.router .iface text { fill: var(--muted); font: 700 12px var(--mono); }
+.router .iface.hit line { stroke: var(--series-4); }
+.router .iface.win line { stroke: var(--good); stroke-width: 5; }
+.router .iface.win text { fill: var(--good); }
+.router-box { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 2.5; }
+.router-label { fill: var(--accent); font: 800 16px var(--display); }
+.blocks .tick { fill: var(--muted); font: 600 10.5px var(--body); }
+.blk rect { stroke-width: 1.5; }
+.blk.orig rect { fill: color-mix(in srgb, var(--series-1) 22%, var(--surface)); stroke: var(--series-1); }
+.blk.sum rect { fill: color-mix(in srgb, var(--series-3) 25%, var(--surface)); stroke: var(--series-3); }
+.blk.merged rect { fill: color-mix(in srgb, var(--series-4) 35%, var(--surface)); stroke: var(--series-4); stroke-width: 3; }
+.blk text { fill: var(--text); font: 700 11px var(--mono); }
+.blocks .supernet { fill: none; stroke: var(--accent); stroke-width: 2; stroke-dasharray: 5 4; }
+
+/* Home art for the new CN tools */
+.aloha-art path { fill: none; stroke-width: 3; }
+.aloha-art .s { stroke: var(--series-1); }
+.aloha-art .p { stroke: var(--series-2); }
+.bucket-art { justify-content: center; gap: 12px; font: 700 14px var(--mono); color: var(--series-1); }
+.bucket-art .b { width: 46px; height: 52px; border: 3px solid var(--text); border-top: 0; border-radius: 0 0 8px 8px; display: flex; flex-wrap: wrap-reverse; align-content: flex-start; gap: 3px; padding: 4px; }
+.bucket-art .b i { width: 15px; height: 12px; border-radius: 2px; background: var(--series-1); }
+@media (prefers-reduced-motion: reduce) { .bus-line { transition: none; } }
+.mv.arrive, .mv.drip { animation: cn-fade 0.3s 0.75s forwards; }
+@keyframes cn-fade { to { opacity: 0; } }

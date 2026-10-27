@@ -1,18 +1,39 @@
-import { analyse, binary, dotted, parseAddress, parseMask, randomAddress, vlsm } from "../engines/subnet.js";
-import { copyLink, h, notice, page, readParams, rng, tabs, writeParams } from "../ui.js";
+import { analyse, ANALYSE_CODE, binary, dotted, parseAddress, parseMask, randomAddress, vlsm, VLSM_CODE } from "../engines/subnet.js";
+import { codePanel, traceLayout, varsPanel } from "../code.js";
+import { copyLink, h, morph, notice, page, readParams, rng, stepper, tabs, writeParams } from "../ui.js";
 
-// Address, mask and network in binary, with the prefix boundary marked.
-function bitsView(r) {
-  const row = (label, n, cls) => h("div", { class: "bits-row" }, h("span", { class: "bits-label" }, label),
+// Address, mask and network in binary, with the prefix boundary marked. With a
+// trace step, only the rows worked out so far are shown and the active one
+// (and octet) is highlighted.
+const ROWS = ["mask", "network", "broadcast"];
+function bitsView(r, st = null) {
+  const upto = st ? ROWS.indexOf(st.row) : 2;
+  const row = (label, n, cls, key) => h("div", { class: `bits-row${st && st.row === key ? " hot" : ""}` }, h("span", { class: "bits-label" }, label),
     h("span", { class: "bits" }, [...binary(n)].map((c, i) => {
       if (c === ".") return h("i", { class: "dot" }, ".");
       const bitIndex = i - Math.floor(i / 9);
-      return h("i", { class: `${bitIndex < r.prefix ? "net" : "host"} ${cls}` }, c);
+      return h("i", { class: `${bitIndex < r.prefix ? "net" : "host"} ${cls}${st?.octet === Math.floor(i / 9) ? " oct" : ""}` }, c);
     })),
     h("span", { class: "bits-dec mono" }, dotted(n)));
   return h("div", { class: "bits-grid", role: "img", "aria-label": `In binary, the first ${r.prefix} bits are the network part and the last ${32 - r.prefix} are the host part.` },
-    row("Address", r.ip, ""), row("Mask", r.mask, "mask"), row("AND → network", r.network, "result"), row("Broadcast", r.broadcast, "bcast"),
+    row("Address", r.ip, "", "address"), row("Mask", r.mask, "mask", "mask"),
+    upto >= 1 ? row("AND → network", r.network, "result", "network") : null,
+    upto >= 2 ? row("Broadcast", r.broadcast, "bcast", "broadcast") : null,
     h("p", { class: "muted small" }, h("span", { class: "key-net" }, `■ ${r.prefix} network bits`), "  ", h("span", { class: "key-host" }, `■ ${32 - r.prefix} host bits`)));
+}
+
+// The block as a strip, each allocated subnet sliding into place as it's made.
+function spaceBar(rows, blockStart, span, upto = Infinity) {
+  const W = 600, H = 46;
+  const placed = rows.filter((x) => !x.failed).map((x, i) => ({ ...x, i })).filter((x) => x.i < upto);
+  return h("svg", { viewBox: `0 0 ${W} ${H}`, class: "space-svg", role: "img", "aria-label": `${placed.length} subnets allocated` },
+    h("rect", { x: 0, y: 4, width: W, height: H - 8, rx: 8, class: "space-bg" }),
+    placed.map((x) => {
+      const px = ((x.network - blockStart) / span) * W, w = Math.max(3, (x.size / span) * W);
+      return h("g", { class: "space-blk", style: `--c:var(--series-${(x.i % 8) + 1})`, "data-k": `s:${x.name}`, "data-x": px, "data-y": 4 },
+        h("rect", { x: px, y: 4, width: w, height: H - 8, rx: 4 }, h("title", null, `${x.name}: ${dotted(x.network)}/${x.prefix}`)),
+        w > 46 ? h("text", { x: px + w / 2, y: H / 2 + 4, "text-anchor": "middle" }, x.name.slice(0, Math.floor(w / 8))) : null);
+    }));
 }
 
 const fact = (label, value, note) => h("div", { class: "stat" }, h("span", null, label), h("b", { class: "mono" }, value), note ? h("small", { class: "muted" }, note) : null);
@@ -20,6 +41,7 @@ const fact = (label, value, note) => h("div", { class: "stat" }, h("span", null,
 export function render(root) {
   const p = readParams();
   const state = { mode: p.get("mode") === "vlsm" ? "vlsm" : "address", address: p.get("a") ?? "192.168.10.77/26", base: p.get("base") ?? "192.168.1.0/24", needs: p.get("needs") ?? "Sales 100, Office 50, Lab 20, Link 2" };
+  let player = null;
   const head = page({
     subject: "Computer networks", title: "Subnetting & VLSM",
     lede: "Find the network, broadcast and usable host range of any IPv4 address, see the binary AND that produces them, and plan variable-length subnets.",
@@ -46,7 +68,22 @@ export function render(root) {
     return { ip: a.ip, prefix };
   };
 
+  // A stepper over a trace, with the drawing beside the pseudocode and variables.
+  function traceCard(steps, lines, title, draw) {
+    const code = codePanel(lines), vars = varsPanel();
+    const stage = h("div", { class: "chart-wrap" }), note = h("p", { class: "step-note", "aria-live": "polite" });
+    player = stepper({ count: steps.length, label: "Step", interval: 1100, render: (i) => {
+      const st = steps[i];
+      morph(stage, draw(st, i));
+      code.show(st.line); vars.show(st.vars);
+      note.textContent = st.note;
+      note.className = `step-note${st.failed ? " bad" : st.done || i === steps.length - 1 ? " good" : ""}`;
+    } });
+    return h("section", { class: "card" }, h("h2", null, title), player.el, note, traceLayout(stage, code, vars));
+  }
+
   function update() {
+    player?.destroy(); player = null;
     writeParams({ mode: state.mode, a: state.address, base: state.base, needs: state.needs });
     addrBox.hidden = state.mode !== "address";
     vlsmBox.hidden = state.mode !== "vlsm";
@@ -62,8 +99,7 @@ export function render(root) {
               fact("First usable", dotted(r.first)), fact("Last usable", dotted(r.last)),
               fact("Usable hosts", r.usable.toLocaleString("en"), `of ${r.total.toLocaleString("en")} addresses`),
               fact("Subnet mask", dotted(r.mask)), fact("Wildcard", dotted(r.wildcard)), fact("Class · type", `${r.cls}`, r.type))),
-          h("section", { class: "card" }, h("h2", null, "How it's worked out"), bitsView(r),
-            h("ol", { class: "notes" }, r.steps.map((s) => h("li", null, s.note)), h("li", null, r.broadcastNote))));
+          traceCard(r.trace, ANALYSE_CODE, "How it's worked out", (st) => bitsView(r, st)));
       } else {
         const { ip, prefix } = parseInput(state.base);
         const needs = state.needs.split(/[,;\n]+/).map((x) => x.trim()).filter(Boolean).map((x, i) => {
@@ -77,17 +113,16 @@ export function render(root) {
         msg.replaceChildren();
         const span = r.total;
         const blockStart = analyse(ip, prefix).network;
-        out.replaceChildren(h("section", { class: "card" }, h("h2", null, `Dividing ${dotted(blockStart)}/${prefix} (${span.toLocaleString("en")} addresses)`),
-          h("div", { class: "space-bar", role: "img", "aria-label": `${r.used} of ${span} addresses used` }, r.rows.filter((x) => !x.failed).map((x, i) => h("i", {
-            style: `left:${((x.network - blockStart) / span) * 100}%;width:${(x.size / span) * 100}%;--c:var(--series-${(i % 8) + 1})`, title: `${x.name}: ${dotted(x.network)}/${x.prefix}`,
-          }, x.size / span > 0.08 ? x.name : ""))),
+        const placedBy = (i) => r.steps.slice(0, i + 1).filter((s) => s.row != null).length;
+        out.replaceChildren(
+          traceCard(r.steps, VLSM_CODE, `Dividing ${dotted(blockStart)}/${prefix} (${span.toLocaleString("en")} addresses)`, (st, i) => spaceBar(r.rows, blockStart, span, placedBy(i))),
+          h("section", { class: "card" }, h("h2", null, "The plan"),
           h("p", { class: "muted small" }, `${r.used.toLocaleString("en")} of ${span.toLocaleString("en")} addresses allocated (${Math.round((r.used / span) * 100)}%).`),
           h("div", { class: "table-wrap" }, h("table", null,
             h("thead", null, h("tr", null, ["Subnet", "Hosts needed", "Block", "Network", "Usable range", "Broadcast", "Spare hosts"].map((t) => h("th", { scope: "col" }, t)))),
             h("tbody", null, r.rows.map((x) => h("tr", { class: x.failed ? "failed" : null },
               h("th", { scope: "row" }, x.name), h("td", null, x.hosts), h("td", { class: "mono" }, `/${x.prefix}`),
-              ...(x.failed ? [h("td", { colspan: 4, class: "bad-text" }, "Doesn't fit in the block")] : [h("td", { class: "mono" }, dotted(x.network)), h("td", { class: "mono" }, `${dotted(x.first)} – ${dotted(x.last)}`), h("td", { class: "mono" }, dotted(x.broadcast)), h("td", null, x.usable - x.hosts)])))))),
-          h("ol", { class: "notes" }, r.steps.map((s) => h("li", { class: s.failed ? "bad-text" : null }, s.note)))));
+              ...(x.failed ? [h("td", { colspan: 4, class: "bad-text" }, "Doesn't fit in the block")] : [h("td", { class: "mono" }, dotted(x.network)), h("td", { class: "mono" }, `${dotted(x.first)} – ${dotted(x.last)}`), h("td", { class: "mono" }, dotted(x.broadcast)), h("td", null, x.usable - x.hosts)]))))))));
       }
     } catch (e) { msg.replaceChildren(notice("error", e.message)); out.replaceChildren(); }
   }
@@ -130,6 +165,6 @@ export function render(root) {
   root.replaceChildren(head, tab.el, panels);
   tab.select("visual");
   update();
-  return () => {};
+  return () => player?.destroy();
 }
 

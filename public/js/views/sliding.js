@@ -1,5 +1,7 @@
 import { efficiency, maxWindow, minSeqBits, parseLosses, PROTOCOLS, simulate } from "../engines/sliding.js";
-import { copyLink, fmt, h, notice, page, readParams, rng, stepper, tabs, writeParams } from "../ui.js";
+import { codePanel, traceLayout, varsPanel } from "../code.js";
+import { copyLink, fmt, h, morph, notice, page, readParams, rng, stepper, tabs, writeParams } from "../ui.js";
+import { packet } from "./net.js";
 
 // The textbook timeline: sender on the left, receiver on the right, time going down.
 function timeline(r, upto) {
@@ -31,6 +33,14 @@ function timeline(r, upto) {
       return h("g", { class: cls }, h("line", { x1: fromX, y1, x2: toX, y2: y2, "marker-end": "url(#tl-arrow)" }),
         h("text", { x: lab.x, y: lab.y - 5, "text-anchor": "middle", class: "msg-label" }, label),
         s.result && s.kind === "F" && s.arrive <= upto ? h("text", { x: toX + 8, y: y2 + 4, class: "result-label" }, s.result) : null);
+    }),
+    // Everything on the wire glides to where it will be one tick later.
+    visible.filter((s) => upto - s.sent < r.delay).flatMap((s) => {
+      const cap = s.lost ? 0.5 : 1, f0 = (upto - s.sent) / r.delay, f1 = Math.min(cap, (upto + 1 - s.sent) / r.delay);
+      if (f0 >= cap) return [];
+      const fromX = s.kind === "F" ? SX : RX, toX = s.kind === "F" ? RX : SX;
+      const pt = (f) => [fromX + (toX - fromX) * f, y(s.sent) + (y(s.arrive) - y(s.sent)) * f];
+      return [packet(...pt(f0), ...pt(f1), { label: `${s.kind}${s.n}`, cls: `${s.kind === "F" ? "frame" : "ack"}${s.lost ? " doomed" : ""}`, dur: 0.6 })];
     }));
 }
 
@@ -65,7 +75,7 @@ export function render(root) {
         h("li", null, h("b", null, "Go-Back-N"), ": the receiver only accepts frames in order, so after a loss the sender resends that frame ", h("i", null, "and everything after it"), ". Needs W ≤ 2ᵐ − 1 for m-bit sequence numbers."),
         h("li", null, h("b", null, "Selective Repeat"), ": the receiver buffers out-of-order frames, so only the lost frame is resent. Needs W ≤ 2ᵐ⁻¹.")),
       h("p", null, "Utilisation = W / (1 + 2a), where a = propagation delay ÷ transmission time (capped at 100%).")),
-    conventions: ["One frame enters the link per tick; a frame sent at tick t arrives at t + d; ACKs are sent immediately.", "Frames are numbered 0, 1, 2, … without wrap-around so they're easy to follow.", "Go-Back-N uses cumulative ACKs (ACK k = everything up to k arrived) and one timer; Selective Repeat ACKs each frame and times each frame.", "Losses: F3 loses frame 3's first transmission, F3#2 its second, A2 the first ACK 2."],
+    conventions: ["One frame enters the link per tick; a frame sent at tick t arrives at t + d; ACKs are sent immediately.", "Frames are numbered 0, 1, 2, … without wrap-around so they're easy to follow.", "Go-Back-N uses cumulative ACKs (ACK k = everything up to k arrived) and one timer; Selective Repeat ACKs each frame and times each frame.", "Losses: F3 loses frame 3's first transmission, F3#2 its second, A2 the first ACK 2.", "On each tick, the moving packets show what travels along the wire until the next tick. The pseudocode highlights every line that ran during the tick, and the variables are their values at its end."],
   });
 
   const num = (key, label, min, max) => h("label", { class: "inline" }, `${label} `, h("input", { type: "number", min, max, value: state[key] ?? "", placeholder: key === "timeout" ? "auto" : null, "aria-label": label, onchange: (e) => { state[key] = e.target.value === "" ? null : Number(e.target.value); update(); } }));
@@ -85,9 +95,12 @@ export function render(root) {
     catch (e) { msg.replaceChildren(notice(e.livelock ? "info" : "error", e.message)); out.replaceChildren(); return; }
     msg.replaceChildren();
     const stage = h("div", { class: "timeline-wrap" }), win = h("div"), note = h("ul", { class: "notes", "aria-live": "polite" });
+    const code = codePanel(PROTOCOLS[state.protocol].code), vars = varsPanel();
     player = stepper({ count: r.ticks.length, label: "Tick", interval: 800, render: (i) => {
       const tick = r.ticks[i];
-      stage.replaceChildren(timeline(r, tick.t));
+      morph(stage, timeline(r, tick.t));
+      code.show(tick.line);
+      vars.show(tick.vars);
       win.replaceChildren(windows(r, tick));
       note.replaceChildren(...(tick.notes.length ? tick.notes : ["Nothing new this tick; frames are in flight."]).map((n) => h("li", null, n)));
     } });
@@ -97,7 +110,7 @@ export function render(root) {
     });
     out.replaceChildren(
       h("section", { class: "card" }, h("h2", null, `${PROTOCOLS[state.protocol].name}${state.protocol === "sw" ? "" : `, window ${r.W}`} · timeout ${r.T} ticks`), player.el,
-        h("div", { class: "grid-2 tight" }, stage, h("div", null, win, note)),
+        traceLayout(h("div", null, stage, win), code, vars), note,
         h("div", { class: "stats-row" },
           h("div", { class: "stat" }, h("span", null, "Frames sent"), h("b", null, r.framesSent)),
           h("div", { class: "stat" }, h("span", null, "Retransmissions"), h("b", null, r.retransmissions)),

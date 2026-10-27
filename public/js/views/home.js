@@ -36,6 +36,10 @@ function art(kind) {
       [[24, 16, 1], [56, 16, 1], [40, 44, 1], [98, 18, 2], [126, 40, 2], [98, 40, 2]].map(([x, y, k]) => h("circle", { cx: x, cy: y, r: 7, class: `c${k}` }))));
     case "memory": return h("div", { class: "art mem-art" }, [["used", 3], ["", 2], ["used", 4], ["hot", 2], ["", 3], ["used", 2]].map(([c, w], i) => h("i", { class: c, style: `flex:${w};--c:var(--series-${i + 1})` })));
     case "translate": return h("div", { class: "art translate-art" }, h("span", null, h("b", { class: "p" }, "0011"), h("b", { class: "d" }, "1010")), h("span", { class: "arrow" }, "→"), h("span", null, h("b", { class: "f" }, "0110"), h("b", { class: "d" }, "1010")));
+    case "lpm": return h("div", { class: "art fd-art" }, h("span", null, "200.23.24.170"), h("span", null, "/21 ✓  /24 ✓  /0 ✓"), h("span", { class: "hot" }, "longest: /24 → if 1"));
+    case "aloha": return h("div", { class: "art disk-art aloha-art" }, h("svg", { viewBox: "0 0 120 50", "aria-hidden": "true" }, h("path", { d: "M4,46 C20,16 34,10 44,12 C64,16 88,34 116,42", class: "s" }), h("path", { d: "M4,46 C14,30 22,26 28,26 C46,28 80,42 116,45", class: "p" })));
+    case "bucket": return h("div", { class: "art bucket-art" }, h("div", { class: "b" }, h("i"), h("i"), h("i"), h("i")), h("span", null, "→ ▪ ▪ ▪"));
+    case "dns": return h("div", { class: "art fd-art" }, h("span", null, "gaia.cs.umass.edu ?"), h("span", null, "root → .edu → umass"), h("span", { class: "hot" }, "→ A record, cached"));
     case "bars": return h("div", { class: "art bars-art" }, [5, 9, 3, 7, 2, 8, 4, 6].map((v, i) => h("i", { style: `height:${v * 10}%`, class: i === 2 || i === 3 ? "hot" : "" })));
     case "search": return h("div", { class: "art search-art" }, [3, 8, 12, 19, 23, 31, 40].map((v, i) => h("i", { class: i === 3 ? "hot" : i < 3 ? "out" : "" }, v)));
     case "stack": return h("div", { class: "art stack-art" }, h("div", null, ["7", "3", "5"].map((v, i) => h("i", { class: i === 0 ? "hot" : "" }, v))), h("span", null, "a b c * +"));
