@@ -5,6 +5,7 @@ import {
 import { codePanel, traceLayout, varsPanel } from "../code.js";
 import { copyLink, fmt, h, morph, notice, page, readParams, rng, stepper, writeParams } from "../ui.js";
 import { choice, mountTabs, numberQuestion, stat } from "./kit.js";
+import { viewToggle } from "../three-kit.js";
 
 const hex = (n) => `0x${n.toString(16).toUpperCase()}`;
 const txt = (x, y, s, cls = null, anchor = "start") => h("text", { x, y, class: cls, "text-anchor": anchor }, s);
@@ -202,6 +203,26 @@ export function render(root) {
     segments: (p.get("seg") ?? SEGMENT_EXAMPLE.segments).replace(/;/g, "\n"), saddr: p.get("sa") ?? SEGMENT_EXAMPLE.addresses,
   };
   let player = null;
+  // Optional 3D view: loaded only when chosen, rebuilt when the inputs change.
+  let d3 = null, gen = 0, live = null;
+  const drop3d = () => { gen++; d3?.dispose(); d3 = null; };
+  const toggle = viewToggle("address-translation", () => mount3d());
+  async function mount3d() {
+    drop3d();
+    if (!live) return;
+    const my = gen, { host, flat } = live;
+    const on = toggle.mode === "3d";
+    host.hidden = !on;
+    flat.hidden = on;
+    if (!on) { host.replaceChildren(); return; }
+    try {
+      const { translationScene } = await import("./translation-3d.js");
+      const sc = await translationScene(host, { ...live.args, height: matchMedia("(max-width: 600px)").matches ? 300 : 420 });
+      if (my !== gen) { sc.dispose(); return; }
+      d3 = sc;
+      d3.show(player?.index ?? 0, true);
+    } catch (e) { host.replaceChildren(notice("error", `3D view unavailable: ${e.message}`)); }
+  }
   const head = page({
     subject: "Operating systems", title: "Address translation",
     lede: "Follow a logical address through the MMU: split into bits, looked up in the TLB and page tables (or the segment table), and turned into a physical address.",
@@ -258,6 +279,8 @@ export function render(root) {
 
   function update() {
     player?.destroy();
+    drop3d();
+    live = null;
     const m = state.mode;
     const params = { mode: m };
     if (m === "paging") Object.assign(params, { ps: state.pageSize, ab: state.addressBits, pt: state.pageTable, tlb: state.tlbSize, pol: state.policy, a: state.addresses, m: state.mem, t: state.tlbTime });
@@ -283,6 +306,7 @@ export function render(root) {
     } catch (e) { msg.replaceChildren(notice("error", e.message)); out.replaceChildren(); return; }
     msg.replaceChildren();
     const code = codePanel(MODES[m].code), vars = varsPanel();
+    const host3d = h("div", { class: "d3-host", hidden: true });
     const stage = h("div", { class: "chart-wrap xl-stage" }), note = h("p", { class: "step-note", "aria-live": "polite" }), counters = h("div", { class: "stats-row" });
     player = stepper({
       count: res.steps.length, label: "Step", interval: 1000,
@@ -296,11 +320,14 @@ export function render(root) {
         if (m === "paging") counters.replaceChildren(stat("TLB hits", st.hits), stat("TLB misses", st.misses), stat("Page faults", st.faults), stat("Addresses", `${Math.min(st.done ? cfg.addresses.length : st.k + 1, cfg.addresses.length)} / ${cfg.addresses.length}`));
         else if (m === "multilevel") counters.replaceChildren(stat("Levels", res.levels), stat("Memory accesses (this address)", st.accesses ?? "–"), stat("Tables that exist", res.tables.size));
         else counters.replaceChildren(stat("Segments", cfg.segments.length), stat("Address", st.done ? "done" : `${st.k + 1} / ${cfg.addresses.length}`));
+        d3?.show(i);
       },
     });
     out.replaceChildren(
-      h("section", { class: "card" }, h("h2", null, MODES[m].name), player.el, note, traceLayout(stage, code, vars), counters),
+      h("section", { class: "card" }, h("div", { class: "d3-head" }, h("h2", null, MODES[m].name), toggle.el), player.el, note, traceLayout(h("div", null, host3d, stage), code, vars), counters),
       resultsCard(m, res, cfg));
+    live = { host: host3d, flat: stage, args: { mode: m, res, cfg } };
+    if (toggle.mode === "3d") mount3d();
   }
 
   function resultsCard(m, res, cfg) {
@@ -389,5 +416,5 @@ export function render(root) {
   mountTabs(root, head, visual, practice, newQuestion);
   drawInputs();
   update();
-  return () => player?.destroy();
+  return () => { player?.destroy(); drop3d(); };
 }

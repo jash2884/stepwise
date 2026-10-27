@@ -1,6 +1,7 @@
 import { codePanel, traceLayout, varsPanel } from "../code.js";
 import { ALGORITHMS, EXAMPLE, FSCAN_EXAMPLE, formatArrivals, parseArrivals, randomArrivals, randomQueue, schedule } from "../engines/disk.js";
 import { copyLink, fmt, h, morph, notice, page, readParams, rng, stepper, tabs, writeParams } from "../ui.js";
+import { viewToggle } from "../three-kit.js";
 
 // Classic textbook chart: cylinders across the top, time going down.
 function chart(result, cylinders, upto, requests, head) {
@@ -93,6 +94,26 @@ export function render(root) {
     n: Number(p.get("n")) || 4,
   };
   let player = null;
+  // Optional 3D view: loaded only when chosen, rebuilt when the inputs change.
+  let d3 = null, gen = 0, live = null;
+  const drop3d = () => { gen++; d3?.dispose(); d3 = null; };
+  const toggle = viewToggle("disk-scheduling", () => mount3d());
+  async function mount3d() {
+    drop3d();
+    if (!live) return;
+    const my = gen, { host, flat } = live;
+    const on = toggle.mode === "3d";
+    host.hidden = !on;
+    for (const el of flat) el.hidden = on;
+    if (!on) { host.replaceChildren(); return; }
+    try {
+      const { diskScene } = await import("./disk-3d.js");
+      const sc = await diskScene(host, { ...live.args, height: matchMedia("(max-width: 600px)").matches ? 300 : 400 });
+      if (my !== gen) { sc.dispose(); return; }
+      d3 = sc;
+      d3.show(player?.index ?? 0, true);
+    } catch (e) { host.replaceChildren(notice("error", `3D view unavailable: ${e.message}`)); }
+  }
   const head = page({
     subject: "Operating systems", title: "Disk scheduling",
     lede: "A queue of cylinder requests and a read/write head: in what order should it move? Watch each algorithm's path and total seek distance.",
@@ -119,6 +140,8 @@ export function render(root) {
 
   function update() {
     player?.destroy();
+    drop3d();
+    live = null;
     writeParams({ r: state.requests, h: state.head, c: state.cylinders, algo: state.algo, dir: state.direction, jump: state.countJump ? 1 : 0, n: state.n });
     nIn.hidden = state.algo !== "nstep";
     dirSel.hidden = !ALGORITHMS[state.algo].direction;
@@ -133,6 +156,7 @@ export function render(root) {
     const timed = ALGORITHMS[state.algo].timed;
     const queues = timed ? h("div", { class: "chart-wrap fq-wrap" }) : null;
     const code = codePanel(ALGORITHMS[state.algo].code), vars = varsPanel();
+    const host3d = h("div", { class: "d3-host", hidden: true });
     player = stepper({
       count: result.path.length, label: "Move", interval: 900,
       render: (i) => {
@@ -144,17 +168,20 @@ export function render(root) {
         code.show(st.line);
         vars.show(st.vars);
         running.textContent = `Head movement so far: ${i ? result.moves[i - 1].total : 0} cylinders.${timed ? ` Time t = ${st.vars.t}.` : ""}`;
+        d3?.show(i);
       },
     });
     out.replaceChildren(
-      h("section", { class: "card" }, h("h2", null, ALGORITHMS[state.algo].name), player.el, note,
-        traceLayout(h("div", null, queues, strip, stage, running), code, vars),
+      h("section", { class: "card" }, h("div", { class: "d3-head" }, h("h2", null, ALGORITHMS[state.algo].name), toggle.el), player.el, note,
+        traceLayout(h("div", null, queues, host3d, strip, stage, running), code, vars),
         h("div", { class: "stats-row" },
           h("div", { class: "stat" }, h("span", null, "Total head movement"), h("b", null, result.total)),
           timed ? h("div", { class: "stat" }, h("span", null, "Sweeps"), h("b", null, result.sweeps)) : null,
           h("div", { class: "stat" }, h("span", null, "Average seek"), h("b", null, fmt(result.average))),
           h("div", { class: "stat wide-stat" }, h("span", null, "Service order"), h("b", { class: "mono order" }, result.order.join(" → "))))),
       compare(requests, state.head, opts));
+    live = { host: host3d, flat: [strip, stage], args: { result, requests, cylinders: state.cylinders, timed } };
+    if (toggle.mode === "3d") mount3d();
   }
 
   const visual = h("div", { class: "panel-body" },
@@ -165,13 +192,13 @@ export function render(root) {
         h("button", { type: "button", class: "btn ghost", onclick: () => {
           const q = randomQueue(Math.random, state.cylinders);
           const text = ALGORITHMS[state.algo].timed ? formatArrivals(q.requests, randomArrivals(Math.random, q.requests.length)) : q.requests.join(" ");
-          player?.destroy();
+          player?.destroy(); drop3d();
           writeParams({ r: text, h: q.head, c: state.cylinders, algo: state.algo, dir: state.direction, jump: state.countJump ? 1 : 0, n: state.n });
           render(root);
         } }, "Random"),
-        h("button", { type: "button", class: "btn ghost", onclick: () => { player?.destroy(); history.replaceState(null, "", location.pathname); render(root); } }, "Textbook example"),
+        h("button", { type: "button", class: "btn ghost", onclick: () => { player?.destroy(); drop3d(); history.replaceState(null, "", location.pathname); render(root); } }, "Textbook example"),
         h("button", { type: "button", class: "btn ghost", onclick: () => {
-          player?.destroy();
+          player?.destroy(); drop3d();
           writeParams({ r: formatArrivals(FSCAN_EXAMPLE.requests, FSCAN_EXAMPLE.arrivals), h: FSCAN_EXAMPLE.head, c: FSCAN_EXAMPLE.cylinders, algo: "fscan", dir: "up", jump: 1, n: state.n });
           render(root);
         } }, "F-SCAN example"),
@@ -229,5 +256,5 @@ export function render(root) {
   root.replaceChildren(head, tab.el, panels);
   tab.select("visual");
   update();
-  return () => player?.destroy();
+  return () => { player?.destroy(); drop3d(); };
 }
