@@ -69,6 +69,10 @@
 | CD | [**Code optimisation**](https://stepwise.jashparmar.com/code-optimisation) | Leaders, basic blocks and the flow graph, then folding, propagation, CSE and dead code, one rewrite at a time. |
 | CD | [**Register allocation**](https://stepwise.jashparmar.com/register-allocation) | Liveness to a fixed point, the interference graph, then Chaitin's simplify, spill and select with k registers. |
 
+## GATE practice
+
+[/gate](https://stepwise.jashparmar.com/gate) serves endless GATE-format questions (MCQ, MSQ and NAT) on ten OS and DBMS topics. `public/js/gate-questions.js` builds each one from a seed with the same engines the visualisers run, so answers are computed, never typed in. Marking follows GATE (a wrong MCQ costs a third of its marks; MSQ and NAT have no negative marks), every question has a worked solution and a link that replays it in the visualiser, and progress per topic is kept in `localStorage`. To add a topic, write a generator, register it in `TOPICS`, and add its slug to `public/js/gate-link.js`; `test/gate.test.js` checks 150 seeds per topic.
+
 ## Why it's built this way
 
 - **Correctness first.** Each algorithm is a pure engine (`public/js/engines/`) that returns the full list of steps, and the UI only renders them. The engines are tested against the worked examples in Silberschatz's *Operating System Concepts* and *Database System Concepts*, Kurose & Ross's *Computer Networking*, Tanenbaum's *Computer Networks*, Hopcroft, Motwani & Ullman's *Automata Theory* and Aho, Lam, Sethi & Ullman's *Compilers* (the Dragon Book), plus a property test that runs 12,000 random B+ tree inserts and deletes across orders 3–7 and checks every invariant (sorted keys, balanced leaves, fill limits, the leaf chain) after each one.

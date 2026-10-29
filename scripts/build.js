@@ -8,6 +8,7 @@ import { createHash } from "node:crypto";
 import { cp, mkdir, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { join, relative } from "node:path";
 import { SITE, SUBJECTS, TOOLS } from "../public/js/tools.js";
+import { TOPICS as GATE_TOPICS } from "../public/js/gate-questions.js";
 
 const root = new URL("..", import.meta.url).pathname;
 const src = join(root, "public"), out = join(root, "dist");
@@ -81,6 +82,15 @@ for (const t of TOOLS) {
   }));
 }
 
+// GATE practice: one indexable page listing every topic.
+const gateLd = { "@context": "https://schema.org", "@type": "Quiz", name: "GATE CS practice questions", url: `${SITE.url}/gate`, educationalLevel: "Undergraduate", about: ["Operating systems", "Databases"], isAccessibleForFree: true, inLanguage: "en" };
+await writeFile(join(out, "gate.html"), pageHtml({
+  title: `GATE CS practice questions with step-by-step solutions · ${SITE.name}`,
+  description: "Free GATE CS practice: endless MCQ, MSQ and NAT questions on OS and DBMS, marked the GATE way, each with a worked solution you can replay step by step.",
+  path: "/gate",
+  body: `<section class="static-content"><p class="eyebrow">GATE CS practice</p><h1>GATE-style questions, with every step shown</h1><p class="lede">Fresh MCQ, MSQ and NAT questions made by the same engines as the visualisers, marked the GATE way, with worked solutions.</p><ul>${GATE_TOPICS.map((t) => `<li><a href="/gate?topic=${t.slug}">${esc(t.title)}</a></li>`).join("")}</ul></section><script type="application/ld+json">${JSON.stringify(gateLd)}</script>`,
+}));
+
 await writeFile(join(out, "404.html"), pageHtml({
   title: `Page not found · ${SITE.name}`,
   description: "This page doesn't exist.",
@@ -92,13 +102,13 @@ await writeFile(join(out, "404.html"), pageHtml({
 const today = new Date().toISOString().slice(0, 10);
 await writeFile(join(out, "sitemap.xml"), `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-${["", ...TOOLS.map((t) => t.slug)].map((s) => `  <url><loc>${SITE.url}/${s}</loc><lastmod>${today}</lastmod></url>`).join("\n")}
+${["", "gate", ...TOOLS.map((t) => t.slug)].map((s) => `  <url><loc>${SITE.url}/${s}</loc><lastmod>${today}</lastmod></url>`).join("\n")}
 </urlset>
 `);
 await writeFile(join(out, "robots.txt"), `User-agent: *\nAllow: /\nSitemap: ${SITE.url}/sitemap.xml\n`);
 
 // --- Service worker -----------------------------------------------------------------------
-const precache = ["/", ...TOOLS.map((t) => `/${t.slug}`), ...all.filter((f) => /\.(js|css|svg|webmanifest)$/.test(f) && !f.includes("/test/") && !f.includes("/vendor/")).map((f) => `/${relative(out, f)}`)];
+const precache = ["/", "/gate", ...TOOLS.map((t) => `/${t.slug}`), ...all.filter((f) => /\.(js|css|svg|webmanifest)$/.test(f) && !f.includes("/test/") && !f.includes("/vendor/")).map((f) => `/${relative(out, f)}`)];
 const sw = (await readFile(join(src, "sw.js"), "utf8")).replace("__VERSION__", version).replace("__PRECACHE__", JSON.stringify(precache, null, 2));
 await writeFile(join(out, "sw.js"), sw);
 

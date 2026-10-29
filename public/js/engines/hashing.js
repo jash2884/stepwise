@@ -105,7 +105,7 @@ export function hashTable(keys, m, strategy) {
     table[placed] = k;
     steps.push({
       key: k, probes, slot: placed, table: [...table],
-      note: probes.length === 1 ? `${how}. Slot ${placed} is free, so ${k} goes there.` : `${how}. Slots ${probes.slice(0, -1).join(", ")} are taken (${probes.length - 1} collision${probes.length > 2 ? "s" : ""}); ${k} lands in slot ${placed}.`,
+      note: probes.length === 1 ? `${how}. Slot ${placed} is free, so ${k} goes there.` : `${how}. ${probes.length === 2 ? `Slot ${probes[0]} is` : `Slots ${probes.slice(0, -1).join(", ")} are`} taken (${probes.length - 1} collision${probes.length > 2 ? "s" : ""}); ${k} lands in slot ${placed}.`,
     });
   }
   const filled = strategy === "chaining" ? keys.length : table.filter((x) => x !== null).length;

@@ -2,6 +2,7 @@ import { SITE, SUBJECTS, TOOLS } from "./tools.js";
 import { h } from "./ui.js";
 
 const main = document.getElementById("app");
+const GATE_DESCRIPTION = "Free GATE CS practice: endless MCQ, MSQ and NAT questions on OS and DBMS, marked the GATE way, each with a worked solution you can replay step by step.";
 const bySlug = new Map(TOOLS.map((t) => [t.slug, t]));
 let cleanup = null;
 let renderId = 0;
@@ -10,7 +11,8 @@ let renderId = 0;
 const nav = document.getElementById("nav");
 nav.replaceChildren(...SUBJECTS.map((s) => h("details", { class: "menu" },
   h("summary", null, h("span", { class: "long" }, s.name), h("span", { class: "short" }, s.short)),
-  h("ul", null, TOOLS.filter((t) => t.subject === s.id).map((t) => h("li", null, h("a", { href: `/${t.slug}`, "data-slug": t.slug }, t.title)))))));
+  h("ul", null, TOOLS.filter((t) => t.subject === s.id).map((t) => h("li", null, h("a", { href: `/${t.slug}`, "data-slug": t.slug }, t.title)))))),
+  h("a", { class: "nav-gate", href: "/gate", "data-slug": "gate" }, h("span", { class: "long" }, "GATE practice"), h("span", { class: "short" }, "GATE")));
 const closeMenus = () => nav.querySelectorAll("details[open]").forEach((d) => d.removeAttribute("open"));
 document.addEventListener("click", (e) => { if (!e.target.closest(".menu")) closeMenus(); });
 document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeMenus(); });
@@ -54,6 +56,11 @@ async function route() {
       setMeta(`${SITE.name}: see every step of DSA, OS, DBMS, networks, theory & compiler algorithms`, "Interactive, step-by-step visualisers with pseudocode for data structures and algorithms, operating systems, databases, networks, theory of computation and compiler design, with practice questions that check your answers.", "/");
       cleanup = home.render(main) ?? null;
       import("./tutor.js").then(({ mountTutor }) => mountTutor(null)).catch(() => {});
+    } else if (slug === "gate") {
+      const gate = await import("./views/gate.js");
+      if (id !== renderId) return;
+      setMeta(`GATE CS practice questions with step-by-step solutions · ${SITE.name}`, GATE_DESCRIPTION, "/gate");
+      cleanup = gate.render(main) ?? null;
     } else if (!tool) {
       setMeta(`Page not found · ${SITE.name}`, "This page doesn't exist.", location.pathname);
       main.replaceChildren(failure("Page not found", "There's no tool at this address. Pick one from the menu, or start from the home page."));
@@ -67,6 +74,10 @@ async function route() {
       main.replaceChildren(host);
       cleanup = view.render(host) ?? null;
       import("./tutor.js").then(({ mountTutor }) => { if (id === renderId) mountTutor(tool); }).catch(() => {});
+      import("./gate-link.js").then(({ gateCard }) => {
+        const card = id === renderId ? gateCard(tool.slug) : null;
+        if (card) host.after(card);
+      }).catch(() => {});
       import("./elsewhere.js").then(({ practiceElsewhere }) => {
         const card = id === renderId ? practiceElsewhere(tool.slug) : null;
         if (card) main.append(card);
