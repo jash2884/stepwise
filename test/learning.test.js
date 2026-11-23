@@ -100,7 +100,9 @@ test("module states move from not started to mastered to due for review", () => 
 
 test("modules without GATE topics are mastered by ticking them off", () => {
   const s = empty();
-  const m = moduleById("dm.logic");
+  // Any module with no GATE topics (reading-only or checkbox modules).
+  const m = ROADMAPS.flatMap((r) => r.stages.flatMap((st) => st.modules)).find((x) => !x.gate?.length && !x.practiceAll);
+  assert.ok(m, "there is a module without GATE topics");
   assert.equal(moduleState(s, m, NOW).state, "not-started");
   setDone(s, m.id, true, NOW);
   assert.equal(moduleState(s, m, NOW).state, "mastered");
@@ -256,7 +258,8 @@ test("a stage test draws ~15 questions from that stage's topics", () => {
   const topics = stageTopics(os, TOPICS);
   assert.ok(mock.items.every((q) => topics.includes(q.topic)));
   for (const t of topics) assert.ok(mock.items.some((q) => q.topic === t));
-  assert.equal(stageMock(gate, gate.stages.find((s) => s.id === "discrete-maths"), TOPICS, 1), null);
+  const noTopics = ROADMAPS.flatMap((r) => r.stages).find((st) => st.modules.every((x) => !x.gate?.length));
+  if (noTopics) assert.equal(stageMock(gate, noTopics, TOPICS, 1), null);
 });
 
 test("the diagnostic spreads 20 questions over subjects and topics", () => {
