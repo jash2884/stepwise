@@ -175,7 +175,7 @@ const GATE_CS = [
             tryIt: [{ tool: "page-replacement", query: "algo=fifo&f=3&r=1 2 3 4 1 2 5 1 2 3 4 5", label: "Belady's anomaly, 3 frames" }, { tool: "page-replacement", query: "algo=fifo&f=4&r=1 2 3 4 1 2 5 1 2 3 4 5", label: "…and with 4 frames" }] },
           { id: "os.disk", title: "Disk scheduling and file systems", hours: 4, placement: 2, needs: ["os.scheduling"],
             outcomes: ["Compute head movement for FCFS, SSTF, SCAN, C-SCAN, LOOK and C-LOOK", "Size file allocation tables and inode block pointers"],
-            tools: ["disk-scheduling"], gate: ["disk-scheduling"],
+            tools: ["disk-scheduling", "file-systems"], gate: ["disk-scheduling"],
             tryIt: [{ tool: "disk-scheduling", query: "algo=scan", label: "SCAN" }, { tool: "disk-scheduling", query: "algo=clook", label: "C-LOOK" }],
             reading: [{ title: "File systems", url: `${GFG}/operating-systems/file-systems-in-operating-system/` }] },
         ],
@@ -210,7 +210,7 @@ const GATE_CS = [
         modules: [
           { id: "cn.layers", title: "Layering and the OSI and TCP/IP models", hours: 2, placement: 4, needs: [],
             outcomes: ["Place each protocol in its layer and explain encapsulation"],
-            tools: [], comingSoon: "Planned.",
+            tools: ["osi-encapsulation"],
             reading: [{ title: "OSI model", url: `${GFG}/computer-networks/open-systems-interconnection-model-osi/` }] },
           { id: "cn.link", title: "Data link: errors and medium access", hours: 5, placement: 2, needs: ["cn.layers"],
             outcomes: ["Compute CRC remainders and Hamming codes", "Compare ALOHA, CSMA/CD and their efficiency"],

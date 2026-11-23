@@ -1,1 +1,53 @@
 /* tracks: styles for CN/OS additions and the placements/semester tracks. Loaded after style.css. */
+
+/* OSI and TCP/IP encapsulation (views/osi.js) */
+svg.osi-svg { width: 100%; min-width: 560px; height: auto; display: block; }
+.osi-col { fill: var(--muted); font: 600 12px var(--body); }
+.osi-note { fill: var(--muted); font: italic 500 11px var(--body); }
+.osi-cell rect { fill: var(--surface); stroke: color-mix(in srgb, var(--c) 55%, var(--line)); stroke-width: 1.5; transition: fill 0.2s; }
+.osi-cell.router rect { stroke-dasharray: 5 3; }
+.osi-cell.on rect { fill: color-mix(in srgb, var(--c) 22%, var(--surface)); stroke: var(--c); stroke-width: 3; stroke-dasharray: none; }
+.osi-name { fill: var(--text); font: 600 12.5px var(--body); }
+.osi-hdr { fill: var(--muted); font: 500 11px var(--mono); }
+.osi-wire { stroke: var(--muted); stroke-width: 2; stroke-dasharray: 6 4; }
+.osi-wire.on { stroke: var(--accent); stroke-width: 3.5; stroke-dasharray: none; }
+.osi-tok rect { fill: var(--accent); }
+.osi-tok text { fill: var(--bg); font: 700 11px var(--mono); }
+.osi-cap { margin: 12px 0 6px; }
+.osi-pdu { display: flex; flex-wrap: wrap; gap: 3px; align-items: stretch; }
+.osi-blk { display: grid; gap: 1px; padding: 6px 9px; border-radius: 6px; min-width: 52px; background: color-mix(in srgb, var(--c) 22%, var(--surface)); border: 1.5px solid var(--c); font-size: 12px; }
+.osi-blk b { font: 700 12px var(--mono); }
+.osi-blk span { color: var(--muted); font: 500 11.5px var(--mono); }
+.osi-blk.data { background: var(--surface); border-style: dashed; border-color: var(--muted); }
+.osi-blk.pad { background: repeating-linear-gradient(45deg, var(--surface-2), var(--surface-2) 5px, var(--line) 5px, var(--line) 10px); border-color: var(--line); }
+.osi-art { gap: 3px; }
+.osi-art i { font: 700 11px var(--mono); font-style: normal; padding: 10px 6px; border-radius: 6px; background: color-mix(in srgb, var(--c) 25%, var(--surface)); border: 1.5px solid var(--c); }
+.osi-art i.d { flex: 1; text-align: center; background: var(--surface); border-style: dashed; border-color: var(--muted); }
+
+/* File systems and inodes (views/filesystems.js) */
+svg.fs-svg { width: 100%; max-width: 760px; min-width: 520px; height: auto; display: block; }
+.fs-title { fill: var(--muted); font: 600 12px var(--body); }
+.fs-inode { fill: var(--surface); stroke: var(--text); stroke-width: 1.5; }
+.fs-dim { fill: var(--muted); font: 700 14px var(--mono); }
+.fs-slot rect { fill: var(--surface-2); stroke: color-mix(in srgb, var(--c) 50%, var(--line)); }
+.fs-slot text { fill: var(--text); font: 500 12px var(--mono); }
+.fs-slot.lit rect { fill: color-mix(in srgb, var(--c) 25%, var(--surface)); stroke: var(--c); }
+.fs-slot.on rect { fill: color-mix(in srgb, var(--c) 35%, var(--surface)); stroke: var(--c); stroke-width: 2.5; }
+.fs-link { fill: none; stroke: var(--muted); stroke-width: 1.6; }
+.fs-link.on { stroke: var(--accent); stroke-width: 2.2; }
+.fs-index rect:first-child { fill: var(--surface); stroke: var(--c); stroke-width: 1.8; }
+.fs-entry { fill: color-mix(in srgb, var(--c) 30%, var(--surface)); }
+.fs-cap { fill: var(--muted); font: 600 11.5px var(--body); }
+.fs-entry-t { fill: var(--text); font: 700 11.5px var(--mono); }
+.fs-data rect { fill: var(--surface); stroke: var(--muted); stroke-width: 1.5; stroke-dasharray: 5 3; }
+.fs-data.on rect { fill: var(--good-soft); stroke: var(--good); stroke-dasharray: none; stroke-width: 2.5; }
+.fs-bars { display: grid; gap: 6px; margin: 10px 0 14px; }
+.fs-bar { display: grid; grid-template-columns: 96px 1fr 70px; align-items: center; gap: 10px; font-size: 14px; }
+.fs-bar i { display: block; height: 16px; border-radius: 5px; background: var(--c); }
+.fs-bar b { font: 700 13px var(--mono); }
+.fs-art { gap: 6px; font: 600 12px var(--mono); }
+.fs-art i { font-style: normal; padding: 9px 8px; border-radius: 6px; background: var(--surface); border: 1.5px solid var(--line); }
+.fs-art i.n { border-color: var(--series-1); }
+.fs-art i.hot { border-color: var(--accent); color: var(--accent); }
+.fs-art b { color: var(--muted); }
+table.fs-table td.left { text-align: left; min-width: 180px; }
