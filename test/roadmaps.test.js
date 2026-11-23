@@ -68,10 +68,10 @@ test("prerequisites have no cycles", () => {
   }
 });
 
-test("every visualiser and GATE topic has a place in the GATE CS roadmap", () => {
+test("every visualiser has a roadmap, and every GATE topic is in GATE CS", () => {
   const gate = roadmapOf("gate-cs");
-  const used = new Set(modulesOf(gate).flatMap(({ module }) => module.tools));
-  for (const t of TOOLS) assert.ok(used.has(t.slug), `${t.slug} isn't in any GATE CS module`);
+  const used = new Set(ROADMAPS.flatMap((r) => modulesOf(r).flatMap(({ module }) => module.tools)));
+  for (const t of TOOLS) assert.ok(used.has(t.slug), `${t.slug} isn't in any roadmap module`);
   const practised = new Set(modulesOf(gate).flatMap(({ module }) => module.gate ?? []));
   for (const t of GATE_TOPICS) assert.ok(practised.has(t.slug), `GATE topic ${t.slug} isn't linked from the roadmap`);
 });

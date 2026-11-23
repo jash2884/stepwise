@@ -10,9 +10,13 @@
 // including practice. placement: 0 to 5, how often it comes up in campus
 // placement interviews. Both are editorial estimates, labelled as such in the UI.
 
+import { ROADMAPS as PLACEMENTS } from "./roadmaps/placements.js";
+import { ROADMAPS as SEMESTER } from "./roadmaps/semester.js";
+import { ROADMAPS as AI } from "./roadmaps/ai.js";
+
 const GFG = "https://www.geeksforgeeks.org";
 
-export const ROADMAPS = [
+const GATE_CS = [
   {
     id: "gate-cs",
     title: "GATE CS",
@@ -310,6 +314,8 @@ export const ROADMAPS = [
     ],
   },
 ];
+
+export const ROADMAPS = [...GATE_CS, ...PLACEMENTS, ...SEMESTER, ...AI];
 
 // --- Lookups -----------------------------------------------------------------------
 

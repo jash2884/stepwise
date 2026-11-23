@@ -17,18 +17,15 @@ import { candidateKeys, closure, normalForm, randomSchema } from "./engines/fd.j
 import { analyse } from "./engines/schedules.js";
 import { hashTable } from "./engines/hashing.js";
 import { costs } from "./engines/joins.js";
-import { rng } from "./ui.js";
-
-const pick = (r, list) => list[Math.floor(r() * list.length)];
-const int = (r, lo, hi) => lo + Math.floor(r() * (hi - lo + 1));
-const round2 = (x) => Math.round(x * 100) / 100;
-const show = (x) => (Number.isInteger(x) ? String(x) : x.toFixed(2));
-function shuffle(r, list) {
-  const a = [...list];
-  for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
-  return a;
-}
-const query = (path, params) => `${path}?${new URLSearchParams(params)}`;
+import { rng, pick, int, round2, show, shuffle, query } from "./gate/kit.js";
+import { TOPICS as DSA } from "./gate/dsa.js";
+import { TOPICS as CN } from "./gate/cn.js";
+import { TOPICS as TOC } from "./gate/toc.js";
+import { TOPICS as CD } from "./gate/cd.js";
+import { TOPICS as DIGITAL_LOGIC } from "./gate/digital-logic.js";
+import { TOPICS as COA } from "./gate/coa.js";
+import { TOPICS as DISCRETE_MATHS } from "./gate/discrete-maths.js";
+import { TOPICS as MATHS } from "./gate/maths.js";
 
 // --- Operating systems ------------------------------------------------------------
 
@@ -362,6 +359,8 @@ export const TOPICS = [
   { slug: "serializability", subject: "dbms", title: "Serialisability", make: serialisability },
   { slug: "hashing", subject: "dbms", title: "Hashing", make: hashing },
   { slug: "sql-joins", subject: "dbms", title: "Join cost", make: joinCost },
+  // Other subjects keep their generators in gate/<subject>.js.
+  ...DSA, ...CN, ...TOC, ...CD, ...DIGITAL_LOGIC, ...COA, ...DISCRETE_MATHS, ...MATHS,
 ];
 export const topicOf = (slug) => TOPICS.find((t) => t.slug === slug);
 

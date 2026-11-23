@@ -5,6 +5,7 @@ import { TOOLS } from "../public/js/tools.js";
 
 test("every tool links to at least one verified practice problem", () => {
   for (const t of TOOLS) {
+    if (t.noPractice) continue;
     const list = PROBLEMS[t.slug] ?? [];
     assert.ok(list.length, `${t.slug} has no practice links`);
     for (const p of list) {

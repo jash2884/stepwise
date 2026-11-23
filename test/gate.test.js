@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { TOPICS, check, generate } from "../public/js/gate-questions.js";
 import { TOOLS } from "../public/js/tools.js";
-import { gateCard } from "../public/js/gate-link.js";
+import { gateCard, GATE_SLUGS } from "../public/js/gate-link.js";
 import { readFileSync } from "node:fs";
 
 test("every topic makes valid questions for many seeds", () => {
@@ -46,8 +46,9 @@ test("GATE marking", () => {
 test("every topic is a real tool and has a link card", () => {
   for (const t of TOPICS) {
     assert.ok(TOOLS.some((x) => x.slug === t.slug), t.slug);
-    // gate-link.js keeps its own list so tool pages stay light; it must match.
-    assert.match(readFileSync(new URL("../public/js/gate-link.js", import.meta.url), "utf8"), new RegExp(`"${t.slug}"`));
+    // gate-link.js reads its list from the roadmap data; it must match.
+    assert.ok(GATE_SLUGS.has(t.slug), `${t.slug}: add it to a roadmap module's gate list`);
   }
+  for (const s of GATE_SLUGS) assert.ok(TOPICS.some((t) => t.slug === s), `roadmap lists GATE topic ${s} but no generator exists`);
   assert.equal(typeof gateCard, "function");
 });

@@ -1,8 +1,13 @@
 // The single list of tools. Routes, navigation, the home page, page titles and
 // the sitemap are all generated from it, so adding a tool is one entry here
-// plus its view module.
+// plus its view module. Newer subjects live in subjects/<id>.js and are merged in below.
+import * as DIGITAL_LOGIC from "./subjects/digital-logic.js";
+import * as COA from "./subjects/coa.js";
+import * as DISCRETE_MATHS from "./subjects/discrete-maths.js";
+import * as MATHS from "./subjects/maths.js";
+import * as AI from "./subjects/ai.js";
 
-export const SUBJECTS = [
+const BASE_SUBJECTS = [
   { id: "dsa", name: "Data structures & algorithms", short: "DSA" },
   { id: "os", name: "Operating systems", short: "OS" },
   { id: "dbms", name: "Databases", short: "DBMS" },
@@ -11,7 +16,7 @@ export const SUBJECTS = [
   { id: "cd", name: "Compiler design", short: "CD" },
 ];
 
-export const TOOLS = [
+const BASE_TOOLS = [
   { slug: "sorting", subject: "dsa", title: "Sorting", art: "bars",
     summary: "Bubble, insertion, merge, quick, heap, radix and more, with pseudocode and live variables.",
     description: "Sorting visualiser with pseudocode: bubble, selection, insertion, shell, merge, quick, heap, counting and radix sort animated, with comparisons and practice.",
@@ -261,5 +266,9 @@ export const TOOLS = [
     description: "Register allocation by graph colouring: liveness analysis to a fixed point, the interference graph, and Chaitin-style simplify, spill and select with k registers.",
     load: () => import("./views/regalloc.js") },
 ];
+
+const EXTRA = [DIGITAL_LOGIC, COA, DISCRETE_MATHS, MATHS, AI].filter((m) => m.TOOLS.length);
+export const SUBJECTS = [...BASE_SUBJECTS, ...EXTRA.map((m) => m.SUBJECT)];
+export const TOOLS = [...BASE_TOOLS, ...EXTRA.flatMap((m) => m.TOOLS)];
 
 export const SITE = { name: "Stepwise", url: "https://stepwise.jashparmar.com" };

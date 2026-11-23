@@ -37,7 +37,7 @@ export function render(root) {
   const pickerBtn = (id, label) => h("button", { type: "button", class: "btn ghost small toggle", "data-topic": id, "aria-pressed": String(id === topic), onclick: () => choose(id) }, label);
   const picker = h("div", { class: "card gate-picker" },
     h("div", { class: "row" }, pickerBtn("mix", "Mixed (all topics)")),
-    ["os", "dbms"].map((sid) => h("div", { class: "gate-group" },
+    SUBJECTS.filter((s) => TOPICS.some((t) => t.subject === s.id)).map((s) => s.id).map((sid) => h("div", { class: "gate-group" },
       h("span", { class: "gate-subject" }, SUBJECTS.find((s) => s.id === sid).short),
       h("div", { class: "row" }, TOPICS.filter((t) => t.subject === sid).map((t) => pickerBtn(t.slug, t.title))))));
 

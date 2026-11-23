@@ -92,7 +92,7 @@ function art(kind) {
 }
 
 const card = (t) => h("a", { class: "tool-card", href: `/${t.slug}`, "data-search": `${t.title} ${t.summary} ${t.description}`.toLowerCase() },
-  art(t.art),
+  t.preview ? t.preview(h) : art(t.art),
   h("h3", null, t.title),
   h("p", null, t.summary),
   h("span", { class: "tag" }, "Visualise + practice"));

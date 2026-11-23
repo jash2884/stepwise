@@ -8,7 +8,7 @@ import { test } from "node:test";
 import { TOOLS } from "../public/js/tools.js";
 
 const dir = new URL("../public/js/", import.meta.url).pathname;
-const files = ["", "views/", "engines/"].flatMap((d) => readdirSync(dir + d).filter((f) => f.endsWith(".js")).map((f) => d + f));
+const files = ["", "views/", "engines/", "gate/", "subjects/", "roadmaps/"].flatMap((d) => readdirSync(dir + d).filter((f) => f.endsWith(".js")).map((f) => d + f));
 
 test("every module is valid JavaScript", () => {
   for (const f of files) execFileSync(process.execPath, ["--check", dir + f]);

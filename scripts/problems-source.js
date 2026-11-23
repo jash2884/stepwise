@@ -4,7 +4,13 @@
 // anything that doesn't resolve or is premium-only, and writes
 // public/js/problems.js. Entries: lc:slug, cses:id, hr:slug, gfg:path.
 
-export const SOURCE = {
+import { SOURCE as DIGITAL_LOGIC } from "./problems/digital-logic.js";
+import { SOURCE as COA } from "./problems/coa.js";
+import { SOURCE as DISCRETE_MATHS } from "./problems/discrete-maths.js";
+import { SOURCE as MATHS } from "./problems/maths.js";
+import { SOURCE as AI } from "./problems/ai.js";
+
+const BASE = {
   // Data structures & algorithms
   "sorting": ["lc:sort-an-array", "lc:sort-colors", "lc:merge-intervals", "lc:kth-largest-element-in-an-array", "lc:largest-number", "lc:maximum-gap", "lc:sort-list", "lc:insertion-sort-list", "lc:relative-sort-array", "lc:count-of-smaller-numbers-after-self", "cses:1621", "cses:1084", "hr:quicksort1", "hr:countingsort1", "gfg:sorting-algorithms/"],
   "searching": ["lc:binary-search", "lc:search-insert-position", "lc:find-first-and-last-position-of-element-in-sorted-array", "lc:search-in-rotated-sorted-array", "lc:find-minimum-in-rotated-sorted-array", "lc:find-peak-element", "lc:sqrtx", "lc:koko-eating-bananas", "lc:median-of-two-sorted-arrays", "cses:1620", "cses:1085", "gfg:binary-search/", "gfg:interpolation-search/", "gfg:jump-search/"],
@@ -74,3 +80,5 @@ export const SOURCE = {
   "register-allocation": ["lc:flower-planting-with-no-adjacent", "gfg:graph-coloring-applications/", "gfg:register-allocations-in-code-generation/", "gfg:liveliness-analysis-in-compiler-design/"],
   "er-to-relational": ["gfg:mapping-from-er-model-to-relational-model/", "gfg:introduction-of-er-model/"],
 };
+
+export const SOURCE = { ...BASE, ...DIGITAL_LOGIC, ...COA, ...DISCRETE_MATHS, ...MATHS, ...AI };
