@@ -11,6 +11,6 @@
   // Workers AI answers by default; set GEMINI_API_KEY (wrangler secret) to try Gemini first.
   "ai": { "binding": "AI" },
   "vars": { "GEMINI_MODELS": "gemini-flash-lite-latest,gemini-flash-latest" },
-  "ratelimits": [{ "name": "ASK_LIMITER", "namespace_id": "4202", "simple": { "limit": 8, "period": 60 } }],
+  "ratelimits": [{ "name": "ASK_LIMITER", "namespace_id": "4202", "simple": { "limit": 8, "period": 60 } }, { "name": "AI_LIMITER", "namespace_id": "4203", "simple": { "limit": 10, "period": 60 } }],
   "observability": { "enabled": true }
 }

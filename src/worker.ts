@@ -1,6 +1,7 @@
 // Stepwise's only server code: the "Ask about this step" tutor at /api/ask.
 // Every other path is a static asset served straight from dist/.
 import { clean, messages, SYSTEM, validate } from "./tutor.ts";
+import { handleAi } from "./ai/routes.ts";
 
 type Env = {
   ASSETS: { fetch: (r: Request) => Promise<Response> };
@@ -73,6 +74,7 @@ export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const { pathname } = new URL(request.url);
     if (pathname === "/api/ask") return ask(request, env);
+    if (pathname.startsWith("/api/ai/")) return handleAi(request, env as any);
     if (pathname === "/api/health") return json({ ok: true, tutor: Boolean(env.GEMINI_API_KEY || env.AI) });
     if (pathname.startsWith("/api/")) return json({ error: "Not found." }, 404);
     return env.ASSETS.fetch(request);
