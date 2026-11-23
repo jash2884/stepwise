@@ -67,3 +67,14 @@ test("real searches land on the right tool", () => {
   assert.equal(first("subnet").href, "/subnetting");
   assert.equal(first("gate").href, "/gate");
 });
+
+test("a weak or question-like search offers to ask the AI", async () => {
+  const { askItem } = await import("../public/js/palette.js");
+  const items = buildIndex();
+  assert.equal(askItem("bst", rank("bst", items)), null);
+  const ai = askItem("why does SJF starve long jobs?", rank("why does SJF starve long jobs?", items));
+  assert.equal(ai.kind, "Ask");
+  assert.equal(ai.href, "/ask?q=why%20does%20SJF%20starve%20long%20jobs%3F");
+  assert.ok(askItem("zzzz", []));
+  assert.equal(askItem("  ", []), null);
+});
