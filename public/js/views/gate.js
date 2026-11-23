@@ -1,16 +1,17 @@
 // GATE practice: endless GATE-format questions (MCQ, MSQ, NAT) made by the
 // visualisers' own engines, marked the GATE way, each with a worked solution
-// and a link that replays it step by step. Progress stays on this device.
+// and a link that replays it step by step. Progress stays on this device, in
+// the learning store (learn/store.js), which also feeds /progress, reviews
+// and the mistake notebook.
 import { TOPICS, check, generate, topicOf } from "../gate-questions.js";
 import { SUBJECTS } from "../tools.js";
 import { h, readParams, writeParams } from "../ui.js";
+import { answer, topicStat } from "../learn/model.js";
+import { load, update } from "../learn/store.js";
 
-const KEY = "stepwise.gate";
 const TYPE_NAME = { mcq: "MCQ · one correct option", msq: "MSQ · one or more correct options", nat: "NAT · type the number" };
 const LETTERS = "ABCD";
 
-const load = () => { try { return JSON.parse(localStorage.getItem(KEY)) ?? {}; } catch { return {}; } };
-const save = (stats) => { try { localStorage.setItem(KEY, JSON.stringify(stats)); } catch { /* private mode */ } };
 const newSeed = () => Math.floor(Math.random() * 1e9);
 
 function block(b) {
@@ -22,7 +23,6 @@ function block(b) {
 
 export function render(root) {
   const params = readParams();
-  const stats = load();
   const session = { score: 0, max: 0, done: 0, right: 0 };
   let topic = topicOf(params.get("topic")) ? params.get("topic") : "mix";
   let seed = Number(params.get("seed")) || newSeed();
@@ -60,7 +60,7 @@ export function render(root) {
     const slug = topic === "mix" ? TOPICS[seed % TOPICS.length].slug : topic;
     writeParams({ topic, seed });
     try { current = generate(slug, seed); } catch (err) { qCard.replaceChildren(h("p", { class: "notice error" }, err.message)); return; }
-    const q = current, info = topicOf(slug);
+    const q = current, info = topicOf(slug), started = Date.now();
     let chosen = q.type === "msq" ? new Set() : null;
 
     const opts = q.options ? h("div", { class: "gate-options", role: q.type === "mcq" ? "radiogroup" : "group", "aria-label": "Options" }, q.options.map((o, i) =>
@@ -91,9 +91,7 @@ export function render(root) {
       if (q.type === "mcq" && response === null) return;
       const { correct, score } = check(q, response);
       session.done++; session.max += q.marks; session.score += score; if (correct) session.right++;
-      const s = (stats[slug] ??= { right: 0, total: 0 });
-      s.total++; if (correct) s.right++;
-      save(stats);
+      update((st) => answer(st, { topic: slug, seed: q.seed, correct, score, marks: q.marks, ms: Date.now() - started, src: "gate" }));
       drawStats();
 
       submit.disabled = true; skip.remove();
@@ -120,7 +118,9 @@ export function render(root) {
 
   // --- Progress -------------------------------------------------------------------------
   function drawStats() {
-    const tried = TOPICS.filter((t) => stats[t.slug]?.total);
+    const store = load();
+    const stats = Object.fromEntries(TOPICS.map((t) => [t.slug, topicStat(store, t.slug)]));
+    const tried = TOPICS.filter((t) => stats[t.slug].total);
     const pct = (s) => Math.round((100 * s.right) / s.total);
     const weakest = tried.filter((t) => stats[t.slug].total >= 3).sort((a, b) => pct(stats[a.slug]) - pct(stats[b.slug]))[0];
     statsCard.replaceChildren(...[
@@ -135,7 +135,7 @@ export function render(root) {
           h("span", { class: "gate-pct" }, `${p}%`));
       })) : null,
       weakest && pct(stats[weakest.slug]) < 100 ? h("button", { type: "button", class: "btn ghost small", onclick: () => choose(weakest.slug) }, `Practise your weakest: ${weakest.title}`) : null,
-      tried.length ? h("button", { type: "button", class: "btn ghost small gate-reset", onclick: () => { for (const k of Object.keys(stats)) delete stats[k]; save(stats); drawStats(); } }, "Reset progress") : null,
+      tried.length ? h("a", { class: "btn ghost small gate-reset", href: "/progress" }, "All your progress") : null,
     ].filter(Boolean));
   }
 

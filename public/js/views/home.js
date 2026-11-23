@@ -124,6 +124,7 @@ export function render(root) {
       h("h1", null, "See every step."),
       h("p", { class: "lede" }, "The algorithms in your data structures, operating systems, databases, networks, theory of computation and compiler design exams, animated one step at a time beside the pseudocode, with the line being run highlighted, the variables live and the reasoning written out. Then practise on fresh questions that check every answer."),
       search, facts), stage),
+    h("div", { id: "home-continue", hidden: true }),
     h("a", { class: "card gate-link gate-home", href: "/gate" },
       h("div", null,
         h("h2", null, "New: GATE CS practice"),
@@ -140,6 +141,8 @@ export function render(root) {
       h("div", null, h("h3", null, "Built for exams"), h("p", null, "Every tool states the conventions it uses (tie-breaking, split rules, what counts as head movement) so your answers match what your examiner expects.")),
       h("div", null, h("h3", null, "Practice that checks you"), h("p", null, "Fresh questions every time, with each answer marked and the full working one click away.")),
       h("div", null, h("h3", null, "Share any example"), h("p", null, "Every input is in the link, so you can send a classmate the exact question you're stuck on."))));
+  // Returning learners: "continue where you left off" (fills itself, or stays hidden).
+  import("../learn/continue.js").then(({ mountContinue }) => mountContinue(root.querySelector("#home-continue"))).catch(() => {});
   let disposeHero = null, gone = false;
   const start = () => import("../hero3d.js").then(async ({ mountHero }) => {
     const { webglAvailable } = await import("../three-kit.js");

@@ -2,11 +2,26 @@
 // looking at (the step note, the highlighted pseudocode line, the variables and
 // any practice question), read from the page so it works for every tool.
 import { h } from "./ui.js";
+import { placeOfTool, roadmapOf } from "./roadmaps.js";
+import { TOOLS } from "./tools.js";
+import { weakSlugs } from "./learn/model.js";
+import { load } from "./learn/store.js";
 
 let tool = null, history = [], els = null, busy = false;
 
 const visible = (el) => el && el.offsetParent !== null;
 const firstVisible = (root, sel) => [...root.querySelectorAll(sel)].find(visible) ?? null;
+
+// Where the tool sits in the roadmap and the learner's weak topics (from their
+// practice on this device), so the tutor can pitch its answer. Both optional.
+function learner() {
+  try {
+    const s = load();
+    const place = placeOfTool(roadmapOf(s.plan?.roadmap) ?? roadmapOf("gate-cs"), tool.slug);
+    const weak = weakSlugs(s, 3).map((slug) => TOOLS.find((t) => t.slug === slug)?.title ?? slug);
+    return { module: place ? `${place.module.title} (${place.stage.title})` : "", weak };
+  } catch { return { module: "", weak: [] }; }
+}
 
 function context() {
   const main = document.getElementById("app");
@@ -23,6 +38,7 @@ function context() {
     tool: tool.slug, title: tool.title, mode, code, line, vars, step,
     note: firstVisible(main, ".step-note")?.textContent ?? "",
     question: mode === "practice" ? [...main.querySelectorAll(".panel-body h2")].filter(visible).map((x) => x.textContent).join(" ") : "",
+    ...learner(),
   };
 }
 

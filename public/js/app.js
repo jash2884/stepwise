@@ -1,5 +1,8 @@
 import { SITE, SUBJECTS, TOOLS } from "./tools.js";
 import { h } from "./ui.js";
+import { LEARN_PAGES } from "./learn/pages.js";
+
+const LEARN = new Map(LEARN_PAGES.map((p) => [p.slug, p]));
 
 const main = document.getElementById("app");
 const GATE_DESCRIPTION = "Free GATE CS practice: endless MCQ, MSQ and NAT questions on OS and DBMS, marked the GATE way, each with a worked solution you can replay step by step.";
@@ -13,7 +16,8 @@ nav.replaceChildren(...SUBJECTS.map((s) => h("details", { class: "menu" },
   h("summary", null, h("span", { class: "long" }, s.name), h("span", { class: "short" }, s.short)),
   h("ul", null, TOOLS.filter((t) => t.subject === s.id).map((t) => h("li", null, h("a", { href: `/${t.slug}`, "data-slug": t.slug }, t.title)))))),
   h("a", { class: "nav-gate nav-road", href: "/roadmaps", "data-slug": "roadmaps" }, h("span", { class: "long" }, "Roadmaps"), h("span", { class: "short" }, "Path")),
-  h("a", { class: "nav-gate", href: "/gate", "data-slug": "gate" }, h("span", { class: "long" }, "GATE practice"), h("span", { class: "short" }, "GATE")));
+  h("a", { class: "nav-gate", href: "/gate", "data-slug": "gate" }, h("span", { class: "long" }, "GATE practice"), h("span", { class: "short" }, "GATE")),
+  h("a", { class: "nav-gate nav-road", href: "/progress", "data-slug": "progress" }, h("span", { class: "long" }, "Progress"), h("span", { class: "short" }, "Stats")));
 const closeMenus = () => nav.querySelectorAll("details[open]").forEach((d) => d.removeAttribute("open"));
 document.addEventListener("click", (e) => { if (!e.target.closest(".menu")) closeMenus(); });
 document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeMenus(); });
@@ -48,7 +52,7 @@ async function route() {
   cleanup?.();
   cleanup = null;
   closeMenus();
-  const section = slug.startsWith("roadmap") ? "roadmaps" : slug;
+  const section = slug.startsWith("roadmap") ? "roadmaps" : LEARN.has(slug) ? "progress" : slug;
   for (const a of nav.querySelectorAll("a")) a.setAttribute("aria-current", a.dataset.slug === section ? "page" : "false");
   for (const d of nav.querySelectorAll("details")) d.classList.toggle("current", !!d.querySelector('[aria-current="page"]'));
 
@@ -64,6 +68,14 @@ async function route() {
       if (id !== renderId) return;
       setMeta(`GATE CS practice questions with step-by-step solutions · ${SITE.name}`, GATE_DESCRIPTION, "/gate");
       cleanup = gate.render(main) ?? null;
+    } else if (LEARN.has(slug)) {
+      const page = LEARN.get(slug);
+      main.replaceChildren(h("p", { class: "loading", "aria-live": "polite" }, "Loading…"));
+      const view = await import(`./views/${page.slug}.js`);
+      if (id !== renderId) return;
+      setMeta(`${page.title} · ${SITE.name}`, page.description, `/${slug}`);
+      cleanup = view.render(main) ?? null;
+      import("./tutor.js").then(({ mountTutor }) => mountTutor(null)).catch(() => {});
     } else if (slug === "roadmaps" || slug.startsWith("roadmap/")) {
       const roadmap = await import("./views/roadmap.js");
       if (id !== renderId) return;
@@ -91,6 +103,7 @@ async function route() {
       const [gateSlot, roadSlot, elseSlot] = [0, 1, 2].map(() => h("div", { class: "card-slot" }));
       main.replaceChildren(host, gateSlot, roadSlot, elseSlot);
       cleanup = view.render(host) ?? null;
+      import("./learn/store.js").then((s) => s.update((st) => s.recordVisit(st, tool.slug))).catch(() => {});
       import("./tutor.js").then(({ mountTutor }) => { if (id === renderId) mountTutor(tool); }).catch(() => {});
       const fill = (slot, card) => { if (card && id === renderId) slot.replaceChildren(card); };
       import("./gate-link.js").then(({ gateCard }) => fill(gateSlot, gateCard(tool.slug))).catch(() => {});
@@ -120,7 +133,7 @@ export function navigate(path) {
 // Intercept same-origin links so moving between tools doesn't reload the page.
 document.addEventListener("click", (e) => {
   const a = e.target.closest("a[href]");
-  if (!a || e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || a.target === "_blank") return;
+  if (!a || a.hasAttribute("download") || e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || a.target === "_blank") return;
   const url = new URL(a.href, location.href);
   if (url.origin !== location.origin || /\.(png|svg|xml|txt|json)$/.test(url.pathname)) return;
   // A jump within the same page (#module) is left to the browser.
@@ -132,6 +145,7 @@ document.addEventListener("click", (e) => {
 let rendered = "";
 addEventListener("popstate", () => { if (location.pathname + location.search !== rendered) route(); });
 route();
+import("./learn/store.js").then((s) => s.startClock()).catch(() => {});
 
 // --- Theme ---------------------------------------------------------------------
 const toggle = document.getElementById("theme");
