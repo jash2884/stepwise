@@ -13,6 +13,8 @@ import { FULL, STAGE, fullMock, scoreByTopic, stageMock, stageTopics } from "../
 import { answer, dueCount, openMistakes } from "../learn/model.js";
 import { answerText, inputs, solution, stem, topicTitle, TYPE_NAME } from "../learn/question.js";
 import { dayKey, load, recordMock, update } from "../learn/store.js";
+import { learnFrom } from "../ai/doctor.js";
+import { doctorPanel } from "../ai/doctor-panel.js";
 
 const CURRENT = "stepwise.mock";
 const readCurrent = () => { try { const m = JSON.parse(localStorage.getItem(CURRENT)); return m && Array.isArray(m.items) && m.deadline ? m : null; } catch { return null; } };
@@ -190,7 +192,10 @@ export function render(root) {
     const used = Math.min(now, m.deadline) - m.started;
     const each = rows.filter((r) => r.answered).length ? used / rows.filter((r) => r.answered).length : 0;
     update((s) => {
-      for (const r of rows) if (r.answered) answer(s, { topic: r.topic, seed: r.q.seed, correct: r.correct, score: r.score, marks: r.marks, ms: each, src: "mock" }, now);
+      for (const r of rows) if (r.answered) {
+        answer(s, { topic: r.topic, seed: r.q.seed, correct: r.correct, score: r.score, marks: r.marks, ms: each, src: "mock", type: r.q.type, response: r.response }, now);
+        if (!r.correct) r.diagnosis = learnFrom(s, r.q, r.response);
+      }
       recordMock(s, { kind: m.kind, roadmap: m.roadmap, stage: m.stage, title: m.title, at: now, score, max, n: rows.length, right, wrong, ms: used });
     });
     const byTopic = scoreByTopic(rows);
@@ -212,8 +217,15 @@ export function render(root) {
       h("section", { class: "card" },
         h("h2", null, "Every question"),
         h("ol", { class: "lp-review-list" }, rows.map((r) => h("li", null,
-          h("details", null,
-            h("summary", null, h("span", { class: r.correct ? "lp-good" : r.answered ? "lp-bad" : "muted" }, r.correct ? `+${r.score}` : r.answered ? `${r.score}` : "0"), ` · Q${r.i + 1} · ${topicTitle(r.topic)}`),
+          h("details", { ontoggle: (e) => {
+            // The mistake doctor, built the first time a wrong answer is opened.
+            const el = e.currentTarget;
+            if (!el.open || el.dataset.doc || !r.diagnosis) return;
+            el.dataset.doc = "1";
+            const panel = doctorPanel(r.q, r.response, r.diagnosis);
+            if (panel) el.querySelector(".gate-solution")?.before(panel);
+          } },
+            h("summary", null, h("span", { class: r.correct ? "lp-good" : r.answered ? "lp-bad" : "muted" }, r.correct ? `+${r.score}` : r.answered ? `${r.score}` : "0"), ` · Q${r.i + 1} · ${topicTitle(r.topic)}`, r.diagnosis?.claim ? h("span", { class: "doc-tag" }, "diagnosed") : null),
             stem(r.q),
             h("p", null, `Your answer: ${answerText(r.q, r.response)}. Correct answer: ${answerText(r.q)}.`),
             solution(r.q)))))));

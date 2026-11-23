@@ -39,6 +39,7 @@ function cacheMapping(r) {
         `Offset = log₂ ${blockSize} = ${g.offsetBits} bits; index = log₂ ${g.sets} = ${g.indexBits} bits; tag = ${addressBits} − ${g.indexBits} − ${g.offsetBits} = ${g.tagBits} bits.`,
         ask === "dir" ? `Tag storage = ${g.lines} lines × (${g.tagBits} + 1 + 1) bits = ${dir.total} bits.` : `Answer: ${answer}.`,
       ],
+      given: { kind, addressBits, blockSize, cacheSize, mapping, ways: g.ways, ask },
       replay: query("/cache-mapping", cacheParams({ cfg, trace: "0" })),
     };
   }
@@ -67,6 +68,7 @@ function cacheMapping(r) {
         `${res.hits} hits and ${res.misses} misses (${res.kinds.compulsory} compulsory, ${res.kinds.conflict} conflict, ${res.kinds.capacity} capacity).`,
         ask === "ratio" ? `Hit ratio = ${res.hits} ÷ ${refs.length} = ${show(answer)}.` : `Answer: ${answer}.`,
       ],
+      given: { kind, cfg, refs: refs.map((x) => x.addr), ask },
       replay: query("/cache-mapping", cacheParams({ cfg, trace: refs.map((x) => x.addr).join(" ") })),
     };
   }
@@ -87,6 +89,7 @@ function cacheMapping(r) {
       "What is the average memory access time in ns, correct to two decimal places?",
     ],
     solution: [res.formula + ".", `= ${res.working} = ${show(answer)} ns.`],
+    given: { kind: "amat", levels, mem, mode },
     replay: query("/cache-mapping", cacheParams({ cfg: { mapping: "direct", ways: 1, addressBits: 8, blockSize: 1, cacheSize: 4, unit: "block", policy: "lru", write: "wb" }, trace: "0", amat: { levels, mem, mode } })),
   };
 }
@@ -113,6 +116,7 @@ function pipelining(r) {
         ...res.hazards.map((x) => x.text),
         `Ideal: ${res.n} + 4 = ${res.ideal} cycles. With ${res.stallCycles} stall${res.stallCycles === 1 ? "" : "s"}: ${res.total} cycles.`,
       ],
+      given: { kind, program, forwarding, ask },
       replay: query("/pipelining", pipeParams({ program, opts: { forwarding, resolve: "ex", branch: "stall" }, delays, latch: 0 })),
     };
   }
@@ -135,6 +139,7 @@ function pipelining(r) {
       `Pipelined: (5 + ${n} − 1) × ${t.clock} = ${t.cycles} × ${t.clock} = ${t.pipelined} ps. Non-pipelined: ${n} × ${t.single} = ${t.unpipelined} ps.`,
       ask === "speedup" ? `Speedup = ${t.unpipelined} ÷ ${t.pipelined} = ${show(answer)}.` : `Answer: ${t.pipelined} ps.`,
     ],
+    given: { kind: "speedup", d, latch, n, ask },
     replay: query("/pipelining", pipeParams({ program, opts: { forwarding: true, resolve: "ex", branch: "stall" }, delays: d, latch })),
   };
 }
@@ -217,6 +222,7 @@ function ieee754(r) {
       topic: "ieee-754", type: "mcq", marks: 1, ...q,
       stem: [`What is the IEEE 754 ${S.name.toLowerCase().replace(/ \(.*/, "")} precision (${S.bits}-bit) representation of ${value.replace("-", "−")}, in hexadecimal?`],
       solution: e.steps.map((s) => s.note),
+      given: { kind, fmt, value },
       replay: query("/ieee-754", { f: fmt, v: value }),
     };
   }
@@ -226,6 +232,7 @@ function ieee754(r) {
       topic: "ieee-754", type: "nat", marks: 1, answer: d.value, tolerance: 0,
       stem: [`The ${S.bits}-bit IEEE 754 ${fmt} precision number 0x${e.hex} is stored in a register. What decimal value does it represent?`],
       solution: d.steps.map((s) => s.note),
+      given: { kind, fmt, value },
       replay: query("/ieee-754", { f: fmt, x: e.hex }),
     };
   }
@@ -233,6 +240,7 @@ function ieee754(r) {
     topic: "ieee-754", type: "nat", marks: 1, answer: e.E + S.bias, tolerance: 0,
     stem: [`${value.replace("-", "−")} is stored in IEEE 754 ${fmt} precision (${S.e}-bit exponent, bias ${S.bias}). What is the value of the stored (biased) exponent field, as an unsigned decimal number?`],
     solution: e.steps.slice(0, 4).map((s) => s.note),
+    given: { kind, fmt, value },
     replay: query("/ieee-754", { f: fmt, v: value }),
   };
 }

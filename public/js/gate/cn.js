@@ -49,6 +49,7 @@ function subnetting(r) {
         { table: { head: ["Subnet", "Hosts", "Block size", "Allocated"], rows: res.rows.map((x) => [x.name, x.hosts, x.size, `${dotted(x.network)}/${x.prefix}`]) } },
         `${target.name} needs ${target.hosts} + 2 = ${target.hosts + 2} addresses, rounded up to ${target.size} (a /${target.prefix}), and gets ${right}.`,
       ],
+      given: { variant, base, needs, target: target.name },
       replay: query("/subnetting", { mode: "vlsm", base: `${dotted(base)}/24`, needs: needText }),
     };
   }
@@ -59,6 +60,7 @@ function subnetting(r) {
     const usable = a.usable;
     return {
       topic: "subnetting", type: "nat", marks: 1, answer: usable, tolerance: 0,
+      given: { variant, ip, prefix },
       stem: [`A host has IP address ${dotted(ip)} with subnet mask ${dotted(a.mask)}. How many usable host addresses does its subnet have?`],
       solution: [
         `The mask ${dotted(a.mask)} has ${prefix} one bits, so it is a /${prefix} and leaves ${32 - prefix} host bits.`,
@@ -73,6 +75,7 @@ function subnetting(r) {
   if (!opts) return null;
   return {
     topic: "subnetting", type: "mcq", marks: 1, ...opts,
+    given: { variant, ip, prefix },
     stem: [`What is the broadcast address of the subnet that contains ${dotted(ip)}/${prefix}?`],
     solution: [
       `A /${prefix} mask is ${dotted(a.mask)}. ANDing it with the address gives the network ${dotted(a.network)}.`,
@@ -103,6 +106,7 @@ function cidr(r) {
         `Matching prefixes: ${res.matches.map(label).join(", ")}.`,
         `The longest is ${label(res.best)}, so the packet goes out on interface ${res.best.iface}.`,
       ],
+      given: { variant: "lpm", rows, ip },
       replay: query("/cidr-and-longest-prefix-match", { t: rows.map((e) => `${e.len ? showPrefix(e) : "default"} ${e.iface}`).join(";"), a: dotted(ip) }),
     };
   }
@@ -131,6 +135,7 @@ function cidr(r) {
       `In binary the blocks run from ${dotted(Math.min(...prefixes.map((p) => p.net)))} to ${dotted(prefixes.at(-1).net + size - 1)}; these two addresses agree on their first ${sup.len} bits and no more.`,
       `So the supernet is ${right}.${res.exact ? " It covers exactly the listed blocks." : ` It also covers ${2 ** (32 - sup.len) - k * size} addresses that are not in the list.`}`,
     ],
+    given: { variant: "sum", prefixes },
     replay: query("/cidr-and-longest-prefix-match", { s: prefixes.map(showPrefix).join(" ") }),
   };
 }
@@ -196,6 +201,7 @@ function errorDetection(r) {
         `Divide by ${gen} using XOR: ${res.steps.filter((s) => s.by !== "0".repeat(gen.length)).length} subtractions, leaving the remainder ${res.remainder}.`,
         `The transmitted frame is ${res.codeword}.`,
       ],
+      given: { variant: "crc", data, gen },
       replay: query("/error-detection", { mode: "crc", d: data, g: gen }),
     };
   }
@@ -215,6 +221,7 @@ function errorDetection(r) {
       { table: { head: ["Check", "Positions covered", "Result"], rows: res.steps.filter((s) => s.parity).map((s) => [`P${s.parity}`, s.covered.join(", "), s.fails ? "fails" : "passes"]) } },
       res.syndrome ? `The failing checks add up to ${res.syndrome}, so bit ${res.syndrome} is wrong. The corrected word is ${res.corrected}.` : "Every check passes, so the syndrome is 0: no error.",
     ],
+    given: { variant: "hamming", rx, n: enc.n },
     replay: query("/error-detection", { mode: "hamming", hd: data, rx }),
   };
 }
@@ -235,6 +242,7 @@ function slidingWindow(r) {
         `Transmission time Tt = ${frameBits} / ${bwMbps * 1e6} s = ${show(round2(e.Tt * 1e3 * 1000) / 1000)} ms, so a = Tp / Tt = ${tpMs} / ${show(round2(e.Tt * 1e3 * 1000) / 1000)} = ${show(round2(e.a))}.`,
         `Utilisation = W / (1 + 2a) = ${W} / (1 + 2 × ${show(round2(e.a))}) = ${show(answer)}% (it would be capped at 100% if the window covered a whole round trip).`,
       ],
+      given: { kind, bwMbps, frameBits, tpMs, W },
       replay: `${query("/sliding-window", { ebw: bwMbps, esize: frameBits, etp: tpMs, ew: W })}#calc`,
     };
   }
@@ -250,6 +258,7 @@ function slidingWindow(r) {
           : `Selective Repeat needs sender + receiver windows ≤ 2ᵐ, so 2ᵐ ≥ 2 × ${W} = ${2 * W}.`,
         `The smallest such m is ${answer}.`,
       ],
+      given: { kind, protocol, W },
       replay: `${query("/sliding-window", { ebw: 1, esize: 1000, etp: 5, ew: W })}#calc`,
     };
   }
@@ -269,6 +278,7 @@ function slidingWindow(r) {
         `Transmission order: ${res.sends.filter((s) => s.kind === "F").map((s) => `${s.n}${s.lost ? " (lost)" : ""}`).join(", ")}.`,
         `${res.framesSent} transmissions: ${frames} frames plus ${res.retransmissions} retransmissions.`,
       ],
+      given: { kind: "sim", protocol, frames, window, k },
       replay: query("/sliding-window", { p: protocol, n: frames, w: window, d: 1, loss: "", k }),
     };
   }

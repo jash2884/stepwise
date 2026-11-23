@@ -9,6 +9,7 @@ import { h } from "../ui.js";
 import { bar, fill, header, moduleLink, plural, subnav } from "../learn/common.js";
 import { diagnostic, diagnosticReport, DIAGNOSTIC } from "../learn/compose.js";
 import { answer, dueCount, markKnown, nextModule, openMistakes } from "../learn/model.js";
+import { learnFrom } from "../ai/doctor.js";
 import { answerText, inputs, metaRow, solution, stem, topicTitle } from "../learn/question.js";
 import { load, update } from "../learn/store.js";
 
@@ -63,7 +64,10 @@ export function render(root) {
   function finish(qs, results) {
     const report = diagnosticReport(results.map((r) => ({ topic: r.q.topic, correct: r.correct })), TOPICS, roadmap);
     update((s) => {
-      for (const r of results) answer(s, { topic: r.q.topic, seed: r.q.seed, correct: r.correct, score: r.score, marks: r.q.marks, ms: r.ms, src: "diagnostic" });
+      for (const r of results) {
+        answer(s, { topic: r.q.topic, seed: r.q.seed, correct: r.correct, score: r.score, marks: r.q.marks, ms: r.ms, src: "diagnostic", type: r.q.type, response: r.response });
+        if (!r.correct && r.response != null) learnFrom(s, r.q, r.response);
+      }
       markKnown(s, report.known);
     });
     const next = nextModule(load(), roadmap);

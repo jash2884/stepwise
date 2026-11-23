@@ -1,13 +1,19 @@
 // The learning store: everything Stepwise remembers about a learner, kept on
 // this device only (localStorage, no accounts, no network).
 //
-// State shape (version 1):
+// State shape (version 2; version 1 had no ty, r, dx, doctor or elo, and
+// migrates by rebuilding elo from its answers):
 //   v        schema version
 //   answers  every answered question, oldest first:
 //            { t: topic slug, s: seed, c: correct, sc: score, m: marks,
-//              ms: time taken, at: timestamp, src: "gate" | "mock" | "review" | "diagnostic" | "mistakes" }
+//              ms: time taken, at: timestamp, src: "gate" | "mock" | "review" | "diagnostic" | "mistakes",
+//              ty?: "mcq" | "msq" | "nat" }
 //   legacy   per-topic { right, total } carried over from the old "stepwise.gate" key
-//   mistakes wrong answers to come back to: { t, s, at, ok: understood? }
+//   mistakes wrong answers to come back to: { t, s, at, ok: understood?,
+//            r?: the learner's answer, dx?: the mistake doctor's posterior for it }
+//   doctor   per topic, soft counts of each diagnosed misconception (the
+//            learner's Dirichlet prior, see ai/doctor.js): { topic: { id: count } }
+//   elo      ability and item difficulty estimates (see elo.js)
 //   known    topics placed as known by the diagnostic: { slug: timestamp }
 //   reviews  spaced repetition per topic: { slug: { step, due } } (see srs.js)
 //   done     modules without GATE topics, marked done by hand: { moduleId: timestamp }
@@ -20,19 +26,24 @@
 // Node; only the functions under "Storage" touch localStorage, and every one of
 // those is wrapped in try/catch (private mode, full storage, blocked storage).
 
+import { clean as cleanElo, empty as emptyElo, replay as replayElo } from "./elo.js";
+
 export const KEY = "stepwise.progress";
 export const LEGACY_KEY = "stepwise.gate";
-export const VERSION = 1;
+export const VERSION = 2;
 const MAX_ANSWERS = 3000, MAX_MISTAKES = 400, MAX_MOCKS = 60;
 const DAY = 86400000;
+const TYPES = new Set(["mcq", "msq", "nat"]);
 
 export function empty() {
-  return { v: VERSION, answers: [], legacy: {}, mistakes: [], known: {}, reviews: {}, done: {}, visits: {}, days: {}, plan: null, mocks: [], migratedGate: false };
+  return { v: VERSION, answers: [], legacy: {}, mistakes: [], known: {}, reviews: {}, done: {}, visits: {}, days: {}, plan: null, mocks: [], migratedGate: false, doctor: {}, elo: emptyElo() };
 }
 
 const obj = (x) => (x && typeof x === "object" && !Array.isArray(x) ? x : {});
 const arr = (x) => (Array.isArray(x) ? x : []);
 const num = (x, d = 0) => (Number.isFinite(Number(x)) ? Number(x) : d);
+// A stored answer to a question: a number (NAT, MCQ) or a list of option indexes (MSQ).
+const response = (x) => (Array.isArray(x) ? (x.every((v) => Number.isInteger(v)) ? x.slice(0, 8) : undefined) : Number.isFinite(x) ? x : undefined);
 
 // Bring anything read from storage (or an imported file) up to the current
 // shape, dropping what can't be trusted. legacyGate is the parsed old
@@ -40,12 +51,18 @@ const num = (x, d = 0) => (Number.isFinite(Number(x)) ? Number(x) : d);
 export function migrate(raw, legacyGate = null) {
   const s = empty();
   const r = obj(raw);
-  if (r.v === VERSION) {
+  if (r.v === 1 || r.v === VERSION) {
     s.answers = arr(r.answers).filter((a) => a && typeof a.t === "string").map((a) => ({
       t: a.t, s: num(a.s), c: !!a.c, sc: num(a.sc), m: num(a.m, 1), ms: Math.max(0, num(a.ms)), at: num(a.at), src: typeof a.src === "string" ? a.src : "gate",
+      ...(TYPES.has(a.ty) ? { ty: a.ty } : {}),
     })).slice(-MAX_ANSWERS);
     for (const [k, v] of Object.entries(obj(r.legacy))) if (num(v?.total) > 0) s.legacy[k] = { right: Math.min(num(v.right), num(v.total)), total: num(v.total) };
-    s.mistakes = arr(r.mistakes).filter((m) => m && typeof m.t === "string").map((m) => ({ t: m.t, s: num(m.s), at: num(m.at), ok: !!m.ok })).slice(-MAX_MISTAKES);
+    s.mistakes = arr(r.mistakes).filter((m) => m && typeof m.t === "string").map((m) => {
+      const out = { t: m.t, s: num(m.s), at: num(m.at), ok: !!m.ok };
+      if (response(m.r) !== undefined) out.r = response(m.r);
+      if (m.dx && typeof m.dx === "object") out.dx = Object.fromEntries(Object.entries(m.dx).filter(([, p]) => Number.isFinite(p) && p >= 0 && p <= 1));
+      return out;
+    }).slice(-MAX_MISTAKES);
     for (const [k, v] of Object.entries(obj(r.known))) s.known[k] = num(v);
     for (const [k, v] of Object.entries(obj(r.reviews))) if (v) s.reviews[k] = { step: Math.max(0, Math.min(3, num(v.step))), due: num(v.due) };
     for (const [k, v] of Object.entries(obj(r.done))) s.done[k] = num(v);
@@ -54,6 +71,12 @@ export function migrate(raw, legacyGate = null) {
     s.plan = r.plan && typeof r.plan === "object" ? { ...r.plan } : null;
     s.mocks = arr(r.mocks).filter((m) => m && typeof m === "object").slice(-MAX_MOCKS);
     s.migratedGate = !!r.migratedGate;
+    for (const [topic, counts] of Object.entries(obj(r.doctor))) {
+      const c = Object.fromEntries(Object.entries(obj(counts)).map(([k, v]) => [k, Math.max(0, num(v))]).filter(([, v]) => v > 0));
+      if (Object.keys(c).length) s.doctor[topic] = c;
+    }
+    // Version 1 had no ability estimates: rebuild them from the answers.
+    s.elo = r.v === VERSION && r.elo ? cleanElo(r.elo) : replayElo(s.answers);
   }
   if (!s.migratedGate && legacyGate && typeof legacyGate === "object") {
     for (const [slug, v] of Object.entries(legacyGate)) {
@@ -90,13 +113,19 @@ const today = (s, now) => (s.days[dayKey(now)] ??= { q: 0, right: 0, ms: 0, visi
 // --- Recording (pure: mutate and return the given state) --------------------------------
 
 // One answered question. Wrong answers also go into the mistake notebook.
-export function recordAnswer(s, { topic, seed, correct, score = 0, marks = 1, ms = 0, src = "gate" }, now = Date.now()) {
-  s.answers.push({ t: topic, s: seed, c: !!correct, sc: score, m: marks, ms: Math.max(0, Math.round(ms)), at: now, src });
+// type (the question's format) and response (what the learner answered) are
+// optional: type feeds the learner model, response lets the mistake doctor
+// look at a wrong answer again later.
+export function recordAnswer(s, { topic, seed, correct, score = 0, marks = 1, ms = 0, src = "gate", type = null, response: resp = null }, now = Date.now()) {
+  s.answers.push({ t: topic, s: seed, c: !!correct, sc: score, m: marks, ms: Math.max(0, Math.round(ms)), at: now, src, ...(TYPES.has(type) ? { ty: type } : {}) });
   if (s.answers.length > MAX_ANSWERS) s.answers.splice(0, s.answers.length - MAX_ANSWERS);
   const d = today(s, now);
   d.q++; if (correct) d.right++;
   if (!correct && src !== "mistakes") {
-    if (!s.mistakes.some((m) => m.t === topic && m.s === seed)) s.mistakes.push({ t: topic, s: seed, at: now, ok: false });
+    const r = response(resp);
+    const old = s.mistakes.find((m) => m.t === topic && m.s === seed);
+    if (!old) s.mistakes.push({ t: topic, s: seed, at: now, ok: false, ...(r !== undefined ? { r } : {}) });
+    else if (r !== undefined) { old.r = r; delete old.dx; }
     if (s.mistakes.length > MAX_MISTAKES) s.mistakes.splice(0, s.mistakes.length - MAX_MISTAKES);
   }
   return s;
@@ -177,7 +206,7 @@ export function exportText(s = load()) {
 export function importText(text) {
   let raw;
   try { raw = JSON.parse(text); } catch { throw new Error("That file isn't valid JSON."); }
-  if (!raw || raw.app !== "stepwise" || raw.v !== VERSION) throw new Error("That file isn't a Stepwise progress export.");
+  if (!raw || raw.app !== "stepwise" || (raw.v !== 1 && raw.v !== VERSION)) throw new Error("That file isn't a Stepwise progress export.");
   const s = migrate(raw, null);
   save(s);
   return s;

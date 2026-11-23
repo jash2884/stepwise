@@ -62,6 +62,7 @@ function cpuScheduling(r) {
       { table: { head: ["Process", "CT", "TAT = CT − AT", "WT = TAT − BT"], rows: res.results.map((x) => [x.id, x.ct, x.tat, x.wt]) } },
       ask === "ct" ? `${target.id} completes at ${target.ct}.` : `Average ${ask === "wt" ? "waiting" : "turnaround"} time = ${res.results.map((x) => x[ask]).join(" + ")} over ${procs.length} = ${show(answer)}.`,
     ],
+    given: { procs, algo, quantum, ask, target: target.id },
     replay: query("/cpu-scheduling", { algo, q: quantum, prio: "low", p: procs.map((p) => `${p.arrival}-${p.burst}-${p.priority}`).join("_") }),
   };
 }
@@ -84,6 +85,7 @@ function pageReplacement(r) {
       `Faults happen on the references to ${faultsAt.join(", ")}: the first ${Math.min(frames, new Set(refs).size)} fill the empty frames, and every later fault evicts a page.`,
       `Total: ${res.faults} faults and ${res.hits} hits out of ${refs.length} references.`,
     ],
+    given: { refs, frames, algo },
     replay: query("/page-replacement", { r: refs.join(" "), f: frames, algo }),
   };
 }
@@ -108,6 +110,7 @@ function diskScheduling(r) {
       `Service order from ${head}: ${res.path.slice(1).join(" → ")}.`,
       `Total head movement = ${res.moves.map((m) => Math.abs(m.to - m.from)).join(" + ")} = ${res.total} cylinders.`,
     ],
+    given: { queue, head, algo, direction },
     replay: query("/disk-scheduling", { r: queue.join(" "), h: head, c: 200, algo, dir: direction, jump: 1 }),
   };
 }
@@ -139,6 +142,7 @@ function bankers(r) {
       res.safe ? `Running the safety algorithm from Work = ${vec(state.available)} finishes everyone in the order ${seq(res.sequence)}. Each wrong option gets stuck: some process's Need exceeds Work at its turn.`
         : `The safety algorithm gets stuck: after ${res.sequence.length ? seq(res.sequence) : "no process"}, no remaining process's Need fits in Work. The state is unsafe, so no sequence is safe.`,
     ],
+    given: { state },
     replay: query("/bankers-algorithm", { s: [state.allocation, state.max].map((x) => x.map((row) => row.join(".")).join("_")).concat(state.available.join(".")).join("~") }),
   };
 }
@@ -158,6 +162,7 @@ function memoryAllocation(r) {
       "Which placement algorithms can allocate memory to all four processes?",
     ],
     solution: FITS.map(([, name], i) => `${name}: ${results[i].failed ? `${results[i].failed} process${results[i].failed > 1 ? "es" : ""} must wait` : "every process fits"}. Free memory left: ${results[i].stats.free} KB, largest hole ${results[i].stats.largest} KB.`),
+    given: { holes, sizes },
     replay: query("/memory-allocation", { algo: "first", h: holes.join(" "), s: ops.map((o) => `${o.name} ${o.size}`).join("; ") }),
   };
 }
@@ -170,6 +175,7 @@ function addressTranslation(r) {
       topic: "address-translation", type: "nat", marks: 1, answer, tolerance: 0.01,
       stem: [`A paged system has a TLB with a hit ratio of ${hitRatio * 100}%. A TLB lookup takes ${tlb} ns and a memory access ${mem} ns. The page table is in memory and has one level. What is the effective memory access time in ns?`],
       solution: [`Hit: TLB + memory = ${tlb + mem} ns. Miss: TLB + page table + memory = ${tlb + 2 * mem} ns.`, `EAT = ${hitRatio} × ${tlb + mem} + ${round2(1 - hitRatio)} × ${tlb + 2 * mem} = ${show(answer)} ns.`],
+      given: { variant: "eat", hitRatio, mem, tlb },
       replay: "/address-translation",
     };
   }
@@ -180,6 +186,7 @@ function addressTranslation(r) {
     topic: "address-translation", type: "nat", marks: 1, answer, tolerance: 0.01,
     stem: [`A system uses ${bits}-bit virtual addresses, a page size of ${pageKB} KB and ${pte}-byte page table entries. With a single-level page table, what is the size of one process's page table in MB?`],
     solution: [`Offset bits = log₂(${pageKB} × 1024) = ${offset}, so the page number has ${bits} − ${offset} = ${bits - offset} bits: 2^${bits - offset} entries.`, `Size = 2^${bits - offset} × ${pte} B = ${show(answer)} MB.`],
+    given: { variant: "size", bits, pageKB, pte },
     replay: "/address-translation",
   };
 }
@@ -202,6 +209,7 @@ function normalisation(r) {
       topic: "normalization", type: "mcq", marks: 2, options, answer: ["1NF", "2NF", "3NF", "BCNF"].indexOf(nf.form),
       stem: [...base, "What is the highest normal form R is in?"],
       solution: [`Candidate key${keys.length > 1 ? "s" : ""}: ${keys.join(", ")}.`, nf.form === "BCNF" ? "Every non-trivial dependency has a superkey on the left, so R is in BCNF." : `R is in ${nf.form} but no higher: ${v[0].lhs} → ${v[0].rhs} breaks the next form because ${v[0].why}`],
+      given: { variant, attrs, fds },
       replay: query("/normalization", { r: attrs, fd: fdParam(fds), algo: "nf" }),
     };
   }
@@ -209,6 +217,7 @@ function normalisation(r) {
     return {
       topic: "normalization", type: "nat", marks: 1, answer: keys.length, tolerance: 0,
       stem: [...base, "How many candidate keys does R have?"],
+      given: { variant, attrs, fds },
       solution: [...candidateKeys(attrs, fds).reasoning],
       replay: query("/normalization", { r: attrs, fd: fdParam(fds), algo: "keys" }),
     };
@@ -227,6 +236,7 @@ function normalisation(r) {
   return {
     topic: "normalization", type: "msq", marks: 2, options, answer: options.map((x, i) => (isKey(x) ? i : null)).filter((x) => x !== null),
     stem: [...base, "Which of the following are candidate keys of R?"],
+    given: { variant: "which", attrs, fds },
     solution: [...options.map((x) => `${x}⁺ = ${closure(x, fds).closure}: ${isKey(x) ? "everything, and no proper subset works, so a candidate key." : closure(x, fds).closure === attrs ? "a superkey, but a smaller part of it is already a key, so not minimal." : "not every attribute, so not a key."}`)],
     replay: query("/normalization", { r: attrs, fd: fdParam(fds), algo: "keys" }),
   };
@@ -264,6 +274,7 @@ function serialisability(r) {
     return {
       topic: "serializability", type: "nat", marks: 1, answer: res.edges.length, tolerance: 0,
       stem: [...base, "How many edges does the precedence graph of S have?"],
+      given: { variant: "edges", text },
       solution: [`Conflicting pairs: ${res.pairs.length ? res.pairs.map((p) => `${opLabel(p.a)} before ${opLabel(p.b)}`).join(", ") : "none"}.`, `Distinct edges: ${edgeList}. That's ${res.edges.length}.`],
       replay,
     };
@@ -277,6 +288,7 @@ function serialisability(r) {
       return {
         topic: "serializability", type: "mcq", marks: 2, options, answer: options.indexOf(fmtOrder(valid[0])),
         stem: [...base, "S is conflict serialisable. Which serial schedule is it conflict equivalent to?"],
+        given: { variant: "order", text },
         solution: [`Precedence graph edges: ${edgeList}. It has no cycle, and the only topological order is ${fmtOrder(valid[0])}.`],
         replay,
       };
@@ -292,6 +304,7 @@ function serialisability(r) {
   if (!answer.length) return null;
   return {
     topic: "serializability", type: "msq", marks: 2, options: statements.map(([s]) => s), answer,
+    given: { variant: "msq", text },
     stem: [...base, "Which of the following statements are true?"],
     solution: [
       `Precedence graph edges: ${edgeList}. ${res.cycle ? `Cycle ${res.cycle.map(T).join(" → ")}, so not conflict serialisable.` : "No cycle, so conflict serialisable (and therefore view serialisable)."}`,
@@ -317,6 +330,7 @@ function hashing(r) {
     const longest = Math.max(...res.table.map((c) => c.length));
     return {
       topic: "hashing", type: "nat", marks: 1, answer: longest, tolerance: 0,
+      given: { strategy, m, keys, target: null },
       stem: [...base, "What is the length of the longest chain?"],
       solution: [`Slots: ${res.table.map((c, i) => (c.length ? `${i}: ${c.join(", ")}` : null)).filter(Boolean).join("; ")}.`, `The longest chain has ${longest} key${longest === 1 ? "" : "s"}.`],
       replay,
@@ -326,6 +340,7 @@ function hashing(r) {
   const target = collided.length ? collided[collided.length - 1] : res.steps[res.steps.length - 1];
   return {
     topic: "hashing", type: "nat", marks: collided.length ? 2 : 1, answer: target.slot, tolerance: 0,
+    given: { strategy, m, keys, target: target.key },
     stem: [...base, `In which slot is key ${target.key} stored?`],
     solution: [...res.steps.map((s) => s.note)],
     replay,
@@ -342,6 +357,7 @@ function joinCost(r) {
     topic: "sql-joins", type: "nat", marks: 2, answer: row.transfers, tolerance: 0,
     stem: [`Relation r has ${nr} tuples in ${br} blocks and relation s has ${ns} tuples in ${bs} blocks. They are joined with ${what}, with r as the outer relation. In the worst case, how many block transfers are needed? (Don't count writing the result.)`],
     solution: [`${row.name}: ${row.formula}.`, `= ${{ nlj: `${nr} × ${bs} + ${br}`, "bnlj-m": `⌈${br} / ${M - 2}⌉ × ${bs} + ${br} = ${Math.ceil(br / (M - 2))} × ${bs} + ${br}`, bnlj: `${br} × ${bs} + ${br}` }[variant]} = ${row.transfers} block transfers.`],
+    given: { variant, nr, br, ns, bs, M },
     replay: query("/sql-joins", { mode: "algo", c: [nr, br, ns, bs, M].join(",") }),
   };
 }

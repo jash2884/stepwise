@@ -6,8 +6,11 @@
 import { TOPICS, check, generate, topicOf } from "../gate-questions.js";
 import { SUBJECTS } from "../tools.js";
 import { h, readParams, writeParams } from "../ui.js";
-import { answer, topicStat } from "../learn/model.js";
+import { answer, predictSuccess, topicStat } from "../learn/model.js";
+import { pickAdaptive } from "../learn/elo.js";
 import { load, update } from "../learn/store.js";
+import { learnFrom } from "../ai/doctor.js";
+import { doctorPanel } from "../ai/doctor-panel.js";
 
 const TYPE_NAME = { mcq: "MCQ · one correct option", msq: "MSQ · one or more correct options", nat: "NAT · type the number" };
 const LETTERS = "ABCD";
@@ -78,8 +81,15 @@ export function render(root) {
   const qCard = h("section", { class: "card gate-q", "aria-live": "polite" });
   const statsCard = h("aside", { class: "card gate-stats" });
 
+  // Adaptive practice: try a few fresh seeds and pick one whose predicted
+  // chance of success (learn/elo.js) is in the useful band.
   function next() {
-    seed = newSeed();
+    const s = load(), cands = [];
+    for (let i = 0; i < 8; i++) {
+      const sd = newSeed(), slug = slugFor(sd);
+      try { const q = generate(slug, sd); cands.push({ seed: sd, p: predictSuccess(s, { topic: slug, type: q.type, marks: q.marks }) }); } catch { /* try another */ }
+    }
+    seed = pickAdaptive(cands)?.seed ?? newSeed();
     show();
   }
 
@@ -118,7 +128,11 @@ export function render(root) {
       if (q.type === "mcq" && response === null) return;
       const { correct, score } = check(q, response);
       session.done++; session.max += q.marks; session.score += score; if (correct) session.right++;
-      update((st) => answer(st, { topic: slug, seed: q.seed, correct, score, marks: q.marks, ms: Date.now() - started, src: "gate" }));
+      let diagnosis = null;
+      update((st) => {
+        answer(st, { topic: slug, seed: q.seed, correct, score, marks: q.marks, ms: Date.now() - started, src: "gate", type: q.type, response });
+        if (!correct) diagnosis = learnFrom(st, q, response);
+      });
       drawStats();
 
       submit.disabled = true; skip.remove();
@@ -130,14 +144,16 @@ export function render(root) {
       });
       const answerText = q.type === "nat" ? String(q.answer) : q.type === "mcq" ? LETTERS[q.answer] : q.answer.map((i) => LETTERS[i]).join(", ");
       const nextBtn = h("button", { type: "button", class: "btn primary", onclick: next }, "Next question →");
-      result.replaceChildren(
+      result.replaceChildren(...[
         h("p", { class: `notice ${correct ? "good" : "bad"}`, tabindex: "-1" },
           correct ? `Correct: +${q.marks}` : `Not quite. The answer is ${answerText}. ${score < 0 ? `GATE marking: ${score}.` : "No negative marks for this format."}`),
+        correct ? null : doctorPanel(q, response, diagnosis),
         h("div", { class: "gate-solution" }, h("h2", null, "Solution"), q.solution.map(block)),
         h("div", { class: "row" },
           nextBtn,
           h("a", { class: "btn ghost", href: q.replay }, "Watch it step by step"),
-          h("button", { type: "button", class: "btn ghost", onclick: (e) => { navigator.clipboard?.writeText(location.href).then(() => { e.target.textContent = "Link copied ✓"; }).catch(() => {}); } }, "Share this question")));
+          h("button", { type: "button", class: "btn ghost", onclick: (e) => { navigator.clipboard?.writeText(location.href).then(() => { e.target.textContent = "Link copied ✓"; }).catch(() => {}); } }, "Share this question")),
+      ].filter(Boolean));
       // Focus the verdict, not Next: an Enter still in flight would skip the solution.
       result.firstChild.focus({ preventScroll: true });
     }
@@ -157,7 +173,7 @@ export function render(root) {
       tried.length ? h("ul", { class: "gate-bars" }, tried.map((t) => {
         const s = stats[t.slug], p = pct(s);
         return h("li", null,
-          h("span", { class: "gate-bar-label" }, t.title, h("span", { class: "muted" }, ` ${s.right}/${s.total}`)),
+          h("span", { class: "gate-bar-label" }, t.title, h("span", { class: "muted" }, ` ${s.right}/${s.total}`), h("span", { class: "muted small", title: "Chance you know this topic, from knowledge tracing" }, ` · ${Math.round(s.pKnown * 100)}% known`)),
           h("span", { class: "gate-bar", role: "img", "aria-label": `${p}% correct` }, h("i", { style: `width:${Math.max(p, 2)}%` })),
           h("span", { class: "gate-pct" }, `${p}%`));
       })) : null,

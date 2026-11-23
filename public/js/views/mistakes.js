@@ -5,8 +5,10 @@ import { generate } from "../gate-questions.js";
 import { h } from "../ui.js";
 import { dateText, fill, header, subnav } from "../learn/common.js";
 import { answer, dueCount, openMistakes } from "../learn/model.js";
-import { metaRow, practiceCard, solution, stem, topicTitle } from "../learn/question.js";
+import { answerText, metaRow, practiceCard, solution, stem, topicTitle } from "../learn/question.js";
 import { dayKey, load, setUnderstood, update } from "../learn/store.js";
+import { diagnoseSaved, learnFrom } from "../ai/doctor.js";
+import { doctorPanel } from "../ai/doctor-panel.js";
 
 const PAGE = 15;
 
@@ -41,15 +43,27 @@ export function render(root) {
     let q;
     try { q = generate(m.t, m.s); } catch { return null; }
     const slot = h("div");
+    // The mistake doctor on the answer that was saved with this mistake.
+    const doc = !m.ok && m.r != null ? doctorPanel(q, m.r, diagnoseSaved(load(), q, m)) : null;
     const card = h("section", { class: "card lp-mistake" },
       metaRow(q, h("span", { class: "muted" }, ` · got wrong on ${dateText(dayKey(m.at))}`)),
       h("details", { class: "lp-stem" }, h("summary", null, "Show the question"), stem(q)),
+      doc ? h("p", { class: "muted small" }, `Your answer was ${answerText(q, m.r)}.`) : null,
+      doc,
       slot,
       h("div", { class: "row" },
         h("button", { type: "button", class: "btn primary small", onclick: (e) => {
           e.currentTarget.remove();
+          doc?.remove();
           slot.replaceChildren(practiceCard(q, {
-            onResult: ({ correct, score, ms }) => update((s) => answer(s, { topic: m.t, seed: m.s, correct, score, marks: q.marks, ms, src: "mistakes" })),
+            onResult: ({ correct, score, ms, response }) => {
+              let diagnosis = null;
+              update((s) => {
+                answer(s, { topic: m.t, seed: m.s, correct, score, marks: q.marks, ms, src: "mistakes", type: q.type, response });
+                if (!correct) diagnosis = learnFrom(s, q, response);
+              });
+              return correct ? null : doctorPanel(q, response, diagnosis);
+            },
             actions: ({ correct }) => correct && !m.ok ? [h("button", { type: "button", class: "btn primary small", onclick: () => mark(true) }, "Mark as understood")] : [],
           }));
           card.querySelector(".lp-stem")?.remove();

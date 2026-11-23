@@ -19,10 +19,21 @@ export function h(tag, props, ...kids) {
 export const fmt = (n, d = 2) => (Number.isInteger(n) ? String(n) : n.toFixed(d));
 export const reducedMotion = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
 
+// A link can open a replay at a given step: ?step=N (1-based). It is read
+// when the page loads (views rewrite the query string before their stepper
+// exists) and used once, by the first stepper on that page.
+let pendingStep = null;
+function takeStep(count) {
+  if (!pendingStep || pendingStep.path !== location.pathname) return null;
+  const n = pendingStep.n;
+  pendingStep = null;
+  return n >= 1 && n <= count ? n - 1 : null;
+}
+
 // The step player: ⏮ ◀ ▶/❚❚ ▶ ⏭, a scrubber and a speed control.
 // render(i) draws step i; the player owns timing and keyboard shortcuts.
 export function stepper({ count, render, label = "Step", interval = 900, start = 0 }) {
-  let i = Math.min(start, count - 1), timer = null, speed = 1;
+  let i = Math.min(takeStep(count) ?? start, count - 1), timer = null, speed = 1;
   const counter = h("span", { class: "step-count", "aria-live": "polite" });
   const range = h("input", { type: "range", min: 0, max: count - 1, value: i, "aria-label": `${label} slider`, oninput: (e) => go(Number(e.target.value)) });
   const playBtn = h("button", { type: "button", class: "ctl play", "aria-label": "Play", onclick: () => (timer ? pause() : play()) }, "▶");
@@ -109,7 +120,10 @@ export function tabs(items, onChange) {
 
 // Shareable state lives in the query string: /cpu-scheduling?algo=rr&q=2
 export function readParams() {
-  return new URLSearchParams(location.search);
+  const params = new URLSearchParams(location.search);
+  const n = Number(params.get("step"));
+  if (Number.isInteger(n) && n > 0) pendingStep = { path: location.pathname, n };
+  return params;
 }
 export function writeParams(params) {
   const q = new URLSearchParams(params).toString();

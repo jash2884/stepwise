@@ -74,7 +74,8 @@ export function solution(q, { open = true } = {}) {
 }
 
 // One question to answer and check. onResult({ correct, score, ms, response })
-// runs once, when the answer is checked. actions: extra buttons shown after.
+// runs once, when the answer is checked, and may return a node to show under
+// the verdict (the mistake doctor). actions: extra buttons shown after.
 export function practiceCard(q, { onResult, actions = () => [], heading = null } = {}) {
   const started = Date.now();
   const result = h("div");
@@ -89,13 +90,15 @@ export function practiceCard(q, { onResult, actions = () => [], heading = null }
     const { correct, score } = check(q, response);
     submit.remove();
     box.lock();
-    result.replaceChildren(
+    const extra = onResult?.({ correct, score, ms: Date.now() - started, response });
+    result.replaceChildren(...[
       h("p", { class: `notice ${correct ? "good" : "bad"}`, tabindex: "-1" },
         correct ? `Correct: +${q.marks}` : `Not quite. The answer is ${answerText(q)}.${score < 0 ? ` GATE marking: ${score}.` : ""}`),
+      extra instanceof Node ? extra : null,
       solution(q, { open: !correct }),
-      h("div", { class: "row" }, actions({ correct, score })));
+      h("div", { class: "row" }, actions({ correct, score })),
+    ].filter(Boolean));
     result.firstChild.focus({ preventScroll: true });
-    onResult?.({ correct, score, ms: Date.now() - started, response });
   }
   return card;
 }

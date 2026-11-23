@@ -69,17 +69,26 @@ test("calendar helpers", () => {
 
 // --- Mastery ----------------------------------------------------------------------
 
-test("mastery needs at least 5 answers and 80% over the last 10", () => {
-  assert.equal(isMastered([true, true, true, true]), false);
-  assert.equal(isMastered([true, true, true, true, false]), true); // 4 of 5
-  assert.equal(isMastered([true, true, true, false, false]), false); // 3 of 5
-  // Only the last 10 count: early mistakes are forgiven.
+// Mastery used to be "5 answers and 80% of the last 10". It is now Bayesian
+// Knowledge Tracing (learn/bkt.js), mastered at P(known) >= 0.95, so these
+// cases changed: 4 straight right answers of unknown format now count (the
+// old rule wanted 5), and a wrong answer straight after them does not (the
+// most recent answer is the strongest evidence; the old rule averaged it in).
+// Early mistakes are still forgiven, recent ones still count against you,
+// old aggregate stats and the diagnostic still set the starting point.
+test("mastery is P(known) >= 0.95 under knowledge tracing", () => {
+  assert.equal(isMastered([true, true, true]), false);
+  assert.equal(isMastered([true, true, true, true]), true);
+  assert.equal(isMastered([true, true, true, true, false]), false, "a fresh mistake pulls it back under");
+  assert.equal(isMastered([true, true, true, true, false, true]), true, "and one more right answer restores it");
+  assert.equal(isMastered([true, true, true, false, false]), false);
+  // Early mistakes are forgiven once enough right answers follow.
   assert.equal(isMastered([false, false, false, false, ...Array(10).fill(true)]), true);
-  assert.equal(isMastered([...Array(10).fill(true), false, false, false]), false); // 7 of the last 10
-  // Old aggregate stats help when there are few recent answers.
+  assert.equal(isMastered([...Array(10).fill(true), false, false, false]), false);
+  // Old aggregate stats set the starting point.
   assert.equal(isMastered([true], { legacy: { right: 9, total: 10 } }), true);
   assert.equal(isMastered([], { legacy: { right: 2, total: 10 } }), false);
-  // The diagnostic can place a topic as known until it is answered wrongly.
+  // The diagnostic places a topic as known until it is answered wrongly.
   assert.equal(isMastered([], { known: true }), true);
   assert.equal(isMastered([true, false], { known: true }), false);
 });

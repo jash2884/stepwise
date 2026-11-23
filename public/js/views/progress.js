@@ -5,8 +5,10 @@ import { TOPICS } from "../gate-questions.js";
 import { ROADMAPS } from "../roadmaps.js";
 import { h } from "../ui.js";
 import { bar, dateText, duration, header, moduleLink, pct, plural, subnav, weekdayLetter } from "../learn/common.js";
+import { topicTitle } from "../learn/question.js";
 import { dueCount, nextModule, openMistakes, stageProgress, streak, todayKey, weakTopics, week } from "../learn/model.js";
 import { dayKey, exportText, hasActivity, importText, load, reset } from "../learn/store.js";
+import { commonMistakes, percent } from "../ai/doctor.js";
 
 export function render(root) {
   const draw = () => {
@@ -63,9 +65,19 @@ export function render(root) {
     const weakCard = h("section", { class: "card" },
       h("h2", null, "Weakest topics"),
       weak.length ? h("ul", { class: "lp-list" }, weak.map((w) => h("li", null,
-        h("span", null, h("b", null, w.topic.title), h("span", { class: "muted small" }, ` ${pct(w.recent ?? w.right / w.total)} right recently, ${w.right} of ${w.total} overall`)),
+        h("span", null, h("b", null, w.topic.title), h("span", { class: "muted small" }, ` ${pct(w.pKnown)} likely you know it, ${w.right} of ${w.total} right overall`)),
         h("a", { class: "btn ghost small", href: `/gate?topic=${w.topic.slug}` }, "Practise"))))
-        : h("p", { class: "muted" }, "No weak spots yet. A topic shows up here once you've answered at least 3 questions on it and got under 80% right."));
+        : h("p", { class: "muted" }, "No weak spots yet. A topic shows up here once you've answered at least 3 questions on it and your answers make it less than 70% likely that you know it."));
+
+    const common = commonMistakes(s, 5);
+    const commonCard = h("section", { class: "card doc-common" },
+      h("h2", null, "Your common mistakes"),
+      common.length ? [
+        h("ul", { class: "lp-list" }, common.map((c) => h("li", null,
+          h("span", null, h("b", null, `You ${c.label}`), h("span", { class: "muted small" }, ` ${topicTitle(c.topic)} · seen in about ${plural(Math.max(1, Math.round(c.evidence)), "answer")} · about ${percent(c.share)}% of your diagnosed mistakes there`)),
+          h("a", { class: "btn ghost small", href: `/gate?topic=${c.topic}` }, "Practise")))),
+        h("p", { class: "muted small" }, "From the mistake doctor: each wrong answer is matched against known mistakes by recomputing the answer each way, and the ones you keep making add up here."),
+      ] : h("p", { class: "muted" }, "Nothing yet. When a wrong answer matches a known mistake (like using FIFO instead of LRU), the mistake doctor keeps count and the ones you make most show up here."));
 
     const mocks = s.mocks.slice(-6).reverse();
     const mockCard = mocks.length ? h("section", { class: "card" },
@@ -96,7 +108,7 @@ export function render(root) {
     root.replaceChildren(h("div", { class: "tool lp" },
       header("Your progress", "How you're doing", "Your streak, this week's work, mastery across the roadmap and what to do next. Saved on this device only."),
       subnav("progress", { review: due, mistakes }),
-      hasActivity(s) ? [facts, actions, weekCard, ...stages, weakCard, mockCard] : [
+      hasActivity(s) ? [facts, actions, weekCard, ...stages, weakCard, commonCard, mockCard] : [
         h("section", { class: "card lp-empty" },
           h("h2", null, "Nothing here yet"),
           h("p", null, "Answer some questions or open a visualiser and your progress will show up here. The quickest start is the diagnostic test: 20 questions that mark what you already know."),

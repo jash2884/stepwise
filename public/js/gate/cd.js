@@ -216,6 +216,7 @@ function firstFollowQ(r) {
       `${which}(${X}) = ${setText(order(g, [...set]))}.${ff.nullable.length ? ` Nullable non-terminals: ${ff.nullable.join(", ")}.` : " No non-terminal is nullable."}`,
       ...(which === "FOLLOW" ? [`FOLLOW(${g.start}) always contains $. FOLLOW(B) gets FIRST(β) for every A → α B β, and FOLLOW(A) as well when β can derive ε.`] : [`FIRST of a body is FIRST of its first symbol, looking past symbols that can derive ε.`]),
     ],
+    given: { text, which, X },
     replay: query("/first-follow", { g: text }),
   };
 }
@@ -310,6 +311,7 @@ function lrParsing(r) {
     const what = kind === "lr0" ? "the canonical collection of LR(0) item sets (the states of the LR(0) and SLR(1) parsers)" : kind === "clr" ? "the canonical collection of LR(1) item sets (the states of the CLR(1) parser)" : "the LALR(1) parser, built by merging LR(1) states with the same core";
     return {
       topic: "lr-parsing", type: "nat", marks: kind === "lr0" ? 1 : 2, answer: n, tolerance: 0,
+      given: { variant: "states", text, kind },
       stem: [...base, `How many states are in ${what}?`],
       solution: [
         { table: { head: ["State", "Items"], rows: auto.items.map((items, i) => [auto.names[i], items.map((it) => `${it.text}${it.la ? `, ${it.la}` : ""}`).join("; ")]) } },
@@ -327,6 +329,7 @@ function lrParsing(r) {
   const answer = sr && rr ? 3 : sr ? 1 : rr ? 2 : 0;
   return {
     topic: "lr-parsing", type: "mcq", marks: 2, options: CONFLICT_OPTIONS, answer,
+    given: { variant: "conflicts", text, kind },
     stem: [...base, `The ${LR_KINDS[kind]} parsing table is built for this grammar. Which of the following describes its conflicts?`],
     solution: [
       `The ${LR_KINDS[kind]} automaton has ${auto.states.length} states. ${kind === "lr0" ? "LR(0) puts a reduce in every column of a state with a complete item." : kind === "slr" ? "SLR(1) reduces A → α only on the terminals in FOLLOW(A)." : kind === "lalr" ? "LALR(1) reduces only on each merged item's lookaheads." : "CLR(1) reduces only on each item's own lookahead."}`,

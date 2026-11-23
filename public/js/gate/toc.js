@@ -175,6 +175,7 @@ function dfaMinimization(r) {
     if (!o) return null;
     return {
       topic: "dfa-minimization", type: "mcq", marks: 2, ...o,
+      given: { text },
       stem: [...base, "Which pair of states is equivalent (no input string distinguishes them)?"],
       solution,
       replay,
@@ -182,6 +183,7 @@ function dfaMinimization(r) {
   }
   return {
     topic: "dfa-minimization", type: "nat", marks: 2, answer: min.states.length, tolerance: 0,
+    given: { text },
     stem: [...base, "How many states does the minimal DFA accepting the same language have?"],
     solution,
     replay,

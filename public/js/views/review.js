@@ -4,12 +4,27 @@
 import { generate } from "../gate-questions.js";
 import { h } from "../ui.js";
 import { dateText, fill, header, plural, subnav } from "../learn/common.js";
-import { answer, openMistakes, review } from "../learn/model.js";
+import { answer, openMistakes, predictSuccess, review } from "../learn/model.js";
+import { pickAdaptive } from "../learn/elo.js";
+import { learnFrom } from "../ai/doctor.js";
+import { doctorPanel } from "../ai/doctor-panel.js";
 import { practiceCard, topicTitle } from "../learn/question.js";
 import { DAY, INTERVALS, REVIEW_QUESTIONS, dueTopics, nextDue } from "../learn/srs.js";
 import { dayKey, load, update } from "../learn/store.js";
 
 const newSeed = () => Math.floor(Math.random() * 1e9);
+
+// A review question for a topic, chosen adaptively: of a few fresh seeds, one
+// whose predicted chance of success (learn/elo.js) is in the useful band.
+function adaptiveQuestion(topic) {
+  const s = load(), cands = [];
+  for (let i = 0; i < 6; i++) {
+    try { const q = generate(topic, newSeed()); cands.push({ q, p: predictSuccess(s, { topic, type: q.type, marks: q.marks }) }); } catch { /* try another */ }
+  }
+  const pick = pickAdaptive(cands);
+  if (!pick) throw new Error(`No ${topic} question`);
+  return pick.q;
+}
 
 export function render(root) {
   const body = h("div");
@@ -34,7 +49,7 @@ export function render(root) {
           h("h2", null, "Nothing due"),
           h("p", { class: "muted" }, Object.keys(s.reviews).length
             ? `You're up to date.${next ? ` The next review is on ${dateText(dayKey(next))}.` : ""}`
-            : "A topic joins the review queue once you master it: at least 5 questions answered and 80% of your last 10 right. Practise on the GATE page or take the diagnostic."),
+            : "A topic joins the review queue once you master it: when your answers make it at least 95% likely that you know it (usually three or four right in a row). Practise on the GATE page or take the diagnostic."),
           h("div", { class: "row" }, h("a", { class: "btn ghost", href: "/gate" }, "GATE practice"), h("a", { class: "btn ghost", href: "/mistakes" }, "Go over your mistakes")),
         ]),
       upcoming.length ? h("section", { class: "card" }, h("h2", null, "Coming back later"),
@@ -49,17 +64,20 @@ export function render(root) {
       if (ti >= topics.length) return finish();
       const topic = topics[ti];
       let q;
-      try { q = generate(topic, newSeed()); } catch { ti++; return step(); }
+      try { q = adaptiveQuestion(topic); } catch { ti++; return step(); }
       const last = qi === REVIEW_QUESTIONS - 1;
       const card = practiceCard(q, {
         heading: h("p", { class: "eyebrow" }, `Review ${ti + 1} of ${topics.length}: ${topicTitle(topic)} · question ${qi + 1} of ${REVIEW_QUESTIONS}`),
-        onResult: ({ correct, score, ms }) => {
+        onResult: ({ correct, score, ms, response }) => {
           if (correct) rights++;
+          let diagnosis = null;
           update((s) => {
-            answer(s, { topic, seed: q.seed, correct, score, marks: q.marks, ms, src: "review" });
+            answer(s, { topic, seed: q.seed, correct, score, marks: q.marks, ms, src: "review", type: q.type, response });
+            if (!correct) diagnosis = learnFrom(s, q, response);
             if (last) review(s, topic, rights === REVIEW_QUESTIONS);
           });
           if (last) tally.push({ topic, passed: rights === REVIEW_QUESTIONS });
+          return correct ? null : doctorPanel(q, response, diagnosis);
         },
         actions: () => [h("button", { type: "button", class: "btn primary", onclick: () => {
           if (last) { ti++; qi = 0; rights = 0; } else qi++;

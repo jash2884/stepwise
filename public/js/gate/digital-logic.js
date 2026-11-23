@@ -24,6 +24,7 @@ function numberSystems(r) {
     if (to === 10) {
       const value = Number(c.result);
       return { topic: "number-systems", type: "nat", marks: 1, answer: value, tolerance: frac ? 0.001 : 0,
+        given: { variant, x, from, to },
         stem: [`The value of (${x})${sub(from)} in decimal is ________.${frac ? " (Give the exact value.)" : ""}`], solution, replay };
     }
     // MCQ: wrong answers that look plausible.
@@ -35,6 +36,7 @@ function numberSystems(r) {
     const q = mcq(r, c.result, [...wrongs].filter((w) => w !== c.result));
     if (!q) return null;
     return { topic: "number-systems", type: "mcq", marks: 1, ...q,
+      given: { variant, x, from, to },
       stem: [`(${x})${sub(from)} written in base ${to} is:`], solution, replay };
   }
   if (variant === "base") {
@@ -49,6 +51,7 @@ function numberSystems(r) {
     for (let t = Math.max(2, ...[...x].map((d) => Number(d) + 1)); t <= 16; t++) if (Number(convert(x, t, 10).result) === value) fits.push(t);
     if (fits.length !== 1) return null;
     return { topic: "number-systems", type: "nat", marks: 1, answer: b, tolerance: 0,
+      given: { variant, x, value },
       stem: [`If (${x})ᵦ = (${value})₁₀, the base b is ________.`],
       solution: [`Expand in base b: ${[...x].map((d, i) => `${d}·b^${x.length - 1 - i}`).join(" + ")} = ${value}.`, `Only b = ${b} works (and every digit must be less than b): ${convert(x, b, 10).expansion.map((e) => `${e.digit}×${b}^${e.pos}`).join(" + ")} = ${value}.`],
       replay: query("/number-systems", { mode: "convert", x, from: b, to: 10, p: 8 }) };
@@ -61,6 +64,7 @@ function numberSystems(r) {
     const name = { twos: "2's complement", sm: "signed magnitude", ones: "1's complement" }[scheme];
     const answer = ask === "min" ? rg[0] : ask === "max" ? rg[1] : rg[1] - rg[0] + 1;
     return { topic: "number-systems", type: "nat", marks: 1, answer, tolerance: 0,
+      given: { variant, bits, scheme, ask },
       stem: [`In ${bits}-bit ${name} representation, ${ask === "min" ? "the smallest (most negative) value that can be represented" : ask === "max" ? "the largest value that can be represented" : "the number of distinct integer values that can be represented"} is ________.`],
       solution: [`${bits}-bit ${name} covers ${rg[0]} to ${rg[1]}.`, scheme === "twos" ? "2's complement has a single zero, so all 2^n patterns are different values and the negative side has one extra." : "There are two patterns for zero (+0 and −0), so only 2^n − 1 distinct values.", `Answer: ${answer}.`],
       replay: query("/number-systems", { mode: "signed", v: rg[0], b: bits, e: bits * 2 }) };
@@ -81,6 +85,7 @@ function numberSystems(r) {
     const fmt = (v) => (v < 0 ? `(${v})` : String(v));
     const first = pairs[answer[0]];
     return { topic: "number-systems", type: "msq", marks: 2, answer,
+      given: { variant, bits, pairs: pairs.map((p) => ({ a: p.a, b: p.b })) },
       options: pairs.map((p) => `${fmt(p.a)} + ${fmt(p.b)}`),
       stem: [`The following additions are done in ${bits}-bit 2's complement arithmetic (range ${lo} to ${hi}). Which of them overflow?`],
       solution: pairs.map((p) => `${fmt(p.a)} + ${fmt(p.b)}: ${p.res.A} + ${p.res.B} = ${p.res.result} (carry in to sign ${p.res.carryIn}, out ${p.res.carryOut}). True sum ${p.res.truth}: ${p.res.overflow ? "overflow" : "fits"}.`),
@@ -94,6 +99,7 @@ function numberSystems(r) {
     const q = mcq(r, rep.twos, wrong);
     if (!q) return null;
     return { topic: "number-systems", type: "mcq", marks: 1, ...q,
+      given: { variant, bits, v },
       stem: [`The ${bits}-bit 2's complement representation of ${v} is:`],
       solution: [rep.work[2].text, `(Signed magnitude would be ${rep.sm}, 1's complement ${rep.ones}.)`],
       replay: query("/number-systems", { mode: "signed", v, b: bits, e: bits * 2 }) };
@@ -105,6 +111,7 @@ function numberSystems(r) {
   const name = { twos: "2's complement", sm: "signed magnitude", ones: "1's complement" }[scheme];
   const answer = decode(pat, scheme);
   return { topic: "number-systems", type: "nat", marks: 1, answer, tolerance: 0,
+    given: { variant: "decode", bits, pat, scheme },
     stem: [`The ${bits}-bit pattern ${pat} is a number in ${name}. Its decimal value is ________.`],
     solution: [scheme === "twos" ? `The sign bit is worth −2^${bits - 1} = ${-(2 ** (bits - 1))}; the rest add ${parseInt(pat.slice(1), 2)}. Total ${answer}.` : scheme === "sm" ? `Sign bit 1 means negative; magnitude ${pat.slice(1)} = ${-answer}. Value ${answer}.` : `Negative, so flip every bit to get the magnitude: ${[...pat].map((b) => (b === "1" ? "0" : "1")).join("")} = ${-answer}. Value ${answer}.`],
     replay: query("/number-systems", { mode: "signed", v: answer, b: bits, e: bits * 2 }) };
@@ -131,11 +138,14 @@ function kmap(r) {
   if (variant === "literals") {
     if (minLiterals(n, f.ones, f.dcs) !== res.literals) return null; // fewest terms and fewest literals must agree
     return { topic: "k-map", type: "nat", marks: 2, answer: res.literals, tolerance: 0,
+      given: { variant, n, ones: f.ones, dcs: f.dcs },
       stem: [`Consider ${fText}${f.dcs.length ? ", where d marks don't-care conditions" : ""}.`, "The number of literals in a minimal sum-of-products expression for F is ________."], solution, replay };
   }
   if (variant === "pi") return { topic: "k-map", type: "nat", marks: 1, answer: res.primes.length, tolerance: 0,
+    given: { variant, n, ones: f.ones, dcs: f.dcs },
     stem: [`Consider ${fText}.`, "The number of prime implicants of F is ________."], solution, replay };
   if (variant === "epi") return { topic: "k-map", type: "nat", marks: 1, answer: res.essential.length, tolerance: 0,
+    given: { variant, n, ones: f.ones, dcs: f.dcs },
     stem: [`Consider ${fText}.`, "The number of essential prime implicants of F is ________."], solution, replay };
   // MCQ: which is a minimal SOP? Wrong options are not equivalent to F.
   const equivalent = (text) => {
@@ -156,7 +166,7 @@ function kmap(r) {
   }
   const q = mcq(r, res.expr, shuffle(r, wrongs));
   if (!q) return null;
-  return { topic: "k-map", type: "mcq", marks: 2, ...q, stem: [`Which of the following is a minimal sum-of-products expression for ${fText}?`], solution, replay };
+  return { topic: "k-map", type: "mcq", marks: 2, ...q, given: { variant, n, ones: f.ones, dcs: f.dcs }, stem: [`Which of the following is a minimal sum-of-products expression for ${fText}?`], solution, replay };
 }
 const productTerm = (imp, n) => {
   let s = "";

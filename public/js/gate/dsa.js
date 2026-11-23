@@ -76,6 +76,7 @@ function sorting(r) {
         { table: { head: ["After pass", "Array"], rows: Array.from({ length: k }, (_, i) => [i + 1, after(algo, i + 1)]) } },
         `After ${k} passes the array is ${right}.`,
       ],
+      given: { variant, algo, values, k },
       replay: query("/sorting", { algo, a: values.join(" ") }),
     };
   }
@@ -97,6 +98,7 @@ function sorting(r) {
         { table: { head: ["Pass", "Comparisons", ...(algo === "insertion" ? [] : ["Swaps"]), "Array after the pass"], rows: rows.map((x) => (algo === "insertion" ? [x[0], x[1], x[3]] : x)) } },
         `Total ${ask}: ${rows.map((x) => (ask === "comparisons" ? x[1] : x[2])).join(" + ")} = ${answer}.${algo === "bubble" && ask === "swaps" ? " Bubble sort makes one swap per inversion, so this is also the number of inversions." : ""}`,
       ],
+      given: { variant, algo, values, ask },
       replay: query("/sorting", { algo, a: values.join(" ") }),
     };
   }
@@ -123,6 +125,7 @@ function sorting(r) {
       { table: { head: ["Sort", "Sorted output", "Equal keys in order?"], rows: algos.map((a, i) => [SORTS[a].name, finals[i].map(tag).join(", "), keeps[i] ? "yes" : "no"]) } },
       "Bubble, insertion and merge sort are stable, so they always keep equal keys in order. The others are not stable in general, although on a particular input they may happen to keep the order.",
     ],
+    given: { variant, values, algos },
     replay: query("/sorting", { algo: algos[answer[0]], a: values.join(" ") }),
   };
 }
@@ -296,6 +299,7 @@ function binarySearchTree(r) {
       topic: "binary-search-tree", type: "mcq", marks: 1, ...m,
       stem: [base, `What is the ${TRAV[kind]} traversal of the tree?`],
       solution: [`The root is ${keys[0]}. ${Object.entries(TRAV).map(([k, name]) => `${name[0].toUpperCase()}${name.slice(1)}: ${list(traversal(t.root, k))}.`).join(" ")}`],
+      given: { variant, keys, kind },
       replay: query("/binary-search-tree", { ops: bstOps(keys), q: kind }),
     };
   }
@@ -307,6 +311,7 @@ function binarySearchTree(r) {
       topic: "binary-search-tree", type: "nat", marks: 1, answer, tolerance: 0,
       stem: [base, "What is the height of the tree? The height of a tree with a single node is 0."],
       solution: [{ table: { head: ["Depth", "Keys"], rows: levels.map((ks, d) => [d, list(ks.sort((a, b) => a - b))]) } }, `The deepest key is at depth ${answer}, so the height is ${answer}.`],
+      given: { variant, keys },
       replay: query("/binary-search-tree", { ops: bstOps(keys), q: "height" }),
     };
   }
@@ -327,6 +332,7 @@ function binarySearchTree(r) {
     topic: "binary-search-tree", type: "mcq", marks: 2, ...m,
     stem: [base, `Then ${k} is deleted. A node with two children is replaced by its in-order successor. What is the pre-order traversal of the resulting tree?`],
     solution: [`${k} has two children. Its in-order successor is the smallest key in its right subtree, which moves up into its place.`, `Pre-order afterwards: ${right}.`],
+    given: { variant, keys, k },
     replay: query("/binary-search-tree", { ops: bstOps(keys, [`d${k}`]), q: "preorder" }),
   };
 }
@@ -389,6 +395,7 @@ function binaryHeap(r) {
       topic: "binary-heap", type: "nat", marks: 2, answer: res.swaps, tolerance: 0,
       stem: [`The array ${list(values)} is turned into a ${word} in place with the bottom-up build-heap method (sift down every non-leaf, from the last one back to the root).`, "How many swaps does it make?"],
       solution: [`Sifting down indices ${Math.floor(values.length / 2) - 1} to 0 makes ${res.swaps} swap${res.swaps === 1 ? "" : "s"}.`, `The heap is ${list(res.result)}.`],
+      given: { variant, kind, values },
       replay: query("/binary-heap", { kind, ops: `f${values.join(".")}` }),
     };
   }
@@ -403,6 +410,7 @@ function binaryHeap(r) {
       topic: "binary-heap", type: "mcq", marks: 1, ...m,
       stem: [`The keys ${list(values)} are inserted one at a time, in that order, into an initially empty binary ${word} stored in an array. Which array results?`],
       solution: [`Each key joins as the last leaf and sifts up while it beats its parent. The final array is ${right}.`, arr(floyd) === right ? "Here the bottom-up build-heap method happens to give the same array." : `The bottom-up build-heap method would give ${arr(floyd)} instead.`],
+      given: { variant, kind, values },
       replay: query("/binary-heap", { kind, ops: `r${values.join(".")}` }),
     };
   }
@@ -420,6 +428,7 @@ function binaryHeap(r) {
     topic: "binary-heap", type: "mcq", marks: 2, ...m,
     stem: [`The array ${list(values)} is turned into a ${word} with the bottom-up build-heap method. Then the ${kind === "max" ? "maximum" : "minimum"} is extracted ${k === 1 ? "once" : "twice"} (the last element moves to the root and sifts down). What is the array afterwards?`],
     solution: [`Build-heap gives ${built}.`, `After ${k === 1 ? "one extraction" : "two extractions"}: ${right}.`],
+    given: { variant, kind, values, k },
     replay: query("/binary-heap", { kind, ops: [`f${values.join(".")}`, ...Array(k).fill("x")].join(",") }),
   };
 }
@@ -614,6 +623,7 @@ function minimumSpanningTree(r) {
   if (variant === "weight") {
     return {
       topic: "minimum-spanning-tree", type: "nat", marks: 1, answer: res.weight, tolerance: 0,
+      given: { variant, text },
       stem: [...base, "What is the total weight of its minimum spanning tree?"],
       solution: [`Kruskal's algorithm takes the edges in increasing weight, skipping any that would close a cycle: ${list(tree)}.`, `Total weight = ${res.tree.map((id) => g.edges.find((x) => x.id === id).w).join(" + ")} = ${res.weight}.`],
       replay: query("/minimum-spanning-tree", { algo: "kruskal", g: graphParam(text), dir: 0 }),
@@ -627,6 +637,7 @@ function minimumSpanningTree(r) {
     const chosen = shuffle(r, [...inTree.slice(0, k), ...out.slice(0, 4 - k)]);
     return {
       topic: "minimum-spanning-tree", type: "msq", marks: 2, options: chosen, answer: chosen.map((x, i) => (tree.includes(x) ? i : null)).filter((x) => x !== null),
+      given: { variant, text },
       stem: [...base, "Which of the following edges are in the minimum spanning tree? (All weights are different, so it is unique.)"],
       solution: [`Kruskal's algorithm picks ${list(tree)}, total weight ${res.weight}.`, "Every other edge would close a cycle in which it is the heaviest edge."],
       replay: query("/minimum-spanning-tree", { algo: "kruskal", g: graphParam(text), dir: 0 }),
@@ -639,6 +650,7 @@ function minimumSpanningTree(r) {
     if (!m) return null;
     return {
       topic: "minimum-spanning-tree", type: "mcq", marks: 1, ...m,
+      given: { variant, text, k },
       stem: [...base, `Kruskal's algorithm is run on this graph. Which edge is the ${ordinal(k)} one added to the tree?`],
       solution: [`In order, Kruskal's algorithm adds ${list(tree)}. Edges that would close a cycle are skipped.`, `The ${ordinal(k)} edge added is ${right}.`],
       replay: query("/minimum-spanning-tree", { algo: "kruskal", g: graphParam(text), dir: 0 }),
@@ -653,6 +665,7 @@ function minimumSpanningTree(r) {
   if (!m) return null;
   return {
     topic: "minimum-spanning-tree", type: "mcq", marks: 2, ...m,
+    given: { variant: "prim", text, k, s },
     stem: [...base, `Prim's algorithm is started from vertex ${s}. Which edge is the ${ordinal(k)} one added to the tree?`],
     solution: [`Prim's grows one tree from ${s}, each time adding the lightest edge leaving it. Vertices join in the order ${list(p.order)}, through the edges ${list(ptree)}.`, `The ${ordinal(k)} edge added is ${right}.`],
     replay: query("/minimum-spanning-tree", { algo: "prim", g: graphParam(text), dir: 0, s }),
@@ -683,6 +696,7 @@ function shortestPaths(r) {
     for (let x = t; x != null; x = res.prev[x]) path.unshift(x);
     return {
       topic: "shortest-paths", type: "nat", marks: negative ? 2 : 1, answer: res.dist[t], tolerance: 0,
+      given: { variant, text, s, t },
       stem: [...base, `What is the length of the shortest path from ${s} to ${t}?`],
       solution: [`${negative ? "Bellman–Ford" : "Dijkstra's algorithm"} from ${s} gives:`, distTable, `A shortest path is ${path.join(" → ")}, of length ${res.dist[t]}.`],
       replay,
@@ -697,6 +711,7 @@ function shortestPaths(r) {
     if (!m || res.order.length < 5) return null;
     return {
       topic: "shortest-paths", type: "mcq", marks: 2, ...m,
+      given: { variant, text, s, t },
       stem: [...base, `Dijkstra's algorithm is run from ${s}. In which order are vertices removed from the priority queue (that is, made final)? Ties are broken alphabetically, and vertices that cannot be reached are never removed.`],
       solution: [`Each round removes the unfinished vertex with the smallest tentative distance and relaxes its out-edges. The order is ${right}.`, distTable],
       replay,
@@ -705,6 +720,7 @@ function shortestPaths(r) {
   const relaxations = res.steps.filter((x) => Array.isArray(x.line) && x.line[0] === 6).length;
   return {
     topic: "shortest-paths", type: "nat", marks: 2, answer: relaxations, tolerance: 0,
+    given: { variant, text, s, t },
     stem: [...base, `Dijkstra's algorithm is run from ${s}, with ties broken alphabetically. Not counting d[${s}] = 0, how many times is some d[v] lowered (including lowering it from ∞)?`],
     solution: [
       `Vertices are made final in the order ${list(res.order)}. Every out-edge of a vertex is tried once, when that vertex is made final.`,
