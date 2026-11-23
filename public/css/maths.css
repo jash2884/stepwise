@@ -1,1 +1,138 @@
-/* maths: styles for this area. Loaded after style.css. */
+/* maths: styles for this area. Loaded after style.css. Everything uses the
+   shared tokens, so light and dark themes come for free. */
+
+/* --- Home-card thumbnails ------------------------------------------------- */
+.mx-art { justify-content: center; }
+.mx-art svg { width: 100%; height: 100%; }
+.mx-art svg .line { fill: none; stroke: var(--accent); stroke-width: 2.5; }
+.mx-art svg .shade { fill: var(--accent-soft); }
+.mx-art svg .axis { stroke: var(--muted); stroke-width: 1.5; }
+.mx-art svg .bar { fill: color-mix(in srgb, var(--series-3) 35%, transparent); stroke: var(--series-3); stroke-width: 1; }
+.mx-art svg .face { fill: var(--surface); stroke: var(--line); stroke-width: 2; }
+.mx-art svg .hand { stroke: var(--text); stroke-width: 2.5; stroke-linecap: round; }
+.mx-art svg .hand.short { stroke: var(--accent); stroke-width: 3.5; }
+.mx-art svg text { font: 600 11px var(--mono); fill: var(--text); }
+.mx-art svg text.hot { fill: var(--accent); }
+.mx-art-matrix { gap: 2px; font: 600 13px var(--mono); }
+.mx-art-matrix .br { font-size: 44px; font-weight: 300; color: var(--muted); line-height: 1; }
+.mx-art-matrix i { display: inline-block; width: 24px; text-align: center; font-style: normal; }
+.mx-art-matrix i.hot { color: var(--accent); }
+.mx-art-matrix i.zero { color: var(--muted); }
+.mx-art-matrix small { margin-left: 10px; color: var(--muted); font: 600 11px var(--mono); }
+
+/* --- Inputs --------------------------------------------------------------- */
+.mx-label-block { display: grid; gap: 6px; font-weight: 600; font-size: 14px; margin: 10px 0; }
+.mx-input { font-family: var(--mono); min-height: 92px; }
+.mx-f { flex: 1 1 260px; }
+.mx-f input { flex: 1; min-width: 0; }
+.mx-answer { width: 160px; max-width: 100%; }
+
+/* --- Plots ---------------------------------------------------------------- */
+.mx-stage { min-height: 120px; }
+.mx-plot { display: block; width: 100%; height: auto; max-width: 640px; margin: 0 auto; }
+.mx-plot .mx-grid { stroke: var(--line); stroke-width: 1; }
+.mx-plot .mx-axis { stroke: var(--muted); stroke-width: 1.5; }
+.mx-plot .mx-tick { font: 500 11px var(--mono); fill: var(--muted); }
+.mx-plot .mx-tick.hot { fill: var(--accent); font-weight: 700; }
+.mx-plot .mx-label { font: 700 12px var(--body); fill: var(--text); }
+.mx-curve { fill: none; stroke: var(--accent); stroke-width: 2.5; stroke-linejoin: round; }
+.mx-dot { fill: var(--series-2); }
+.mx-hole { fill: var(--surface); stroke: var(--good); stroke-width: 2.5; }
+.mx-target { stroke: var(--good); stroke-width: 1.5; stroke-dasharray: 5 4; }
+.mx-mean { stroke: var(--series-2); stroke-width: 1.5; stroke-dasharray: 4 4; }
+.mx-shade { fill: color-mix(in srgb, var(--accent) 22%, transparent); }
+.mx-shade.light { fill: color-mix(in srgb, var(--accent) 9%, transparent); }
+.mx-bar { fill: color-mix(in srgb, var(--muted) 28%, transparent); stroke: var(--muted); stroke-width: 1; transition: fill 0.2s; }
+.mx-bar.hot { fill: color-mix(in srgb, var(--accent) 55%, transparent); stroke: var(--accent); }
+.mx-bar.comp { fill: color-mix(in srgb, var(--series-2) 45%, transparent); stroke: var(--series-2); }
+.mx-band { fill: color-mix(in srgb, var(--series-4) 12%, transparent); }
+.mx-strip { fill: color-mix(in srgb, var(--series-3) 28%, transparent); stroke: var(--series-3); stroke-width: 1; }
+.mx-strip.neg { fill: color-mix(in srgb, var(--series-8) 25%, transparent); stroke: var(--series-8); }
+.mx-secant { stroke: var(--series-2); stroke-width: 2; stroke-dasharray: 6 4; }
+.mx-tangent { stroke: var(--good); stroke-width: 2; }
+.mx-crit { fill: var(--surface); stroke: var(--muted); stroke-width: 2.5; }
+.mx-crit.max { fill: var(--good); stroke: var(--good); }
+.mx-crit.min { fill: var(--series-2); stroke: var(--series-2); }
+.mx-crit.neither { fill: var(--series-4); stroke: var(--series-4); }
+
+/* --- Matrices ------------------------------------------------------------- */
+.mx-matrix-wrap { display: grid; justify-items: center; gap: 8px; padding: 6px 0; overflow-x: auto; }
+.mx-op { font: 700 14px var(--mono); color: var(--accent); background: var(--accent-soft); padding: 4px 12px; border-radius: 999px; }
+.mx-matrix { width: auto; margin: 0; border-collapse: separate; border-spacing: 0; font: 600 15px var(--mono); position: relative; border-left: 2px solid var(--text); border-right: 2px solid var(--text); border-radius: 6px; }
+.mx-matrix td { padding: 7px 12px; text-align: right; min-width: 3ch; white-space: nowrap; transition: background 0.25s; }
+.mx-matrix tr.hot td { background: var(--warn-soft); }
+.mx-matrix td.col { color: var(--series-2); }
+.mx-matrix td.pivot { background: var(--accent-soft); color: var(--accent); box-shadow: inset 0 0 0 2px var(--accent); border-radius: 6px; }
+.mx-matrix td.pivot.soft { box-shadow: none; }
+.mx-matrix td.diag { color: var(--good); background: var(--good-soft); }
+.mx-matrix td.aug { border-left: 2px dashed var(--muted); }
+@media (max-width: 480px) { .mx-matrix { font-size: 13px; } .mx-matrix td { padding: 5px 7px; } }
+.mx-row { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start; justify-content: center; }
+.mx-row > * { min-width: 0; }
+.mx-figure { margin: 10px 0 0; flex: 1 1 260px; max-width: 420px; }
+.mx-figure figcaption { text-align: center; margin-top: 4px; }
+.mx-unit { fill: none; stroke: var(--muted); stroke-width: 1.5; stroke-dasharray: 4 4; }
+.mx-image { fill: color-mix(in srgb, var(--accent) 10%, transparent); stroke: var(--accent); stroke-width: 2; }
+.mx-eigline { stroke: var(--c); stroke-width: 1.2; stroke-dasharray: 3 4; }
+.mx-eigvec { stroke: var(--c); stroke-width: 3.5; stroke-linecap: round; }
+
+/* --- Probability ---------------------------------------------------------- */
+.mx-cell rect, .mx-leaf rect { fill: var(--surface); stroke: var(--line); stroke-width: 1.5; transition: fill 0.25s, opacity 0.25s; }
+.mx-cell text, .mx-leaf text { font: 600 11px var(--mono); fill: var(--text); }
+.mx-cell.in-a rect, .mx-leaf.in-a rect { fill: color-mix(in srgb, var(--series-1) 30%, var(--surface)); stroke: var(--series-1); }
+.mx-cell.in-b rect, .mx-leaf.in-b rect { fill: color-mix(in srgb, var(--series-2) 30%, var(--surface)); stroke: var(--series-2); }
+.mx-cell.in-a.in-b rect, .mx-leaf.in-a.in-b rect, .mx-cell.in-ab rect, .mx-leaf.in-ab rect { fill: color-mix(in srgb, var(--series-7) 45%, var(--surface)); stroke: var(--series-7); stroke-width: 2.5; }
+.mx-cell.dim, .mx-leaf.dim { opacity: 0.45; }
+.mx-dice { max-width: 330px; }
+.mx-branch { stroke: var(--muted); stroke-width: 1.5; }
+.mx-area { stroke: var(--surface); stroke-width: 1.5; transition: fill 0.25s; }
+.mx-area.a { fill: color-mix(in srgb, var(--series-1) 14%, var(--surface-2)); }
+.mx-area.na { fill: var(--surface-2); }
+.mx-area.ab { fill: color-mix(in srgb, var(--series-1) 55%, var(--surface)); }
+.mx-area.ab.hot { fill: var(--accent); }
+.mx-area.nab { fill: color-mix(in srgb, var(--series-2) 40%, var(--surface)); }
+.mx-square { max-width: 300px; }
+.mx-tree { max-width: 400px; }
+.mx-formula { flex-basis: 100%; text-align: center; font-size: 14px; overflow-wrap: anywhere; }
+
+/* --- Calculus ------------------------------------------------------------- */
+.mx-limtable tr.later td { color: var(--muted); }
+.mx-limtable tr.hot td, table.parse tr.hot td { background: var(--accent-soft); }
+.mx-signs { display: flex; flex-wrap: wrap; align-items: stretch; gap: 4px; margin-top: 10px; justify-content: center; }
+.mx-sign { display: grid; justify-items: center; padding: 6px 10px; border-radius: 10px; min-width: 92px; font-size: 13px; }
+.mx-sign b { font: 700 18px var(--mono); }
+.mx-sign small { color: var(--muted); font: 500 11px var(--mono); }
+.mx-sign.up { background: var(--good-soft); color: var(--good); }
+.mx-sign.down { background: var(--bad-soft); color: var(--bad); }
+.mx-sign-pt { align-self: center; font: 700 13px var(--mono); padding: 4px 6px; border-radius: 999px; background: var(--surface); border: 1px solid var(--line); }
+
+/* --- Aptitude ------------------------------------------------------------- */
+.mx-worked { display: grid; gap: 8px; justify-items: start; }
+.mx-qtext { margin: 0; font-weight: 600; }
+.mx-lines { margin: 0; padding-left: 20px; display: grid; gap: 6px; }
+.mx-lines li { color: var(--muted); }
+.mx-lines li.now { color: var(--text); }
+.mx-answer-box { margin: 4px 0 0; padding: 8px 14px; border-radius: 10px; background: var(--good-soft); color: var(--good); }
+.mx-clock { max-width: 180px; justify-self: center; }
+.mx-face { fill: var(--surface); stroke: var(--line); stroke-width: 2; }
+.mx-hand { stroke: var(--text); stroke-width: 3; stroke-linecap: round; }
+.mx-hand.hour { stroke: var(--accent); stroke-width: 5; }
+.mx-timer { font: 700 18px var(--mono); padding: 4px 12px; border-radius: 999px; background: var(--surface-2); }
+.mx-timer.low { background: var(--bad-soft); color: var(--bad); }
+.mx-set { padding-left: 22px; display: grid; gap: 14px; }
+.mx-item p { margin: 0 0 4px; }
+.mx-steps { margin-top: 6px; font-size: 14px; }
+.mx-steps summary { cursor: pointer; font-weight: 600; }
+.mx-steps ol { margin: 6px 0 0; padding-left: 20px; display: grid; gap: 4px; }
+
+/* --- Practice cards ------------------------------------------------------- */
+.mx-question p { margin: 0 0 10px; }
+.mx-qtable { margin: 4px 0 12px; }
+.mx-options { display: grid; gap: 8px; margin: 8px 0; }
+.mx-options .btn { justify-content: flex-start; text-align: left; white-space: normal; }
+.mx-options .btn[aria-checked="true"] { border-color: var(--accent); background: var(--accent-soft); }
+.mx-solution { margin-top: 10px; }
+.mx-solution h3 { margin: 0 0 6px; font-size: 16px; }
+.mx-solution p { margin: 0 0 6px; }
+.mx-options .btn.right { border-color: var(--good); background: var(--good-soft); color: var(--good); }
+.mx-options .btn.wrong { border-color: var(--bad); background: var(--bad-soft); color: var(--bad); }
