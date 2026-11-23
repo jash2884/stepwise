@@ -2,7 +2,9 @@
 //   /roadmaps                    every roadmap
 //   /roadmap/<id>                the map: stages in order, each with its modules
 //   /roadmap/<id>/<stage>        one stage: modules with outcomes, tools, practice, reading
-import { ROADMAPS, hoursOf, roadmapOf, stageOf } from "../roadmaps.js";
+// Personal roadmaps from /syllabus ("my-<hash>") resolve from this device's
+// learning store, so they render here but are never prerendered.
+import { ROADMAPS, hoursOf, localRoadmaps, roadmapOf, stageOf } from "../roadmaps.js";
 import { SUBJECTS, TOOLS } from "../tools.js";
 import { h } from "../ui.js";
 import { badge, bar, fill, moduleLink, ring } from "../learn/common.js";
@@ -31,6 +33,10 @@ export function parse(path) {
 
 // Title and description for the page, used by the router and the build.
 export function meta(page, siteName) {
+  if (page.roadmap?.local) return {
+    title: `${page.stage ? `${page.stage.title}: ` : ""}${page.roadmap.title}, your syllabus roadmap · ${siteName}`,
+    description: page.roadmap.description || "A personal roadmap built from your syllabus.",
+  };
   if (page.kind === "index") return {
     title: `Study roadmaps for GATE, placements and semester exams · ${siteName}`,
     description: "Free step-by-step study roadmaps for computer science: every topic in order, linked to visualisers and practice questions.",
@@ -60,6 +66,17 @@ function renderIndex(root) {
       h("p", { class: "eyebrow" }, "Roadmaps"),
       h("h1", null, "Know what to study next"),
       h("p", { class: "lede" }, "Each roadmap puts the topics in a sensible order and links every one to a visualiser you can step through, questions that check you, and reading for the rest.")),
+    (() => {
+      const mine = localRoadmaps(s);
+      return h("section", { class: "sy-index" },
+        h("h2", null, mine.length ? "From your syllabus" : "Your own syllabus"),
+        mine.length ? h("div", { class: "rm-list" }, mine.map((r) => h("a", { class: "card rm-card", href: `/roadmap/${r.id}` },
+          h("p", { class: "eyebrow" }, h("span", { class: "sy-badge" }, "Your syllabus")),
+          h("h2", null, r.title),
+          h("p", { class: "muted" }, r.summary),
+          h("span", { class: "btn primary" }, "Open the roadmap →")))) : null,
+        h("p", { class: "muted" }, mine.length ? null : "Every college has its own syllabus. ", h("a", { href: "/syllabus" }, mine.length ? "Add another syllabus" : "Upload yours and get a roadmap that follows it"), mine.length ? "" : ", matched to Stepwise topic by topic."));
+    })(),
     h("div", { class: "rm-list" }, ROADMAPS.map((r) => {
       const modules = r.stages.flatMap((s) => s.modules);
       return h("a", { class: "card rm-card", href: `/roadmap/${r.id}` },
@@ -76,7 +93,23 @@ function renderIndex(root) {
 
 // --- /roadmap/<id> -------------------------------------------------------------------
 
-function renderMap(root, roadmap) {
+// The "Your syllabus" badge and, on the map, the editor for a personal roadmap.
+const localBadge = (roadmap) => roadmap.local ? h("span", { class: "sy-badge" }, "Your syllabus") : null;
+function localEditor(root, roadmap, open) {
+  if (!roadmap.local || !roadmap.syllabus) return null;
+  const slot = h("div");
+  import("../syllabus/ui.js").then(({ editor }) => {
+    const el = editor(roadmap, (r) => {
+      if (!r) { history.pushState(null, "", "/syllabus"); dispatchEvent(new PopStateEvent("popstate")); return; }
+      renderMap(root, r, true);
+    });
+    el.open = !!open;
+    slot.replaceChildren(el);
+  }).catch(() => {});
+  return slot;
+}
+
+function renderMap(root, roadmap, editing = false) {
   const all = roadmap.stages.flatMap((s) => s.modules);
   const withTools = all.filter((m) => m.tools.length).length;
   const st = load(), active = hasActivity(st);
@@ -84,10 +117,10 @@ function renderMap(root, roadmap) {
   fill(root, 
     h("header", { class: "tool-head" },
       h("p", { class: "eyebrow" }, h("a", { href: "/roadmaps" }, "Roadmaps"), " / ", roadmap.title),
-      h("h1", null, `${roadmap.title} roadmap`),
+      h("h1", null, `${roadmap.title} roadmap`, roadmap.local ? " " : null, localBadge(roadmap)),
       h("p", { class: "lede" }, roadmap.summary),
       h("ul", { class: "hero-facts rm-hero-facts" },
-        h("li", null, h("b", null, roadmap.stages.length), " stages"),
+        h("li", null, h("b", null, roadmap.stages.length), roadmap.local ? " units" : " stages"),
         h("li", null, h("b", null, all.length), " topics"),
         h("li", null, h("b", null, withTools), " with visualisers"),
         h("li", null, h("b", null, hoursText(hoursOf(all))), " of study"))),
@@ -96,6 +129,7 @@ function renderMap(root, roadmap) {
       h("div", { class: "row lp-tight" },
         h("a", { class: "btn primary", href: moduleLink(roadmap.id, next.stage.id, next.module.id) }, `Continue: ${next.module.title}`),
         active ? h("a", { class: "btn ghost small", href: "/progress" }, "Your progress") : h("a", { class: "btn ghost small", href: "/diagnostic" }, "Take the diagnostic first"))) : null,
+    localEditor(root, roadmap, editing),
     roadmap.howTo?.length ? h("section", { class: "card rm-howto" },
       h("h2", null, "How to use it"),
       h("ol", null, roadmap.howTo.map((t) => h("li", null, t)))) : null,
@@ -114,7 +148,9 @@ function renderMap(root, roadmap) {
         })),
         h("a", { class: "btn ghost small", href: `/roadmap/${roadmap.id}/${stage.id}` }, "Open this stage →")))),
     ),
-    h("p", { class: "muted small rm-note" }, "Hours are rough estimates for a first pass, including practice. Topics in grey don't have a Stepwise visualiser yet and link to reading instead."));
+    h("p", { class: "muted small rm-note" }, roadmap.local
+      ? "Hours are borrowed from the matching Stepwise topics (or your syllabus's lecture hours), so treat them as rough. Topics in grey aren't covered by Stepwise yet and link to searches instead."
+      : "Hours are rough estimates for a first pass, including practice. Topics in grey don't have a Stepwise visualiser yet and link to reading instead."));
 }
 
 // --- /roadmap/<id>/<stage> -----------------------------------------------------------
@@ -163,7 +199,9 @@ function renderStage(root, roadmap, stage) {
         return h("a", { class: "rm-tool", href: `/${slug}` }, h("b", null, t.title), h("span", { class: "muted small" }, t.summary));
       })),
     ] : null,
-    m.comingSoon ? h("p", { class: "notice info rm-soon" }, `No Stepwise visualiser for this yet. ${m.comingSoon === "Planned." ? "One is planned." : m.comingSoon} Use the reading below for now.`) : null,
+    m.uncovered ? h("p", { class: "notice info rm-soon" }, "Not covered by Stepwise yet. Use your notes and the searches below.")
+      : m.comingSoon ? h("p", { class: "notice info rm-soon" }, `No Stepwise visualiser for this yet. ${m.comingSoon === "Planned." ? "One is planned." : m.comingSoon} Use the reading below for now.`) : null,
+    m.match?.title ? h("p", { class: "muted small sy-from" }, `Matched to the Stepwise topic "${m.match.title}"${m.match.via === "verifier" ? ", checked by the AI" : ""}.`) : null,
     m.tryIt?.length ? [
       h("h3", null, "Try these examples"),
       h("div", { class: "row rm-try" }, m.tryIt.map((t) => h("a", { class: "btn ghost small", href: `/${t.tool}?${t.query}` }, t.label))),
@@ -181,7 +219,7 @@ function renderStage(root, roadmap, stage) {
 
   fill(root, 
     h("header", { class: "tool-head rm-stage-top", style: `--c:${stageColour(i)}` },
-      h("p", { class: "eyebrow" }, h("a", { href: "/roadmaps" }, "Roadmaps"), " / ", h("a", { href: `/roadmap/${roadmap.id}` }, roadmap.title), ` / Stage ${i + 1} of ${roadmap.stages.length}`),
+      h("p", { class: "eyebrow" }, h("a", { href: "/roadmaps" }, "Roadmaps"), " / ", h("a", { href: `/roadmap/${roadmap.id}` }, roadmap.title), ` / ${roadmap.local ? "Unit" : "Stage"} ${i + 1} of ${roadmap.stages.length}`, roadmap.local ? " " : null, localBadge(roadmap)),
       h("h1", null, stage.title),
       h("p", { class: "lede" }, stage.summary),
       h("p", { class: "muted small" }, `${stage.modules.length} topics · ${hoursText(hoursOf(stage.modules))}${subject ? ` · ${subject} visualisers` : ""}`),

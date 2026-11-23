@@ -1,7 +1,7 @@
 // /plan: the exam-date planner. The learner picks a roadmap, exam date, hours
 // a day and days a week; the plan is rebuilt from today on every visit from
 // what is still to master, so it replans by itself when they fall behind.
-import { ROADMAPS, roadmapOf } from "../roadmaps.js";
+import { allRoadmaps, roadmapOf } from "../roadmaps.js";
 import { h } from "../ui.js";
 import { dateText, header, moduleLink, plural, subnav } from "../learn/common.js";
 import { dueCount, isDone, moduleState, openMistakes, todayKey, weakSlugs } from "../learn/model.js";
@@ -25,7 +25,7 @@ export function render(root) {
 }
 
 function form(plan, today, redraw) {
-  const roadmap = h("select", { id: "lp-roadmap" }, ROADMAPS.map((r) => h("option", { value: r.id, selected: plan?.roadmap === r.id }, r.title)));
+  const roadmap = h("select", { id: "lp-roadmap" }, allRoadmaps().map((r) => h("option", { value: r.id, selected: plan?.roadmap === r.id }, r.local ? `${r.title} (your syllabus)` : r.title)));
   const exam = h("input", { type: "date", id: "lp-exam", required: true, min: addDays(today, 1), value: plan?.exam ?? addDays(today, 90) });
   const hours = h("input", { type: "number", id: "lp-hours", min: 0.5, max: 14, step: 0.5, required: true, value: plan?.hoursPerDay ?? 3 });
   const days = h("select", { id: "lp-days" }, [7, 6, 5, 4, 3, 2, 1].map((n) => h("option", { value: n, selected: (plan?.daysPerWeek ?? 6) === n }, n === 7 ? "Every day" : `${n} days (${["", "Mon", "Mon to Tue", "Mon to Wed", "Mon to Thu", "Mon to Fri", "Mon to Sat"][n]})`)));
@@ -46,7 +46,7 @@ function form(plan, today, redraw) {
   } },
     h("h2", null, plan ? "Change your plan" : "Make your plan"),
     h("div", { class: "lp-fields" },
-      field("Roadmap", roadmap),
+      field("Roadmap", roadmap, h("a", { href: "/syllabus" }, "Or use your own syllabus")),
       field("Exam date", exam),
       field("Hours a day", hours, "On study days"),
       field("Days a week", days)),

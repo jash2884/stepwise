@@ -15,6 +15,8 @@
 //   days     activity per local day: { "YYYY-MM-DD": { q, right, ms, visits } }
 //   plan     the study plan settings, or null (see planner.js)
 //   mocks    finished mocks: { kind, roadmap?, stage?, at, score, max, n, right, ms }
+//   roadmaps personal roadmaps built from a syllabus: { "my-<hash>": roadmap }
+//            (see syllabus/assemble.js; checked again when read by roadmaps.js)
 //
 // The pure functions here take and return plain state so they can be tested in
 // Node; only the functions under "Storage" touch localStorage, and every one of
@@ -23,11 +25,11 @@
 export const KEY = "stepwise.progress";
 export const LEGACY_KEY = "stepwise.gate";
 export const VERSION = 1;
-const MAX_ANSWERS = 3000, MAX_MISTAKES = 400, MAX_MOCKS = 60;
+const MAX_ANSWERS = 3000, MAX_MISTAKES = 400, MAX_MOCKS = 60, MAX_ROADMAPS = 20;
 const DAY = 86400000;
 
 export function empty() {
-  return { v: VERSION, answers: [], legacy: {}, mistakes: [], known: {}, reviews: {}, done: {}, visits: {}, days: {}, plan: null, mocks: [], migratedGate: false };
+  return { v: VERSION, answers: [], legacy: {}, mistakes: [], known: {}, reviews: {}, done: {}, visits: {}, days: {}, plan: null, mocks: [], roadmaps: {}, migratedGate: false };
 }
 
 const obj = (x) => (x && typeof x === "object" && !Array.isArray(x) ? x : {});
@@ -53,6 +55,7 @@ export function migrate(raw, legacyGate = null) {
     for (const [k, v] of Object.entries(obj(r.days))) if (/^\d{4}-\d{2}-\d{2}$/.test(k) && v) s.days[k] = { q: num(v.q), right: num(v.right), ms: num(v.ms), visits: num(v.visits) };
     s.plan = r.plan && typeof r.plan === "object" ? { ...r.plan } : null;
     s.mocks = arr(r.mocks).filter((m) => m && typeof m === "object").slice(-MAX_MOCKS);
+    for (const [k, v] of Object.entries(obj(r.roadmaps)).slice(0, MAX_ROADMAPS)) if (/^my-[a-z0-9]{4,12}$/.test(k) && v && v.id === k && Array.isArray(v.stages)) s.roadmaps[k] = v;
     s.migratedGate = !!r.migratedGate;
   }
   if (!s.migratedGate && legacyGate && typeof legacyGate === "object") {
@@ -127,6 +130,18 @@ export function setUnderstood(s, topic, seed, ok = true) {
 export function recordMock(s, result) {
   s.mocks.push(result);
   if (s.mocks.length > MAX_MOCKS) s.mocks.splice(0, s.mocks.length - MAX_MOCKS);
+  return s;
+}
+
+export function saveRoadmap(s, roadmap) {
+  s.roadmaps[roadmap.id] = roadmap;
+  return s;
+}
+
+// Deleting a personal roadmap also drops a plan made from it; progress stays.
+export function deleteRoadmap(s, id) {
+  delete s.roadmaps[id];
+  if (s.plan?.roadmap === id) s.plan = null;
   return s;
 }
 

@@ -126,7 +126,7 @@ async function route() {
   cleanup?.();
   cleanup = null;
   closeMenus();
-  const section = slug.startsWith("roadmap") ? "roadmaps" : LEARN.has(slug) ? "progress" : slug;
+  const section = slug.startsWith("roadmap") || slug === "syllabus" ? "roadmaps" : LEARN.has(slug) ? "progress" : slug;
   for (const a of nav.querySelectorAll("a")) a.setAttribute("aria-current", a.dataset.slug === section ? "page" : "false");
   for (const d of nav.querySelectorAll("details")) d.classList.toggle("current", !!d.querySelector('[aria-current="page"]'));
 
@@ -150,6 +150,11 @@ async function route() {
       setMeta(`${page.title} · ${SITE.name}`, page.description, `/${slug}`);
       cleanup = view.render(main) ?? null;
       import("./tutor.js").then(({ mountTutor }) => mountTutor(null)).catch(() => {});
+    } else if (slug === "syllabus") {
+      const view = await import("./views/syllabus.js");
+      if (id !== renderId) return;
+      setMeta(`${view.META.title} · ${SITE.name}`, view.META.description, "/syllabus");
+      cleanup = view.render(main) ?? null;
     } else if (slug === "roadmaps" || slug.startsWith("roadmap/")) {
       const roadmap = await import("./views/roadmap.js");
       if (id !== renderId) return;
