@@ -5,11 +5,16 @@
 import { ROADMAPS, hoursOf, roadmapOf, stageOf } from "../roadmaps.js";
 import { SUBJECTS, TOOLS } from "../tools.js";
 import { h } from "../ui.js";
+import { badge, bar, fill, moduleLink, ring } from "../learn/common.js";
+import { moduleState, nextModule, stageProgress, STATE_LABEL } from "../learn/model.js";
+import { hasActivity, load, setDone, update } from "../learn/store.js";
 
 const toolOf = (slug) => TOOLS.find((t) => t.slug === slug);
 const stageColour = (i) => `var(--series-${(i % 8) + 1})`;
 const subjectName = (id) => SUBJECTS.find((s) => s.id === id)?.name;
 const hoursText = (n) => `about ${n} h`;
+const hasGate = (stage) => stage.modules.some((m) => m.gate?.length);
+const progressText = (p) => `${p.mastered} of ${p.total} mastered`;
 const clip = (s, n = 168) => s.length <= n ? s : `${s.slice(0, s.lastIndexOf(" ", n - 1))}…`;
 
 // Which page a path asks for, or null when it isn't a roadmap page.
@@ -49,7 +54,8 @@ export function render(root, page) {
 // --- /roadmaps ---------------------------------------------------------------------
 
 function renderIndex(root) {
-  root.replaceChildren(
+  const s = load(), active = hasActivity(s);
+  fill(root, 
     h("header", { class: "tool-head" },
       h("p", { class: "eyebrow" }, "Roadmaps"),
       h("h1", null, "Know what to study next"),
@@ -60,6 +66,10 @@ function renderIndex(root) {
         h("h2", null, r.title),
         h("p", { class: "muted" }, r.summary),
         h("p", { class: "rm-facts" }, `${r.stages.length} stages · ${modules.length} topics · ${hoursText(hoursOf(modules))}`),
+        active ? (() => {
+          const p = r.stages.map((st) => stageProgress(s, st)).reduce((a, b) => ({ mastered: a.mastered + b.mastered, total: a.total + b.total, progress: a.progress + b.progress * b.total }), { mastered: 0, total: 0, progress: 0 });
+          return h("p", { class: "lp-inline" }, ring(p.progress / p.total, `${Math.round((100 * p.progress) / p.total)}% through`), h("span", { class: "muted small" }, progressText(p)));
+        })() : null,
         h("span", { class: "btn primary" }, "Open the roadmap →"));
     })));
 }
@@ -69,7 +79,9 @@ function renderIndex(root) {
 function renderMap(root, roadmap) {
   const all = roadmap.stages.flatMap((s) => s.modules);
   const withTools = all.filter((m) => m.tools.length).length;
-  root.replaceChildren(
+  const st = load(), active = hasActivity(st);
+  const next = nextModule(st, roadmap);
+  fill(root, 
     h("header", { class: "tool-head" },
       h("p", { class: "eyebrow" }, h("a", { href: "/roadmaps" }, "Roadmaps"), " / ", roadmap.title),
       h("h1", null, `${roadmap.title} roadmap`),
@@ -79,6 +91,11 @@ function renderMap(root, roadmap) {
         h("li", null, h("b", null, all.length), " topics"),
         h("li", null, h("b", null, withTools), " with visualisers"),
         h("li", null, h("b", null, hoursText(hoursOf(all))), " of study"))),
+    next ? h("div", { class: "card lp-next" },
+      h("div", null, h("p", { class: "eyebrow" }, active ? "Next up" : "Start here"), h("p", { class: "lp-next-title" }, next.module.title, h("span", { class: "muted small" }, ` · ${next.stage.title}`))),
+      h("div", { class: "row lp-tight" },
+        h("a", { class: "btn primary", href: moduleLink(roadmap.id, next.stage.id, next.module.id) }, `Continue: ${next.module.title}`),
+        active ? h("a", { class: "btn ghost small", href: "/progress" }, "Your progress") : h("a", { class: "btn ghost small", href: "/diagnostic" }, "Take the diagnostic first"))) : null,
     h("section", { class: "card rm-howto" },
       h("h2", null, "How to use it"),
       h("ol", null, roadmap.howTo.map((t) => h("li", null, t)))),
@@ -89,8 +106,12 @@ function renderMap(root, roadmap) {
           h("h2", null, h("a", { href: `/roadmap/${roadmap.id}/${stage.id}` }, stage.title)),
           h("span", { class: "muted small" }, `${stage.modules.length} topics · ${hoursText(hoursOf(stage.modules))}`)),
         h("p", { class: "muted" }, stage.summary),
-        h("ul", { class: "rm-chips" }, stage.modules.map((m) => h("li", null,
-          h("a", { class: m.tools.length || m.practiceAll ? "rm-chip" : "rm-chip soon", href: `/roadmap/${roadmap.id}/${stage.id}#${m.id}` }, m.title)))),
+        active ? (() => { const p = stageProgress(st, stage); return h("div", { class: "lp-stage-bar" }, bar(p.progress, `${stage.title}: ${Math.round(p.progress * 100)}%`), h("span", { class: "muted small" }, progressText(p))); })() : null,
+        h("ul", { class: "rm-chips" }, stage.modules.map((m) => {
+          const state = active ? moduleState(st, m).state : "not-started";
+          return h("li", null,
+            h("a", { class: m.tools.length || m.practiceAll ? "rm-chip" : "rm-chip soon", "data-state": state, href: `/roadmap/${roadmap.id}/${stage.id}#${m.id}`, title: state === "not-started" ? null : STATE_LABEL[state] }, m.title));
+        })),
         h("a", { class: "btn ghost small", href: `/roadmap/${roadmap.id}/${stage.id}` }, "Open this stage →")))),
     ),
     h("p", { class: "muted small rm-note" }, "Hours are rough estimates for a first pass, including practice. Topics in grey don't have a Stepwise visualiser yet and link to reading instead."));
@@ -103,13 +124,32 @@ function renderStage(root, roadmap, stage) {
   const prev = roadmap.stages[i - 1], next = roadmap.stages[i + 1];
   const titles = new Map(roadmap.stages.flatMap((s) => s.modules.map((m) => [m.id, { title: m.title, stage: s }])));
   const subject = subjectName(stage.subject);
+  const progressBox = h("div", { class: "lp-stage-bar" });
+  const drawProgress = () => {
+    const p = stageProgress(load(), stage);
+    fill(progressBox, bar(p.progress, `Stage progress: ${Math.round(p.progress * 100)}%`), h("span", { class: "muted small" }, progressText(p)));
+  };
+  // The state badge, ring and (for modules without GATE questions) the done box.
+  const status = (m) => {
+    const box = h("div", { class: "lp-status" });
+    const draw = () => {
+      const { state, progress } = moduleState(load(), m);
+      fill(box, ring(progress, `${STATE_LABEL[state]}, ${Math.round(progress * 100)}%`), badge(state),
+        m.gate?.length ? null : h("label", { class: "lp-check" },
+          h("input", { type: "checkbox", checked: state === "mastered", onchange: (e) => { update((s) => setDone(s, m.id, e.target.checked)); draw(); drawProgress(); } }),
+          " Mark as done"));
+    };
+    draw();
+    return box;
+  };
 
   const moduleCard = (m, n) => h("section", { class: "card rm-module", id: m.id },
     h("div", { class: "rm-module-head" },
       h("span", { class: "rm-num" }, `${i + 1}.${n + 1}`),
       h("h2", null, m.title),
       h("span", { class: "muted small" }, hoursText(m.hours)),
-      m.placement >= 4 ? h("span", { class: "tag" }, "Common in interviews") : null),
+      m.placement >= 4 ? h("span", { class: "tag" }, "Common in interviews") : null,
+      status(m)),
     m.needs.length ? h("p", { class: "muted small rm-needs" }, "Needs: ", m.needs.map((id, k) => {
       const t = titles.get(id);
       return [k ? ", " : "", h("a", { href: `/roadmap/${roadmap.id}/${t.stage.id}#${id}` }, t.title)];
@@ -139,20 +179,27 @@ function renderStage(root, roadmap, stage) {
       h("ul", { class: "rm-reading" }, m.reading.map((r) => h("li", null, h("a", { href: r.url, target: "_blank", rel: "noopener" }, r.title), h("span", { class: "muted small" }, ` · ${new URL(r.url).hostname.replace(/^www\./, "")}`)))),
     ] : null);
 
-  root.replaceChildren(
+  fill(root, 
     h("header", { class: "tool-head rm-stage-top", style: `--c:${stageColour(i)}` },
       h("p", { class: "eyebrow" }, h("a", { href: "/roadmaps" }, "Roadmaps"), " / ", h("a", { href: `/roadmap/${roadmap.id}` }, roadmap.title), ` / Stage ${i + 1} of ${roadmap.stages.length}`),
       h("h1", null, stage.title),
       h("p", { class: "lede" }, stage.summary),
-      h("p", { class: "muted small" }, `${stage.modules.length} topics · ${hoursText(hoursOf(stage.modules))}${subject ? ` · ${subject} visualisers` : ""}`)),
+      h("p", { class: "muted small" }, `${stage.modules.length} topics · ${hoursText(hoursOf(stage.modules))}${subject ? ` · ${subject} visualisers` : ""}`),
+      progressBox,
+      hasGate(stage) ? h("div", { class: "row" }, h("a", { class: "btn primary small", href: `/mock?roadmap=${roadmap.id}&stage=${stage.id}` }, "Take the stage test"), h("span", { class: "muted small" }, "15 questions, 30 minutes, GATE marking")) : null),
     h("nav", { class: "card rm-toc", "aria-label": "Topics in this stage" },
       h("ol", null, stage.modules.map((m) => h("li", null, h("a", { href: `#${m.id}` }, m.title))))),
     ...stage.modules.map(moduleCard),
+    hasGate(stage) ? h("section", { class: "card lp-stage-test" },
+      h("h2", null, "Stage test"),
+      h("p", { class: "muted" }, "Check the whole stage under time pressure: 15 GATE-style questions from these topics in 30 minutes, marked the GATE way, with a score report by topic."),
+      h("a", { class: "btn primary", href: `/mock?roadmap=${roadmap.id}&stage=${stage.id}` }, "Take the stage test")) : null,
     h("nav", { class: "rm-pager", "aria-label": "Stages" },
       prev ? h("a", { class: "btn ghost", href: `/roadmap/${roadmap.id}/${prev.id}` }, `← ${prev.title}`) : h("span"),
       h("a", { class: "btn ghost", href: `/roadmap/${roadmap.id}` }, "All stages"),
       next ? h("a", { class: "btn primary", href: `/roadmap/${roadmap.id}/${next.id}` }, `${next.title} →`) : h("span")));
 
+  drawProgress();
   // Arriving at /roadmap/gate-cs/os#os.vm should land on that module.
   // The page is already in the document here, so no need to wait for a frame.
   if (location.hash) document.getElementById(decodeURIComponent(location.hash.slice(1)))?.scrollIntoView();

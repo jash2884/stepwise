@@ -11,6 +11,7 @@ import { SITE, SUBJECTS, TOOLS } from "../public/js/tools.js";
 import { TOPICS as GATE_TOPICS } from "../public/js/gate-questions.js";
 import { ROADMAPS, hoursOf } from "../public/js/roadmaps.js";
 import { meta as roadmapMeta } from "../public/js/views/roadmap.js";
+import { LEARN_PAGES } from "../public/js/learn/pages.js";
 
 const root = new URL("..", import.meta.url).pathname;
 const src = join(root, "public"), out = join(root, "dist");
@@ -119,6 +120,17 @@ for (const r of ROADMAPS) {
   }
 }
 
+// Learning pages: progress, planner, reviews, mistakes, mocks, diagnostic.
+for (const p of LEARN_PAGES) {
+  if (p.description.length > 170) throw new Error(`/${p.slug}: description is ${p.description.length} chars; keep it under 170`);
+  await stat(join(src, "js", "views", `${p.slug}.js`)).catch(() => { throw new Error(`/${p.slug}: view file views/${p.slug}.js is missing`); });
+  await writeFile(join(out, `${p.slug}.html`), pageHtml({
+    title: `${p.title} · ${SITE.name}`, description: p.description, path: `/${p.slug}`,
+    body: `<section class="static-content"><p class="eyebrow">${esc(p.title)}</p><h1>${esc(p.heading)}</h1><p class="lede">${esc(p.description)}</p><p><a href="/roadmap/gate-cs">The GATE CS roadmap</a> · <a href="/gate">GATE practice</a></p></section>`,
+  }));
+}
+const learnPaths = LEARN_PAGES.map((p) => p.slug);
+
 await writeFile(join(out, "404.html"), pageHtml({
   title: `Page not found · ${SITE.name}`,
   description: "This page doesn't exist.",
@@ -130,13 +142,13 @@ await writeFile(join(out, "404.html"), pageHtml({
 const today = new Date().toISOString().slice(0, 10);
 await writeFile(join(out, "sitemap.xml"), `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-${["", "gate", ...roadmapPaths, ...TOOLS.map((t) => t.slug)].map((s) => `  <url><loc>${SITE.url}/${s}</loc><lastmod>${today}</lastmod></url>`).join("\n")}
+${["", "gate", ...roadmapPaths, ...learnPaths, ...TOOLS.map((t) => t.slug)].map((s) => `  <url><loc>${SITE.url}/${s}</loc><lastmod>${today}</lastmod></url>`).join("\n")}
 </urlset>
 `);
 await writeFile(join(out, "robots.txt"), `User-agent: *\nAllow: /\nSitemap: ${SITE.url}/sitemap.xml\n`);
 
 // --- Service worker -----------------------------------------------------------------------
-const precache = ["/", "/gate", ...roadmapPaths.map((p) => `/${p}`), ...TOOLS.map((t) => `/${t.slug}`), ...all.filter((f) => /\.(js|css|svg|webmanifest)$/.test(f) && !f.includes("/test/") && !f.includes("/vendor/")).map((f) => `/${relative(out, f)}`)];
+const precache = ["/", "/gate", ...roadmapPaths.map((p) => `/${p}`), ...learnPaths.map((p) => `/${p}`), ...TOOLS.map((t) => `/${t.slug}`), ...all.filter((f) => /\.(js|css|svg|webmanifest)$/.test(f) && !f.includes("/test/") && !f.includes("/vendor/")).map((f) => `/${relative(out, f)}`)];
 const sw = (await readFile(join(src, "sw.js"), "utf8")).replace("__VERSION__", version).replace("__PRECACHE__", JSON.stringify(precache, null, 2));
 await writeFile(join(out, "sw.js"), sw);
 

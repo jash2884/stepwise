@@ -13,6 +13,8 @@ export type AskRequest = {
   question?: string;   // the practice question on screen, if any
   history?: Turn[];
   ask: string;         // what the student typed
+  module?: string;     // the roadmap module this tool belongs to, if any
+  weak?: string[];     // the student's weakest practice topics, if any
 };
 
 const cut = (s: unknown, n: number) => (typeof s === "string" || typeof s === "number" ? String(s).replace(/\s+/g, " ").trim().slice(0, n) : "");
@@ -44,6 +46,8 @@ export function validate(body: unknown): AskRequest | string {
     line: cutLine(b.line, 200),
     code: Array.isArray(b.code) ? (b.code as unknown[]).slice(0, 40).map((l) => cutLine(l, 160)) : [],
     question: cut(b.question, 600),
+    module: cut(b.module, 120),
+    weak: Array.isArray(b.weak) ? (b.weak as unknown[]).slice(0, 5).map((w) => cut(w, 60)).filter(Boolean) : [],
   };
 }
 
@@ -59,6 +63,8 @@ Rules:
 
 export function buildPrompt(r: AskRequest) {
   const parts = [`Tool: ${r.title || r.tool} (${r.mode === "practice" ? "practice tab" : "visualiser"})`];
+  if (r.module) parts.push(`Roadmap module they're studying: ${r.module}`);
+  if (r.weak?.length) parts.push(`Their weakest practice topics so far: ${r.weak.join(", ")}`);
   if (r.question) parts.push(`Practice question on screen: ${r.question}`);
   if (r.note) parts.push(`Current step explanation: ${r.note}`);
   if (r.code?.length) parts.push(`Pseudocode (the line marked >> is executing):\n${r.code.map((l) => (l === r.line ? `>> ${l}` : `   ${l}`)).join("\n")}`);

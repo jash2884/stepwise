@@ -21,3 +21,19 @@ test("the prompt marks the executing line and lists variables", () => {
   const m = messages(r);
   assert.equal(m.at(-1).content, "why?");
 });
+
+test("roadmap module and weak topics are optional, trimmed and shown", () => {
+  const plain = validate({ tool: "sorting", ask: "hi" });
+  assert.equal(plain.module, "");
+  assert.deepEqual(plain.weak, []);
+  assert.doesNotMatch(buildPrompt(plain), /Roadmap module|weakest/);
+  const odd = validate({ tool: "sorting", ask: "hi", module: { x: 1 }, weak: "hashing" });
+  assert.equal(odd.module, "");
+  assert.deepEqual(odd.weak, []);
+  const r = validate({ tool: "sorting", title: "Sorting", ask: "hi", module: "Sorting (Algorithms)", weak: ["Hashing", "", 7, "a".repeat(200), "b", "c", "d"] });
+  assert.equal(r.weak.length, 4);
+  assert.equal(r.weak[2].length, 60);
+  const p = buildPrompt(r);
+  assert.match(p, /Roadmap module they're studying: Sorting \(Algorithms\)/);
+  assert.match(p, /weakest practice topics so far: Hashing, 7/);
+});
