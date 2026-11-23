@@ -24,7 +24,11 @@ function block(b) {
 export function render(root) {
   const params = readParams();
   const session = { score: 0, max: 0, done: 0, right: 0 };
-  let topic = topicOf(params.get("topic")) ? params.get("topic") : "mix";
+  // Subjects that have questions, each with its topics, for the picker and mixed modes.
+  const groups = SUBJECTS.map((s) => ({ ...s, topics: TOPICS.filter((t) => t.subject === s.id) })).filter((g) => g.topics.length);
+  const mixOf = (id) => groups.find((g) => `mix-${g.id}` === id);
+  const valid = (id) => id === "mix" || !!topicOf(id) || !!mixOf(id);
+  let topic = valid(params.get("topic")) ? params.get("topic") : "mix";
   let seed = Number(params.get("seed")) || newSeed();
   let current = null;
 
@@ -34,17 +38,40 @@ export function render(root) {
     h("p", { class: "lede" }, "Fresh questions in the GATE formats, made by the same engines as the visualisers, so every answer is worked out rather than typed in. Marked the GATE way, with a full solution and a replay you can step through."));
 
   // --- Topic picker -----------------------------------------------------------------
-  const pickerBtn = (id, label) => h("button", { type: "button", class: "btn ghost small toggle", "data-topic": id, "aria-pressed": String(id === topic), onclick: () => choose(id) }, label);
+  // One collapsible group per subject, each with a "Mixed <subject>" chip, so
+  // the picker stays short however many topics there are.
+  const pickerBtn = (id, label, extra = "") => h("button", { type: "button", class: `btn ghost small toggle gate-chip${extra}`, "data-topic": id, "aria-pressed": String(id === topic), onclick: () => choose(id) }, label);
+  const groupOf = (id) => (mixOf(id) ?? groups.find((g) => g.id === topicOf(id)?.subject))?.id;
+  const groupEls = groups.map((g) => h("details", { class: "gate-group", "data-subject": g.id, open: groupOf(topic) === g.id ? "" : null },
+    h("summary", null,
+      h("span", { class: "gate-subject" }, g.short),
+      h("span", { class: "gate-group-name" }, g.name),
+      h("span", { class: "gate-count muted small" }, `${g.topics.length} topic${g.topics.length === 1 ? "" : "s"}`)),
+    h("div", { class: "gate-chips" },
+      pickerBtn(`mix-${g.id}`, `Mixed ${g.short}`, " gate-chip-mix"),
+      g.topics.map((t) => pickerBtn(t.slug, t.title)))));
   const picker = h("div", { class: "card gate-picker" },
-    h("div", { class: "row" }, pickerBtn("mix", "Mixed (all topics)")),
-    SUBJECTS.filter((s) => TOPICS.some((t) => t.subject === s.id)).map((s) => s.id).map((sid) => h("div", { class: "gate-group" },
-      h("span", { class: "gate-subject" }, SUBJECTS.find((s) => s.id === sid).short),
-      h("div", { class: "row" }, TOPICS.filter((t) => t.subject === sid).map((t) => pickerBtn(t.slug, t.title))))));
+    h("div", { class: "row gate-picker-top" },
+      pickerBtn("mix", "Mixed (all subjects)"),
+      h("span", { class: "muted small" }, `${TOPICS.length} topics in ${groups.length} subjects. Open a subject to pick a topic.`)),
+    groupEls);
 
   function choose(id) {
     topic = id;
     picker.querySelectorAll("[data-topic]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.topic === id)));
+    const open = groupOf(id);
+    groupEls.forEach((el) => { el.classList.toggle("has-current", el.dataset.subject === open); if (el.dataset.subject === open) el.open = true; });
     next();
+  }
+  groupEls.forEach((el) => el.classList.toggle("has-current", el.dataset.subject === groupOf(topic)));
+
+  // Mixed modes take a subject evenly first, then a topic within it, so a
+  // subject with many topics doesn't crowd out one with few.
+  function slugFor(seed) {
+    if (topic !== "mix" && !mixOf(topic)) return topic;
+    const g = mixOf(topic) ?? groups[seed % groups.length];
+    const k = mixOf(topic) ? seed : Math.floor(seed / groups.length);
+    return g.topics[k % g.topics.length].slug;
   }
 
   // --- Question -----------------------------------------------------------------------
@@ -57,7 +84,7 @@ export function render(root) {
   }
 
   function show() {
-    const slug = topic === "mix" ? TOPICS[seed % TOPICS.length].slug : topic;
+    const slug = slugFor(seed);
     writeParams({ topic, seed });
     try { current = generate(slug, seed); } catch (err) { qCard.replaceChildren(h("p", { class: "notice error" }, err.message)); return; }
     const q = current, info = topicOf(slug), started = Date.now();

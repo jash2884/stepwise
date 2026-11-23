@@ -1,1 +1,38 @@
 /* gate-extra: styles for this area. Loaded after style.css. */
+
+/* GATE topic picker: one collapsible group per subject, topics as compact chips. */
+.gate-picker { gap: 0; }
+.gate-picker-top { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 0 0 6px; }
+.gate-picker .gate-group { display: block; border-top: 1px solid var(--line); }
+.gate-picker .gate-group > summary {
+  display: flex; align-items: baseline; gap: 10px; padding: 9px 2px; cursor: pointer; list-style: none;
+  border-radius: 6px;
+}
+.gate-picker .gate-group > summary::-webkit-details-marker { display: none; }
+.gate-picker .gate-group > summary::before {
+  content: ""; flex: 0 0 auto; width: 7px; height: 7px; margin-right: 2px;
+  border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted);
+  transform: rotate(-45deg); transition: transform 0.15s ease; align-self: center;
+}
+.gate-picker .gate-group[open] > summary::before { transform: rotate(45deg); }
+.gate-picker .gate-group > summary:hover .gate-group-name { color: var(--accent); }
+.gate-picker .gate-group > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.gate-picker .gate-subject { flex: 0 0 44px; }
+.gate-group-name { font-weight: 600; }
+.gate-count { margin-left: auto; white-space: nowrap; }
+.gate-group.has-current .gate-subject { color: var(--accent); }
+.gate-group.has-current:not([open]) .gate-group-name::after { content: " · selected"; color: var(--accent); font-weight: 500; font-size: 0.85em; }
+.gate-chips { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 0 12px 21px; }
+.gate-chip { padding: 4px 10px; font-size: 13px; }
+.gate-chip-mix { font-weight: 600; border-style: dashed; }
+.gate-chip-mix[aria-pressed="true"] { border-style: solid; }
+
+@media (max-width: 640px) {
+  .gate-picker .gate-group { flex-direction: column; }
+  .gate-chips { padding-left: 0; }
+  .gate-count { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gate-picker .gate-group > summary::before { transition: none; }
+}
