@@ -12,6 +12,7 @@ import { TOPICS as GATE_TOPICS } from "../public/js/gate-questions.js";
 import { ROADMAPS, hoursOf } from "../public/js/roadmaps.js";
 import { meta as roadmapMeta } from "../public/js/views/roadmap.js";
 import { LEARN_PAGES } from "../public/js/learn/pages.js";
+import { writeCards } from "./ai-cards.js";
 
 const root = new URL("..", import.meta.url).pathname;
 const src = join(root, "public"), out = join(root, "dist");
@@ -41,6 +42,9 @@ for (const t of TOOLS) {
   slugs.add(t.slug);
   if (t.legacy) legacy.add(t.legacy);
 }
+
+// The /ask router's retrieval cards (bundled into the Worker) follow the registry.
+await writeCards();
 
 // --- Copy and fingerprint -------------------------------------------------------
 await rm(out, { recursive: true, force: true });
@@ -94,6 +98,14 @@ await writeFile(join(out, "gate.html"), pageHtml({
   body: `<section class="static-content"><p class="eyebrow">GATE CS practice</p><h1>GATE-style questions, with every step shown</h1><p class="lede">Fresh MCQ, MSQ and NAT questions made by the same engines as the visualisers, marked the GATE way, with worked solutions.</p><ul>${GATE_TOPICS.map((t) => `<li><a href="/gate?topic=${t.slug}">${esc(t.title)}</a></li>`).join("")}</ul></section><script type="application/ld+json">${JSON.stringify(gateLd)}</script>`,
 }));
 
+// Ask anything: the AI front door to every visualiser.
+const ASK_DESCRIPTION = "Type or snap a CS question: Stepwise picks the right visualiser, fills in your numbers, and its engine works out and checks the answer step by step.";
+if (ASK_DESCRIPTION.length > 170) throw new Error("/ask: description too long");
+await writeFile(join(out, "ask.html"), pageHtml({
+  title: `Ask anything, see it happen · ${SITE.name}`, description: ASK_DESCRIPTION, path: "/ask",
+  body: `<section class="static-content"><p class="eyebrow">Ask Stepwise</p><h1>Ask anything, see it happen</h1><p class="lede">${esc(ASK_DESCRIPTION)}</p><p><a href="/">All ${TOOLS.length} visualisers</a> · <a href="/gate">GATE practice</a></p></section>`,
+}));
+
 // Roadmaps: an index, one page per roadmap and one per stage, all indexable.
 const roadmapPaths = ["roadmaps"];
 const toolTitle = (slug) => TOOLS.find((t) => t.slug === slug)?.title ?? slug;
@@ -142,13 +154,13 @@ await writeFile(join(out, "404.html"), pageHtml({
 const today = new Date().toISOString().slice(0, 10);
 await writeFile(join(out, "sitemap.xml"), `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-${["", "gate", ...roadmapPaths, ...learnPaths, ...TOOLS.map((t) => t.slug)].map((s) => `  <url><loc>${SITE.url}/${s}</loc><lastmod>${today}</lastmod></url>`).join("\n")}
+${["", "gate", "ask", ...roadmapPaths, ...learnPaths, ...TOOLS.map((t) => t.slug)].map((s) => `  <url><loc>${SITE.url}/${s}</loc><lastmod>${today}</lastmod></url>`).join("\n")}
 </urlset>
 `);
 await writeFile(join(out, "robots.txt"), `User-agent: *\nAllow: /\nSitemap: ${SITE.url}/sitemap.xml\n`);
 
 // --- Service worker -----------------------------------------------------------------------
-const precache = ["/", "/gate", ...roadmapPaths.map((p) => `/${p}`), ...learnPaths.map((p) => `/${p}`), ...TOOLS.map((t) => `/${t.slug}`), ...all.filter((f) => /\.(js|css|svg|webmanifest)$/.test(f) && !f.includes("/test/") && !f.includes("/vendor/")).map((f) => `/${relative(out, f)}`)];
+const precache = ["/", "/gate", "/ask", ...roadmapPaths.map((p) => `/${p}`), ...learnPaths.map((p) => `/${p}`), ...TOOLS.map((t) => `/${t.slug}`), ...all.filter((f) => /\.(js|css|svg|webmanifest)$/.test(f) && !f.includes("/test/") && !f.includes("/vendor/")).map((f) => `/${relative(out, f)}`)];
 const sw = (await readFile(join(src, "sw.js"), "utf8")).replace("__VERSION__", version).replace("__PRECACHE__", JSON.stringify(precache, null, 2));
 await writeFile(join(out, "sw.js"), sw);
 

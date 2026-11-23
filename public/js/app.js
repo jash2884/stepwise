@@ -94,6 +94,7 @@ document.addEventListener("keydown", (e) => {
   else if (e.key === "/" && !typing && !e.metaKey && !e.ctrlKey) { e.preventDefault(); openPalette(); }
 });
 later(() => import("./palette.js").catch(() => {}));
+document.addEventListener("click", (e) => { if (e.target.closest("[data-ai-settings]")) { e.preventDefault(); import("./ai/settings.js").then((m) => m.openAiSettings()).catch(() => {}); } });
 
 // --- Routing (History API) ------------------------------------------------------
 function setMeta(title, description, path) {
@@ -163,6 +164,12 @@ async function route() {
         main.replaceChildren();
         cleanup = roadmap.render(main, page) ?? null;
       }
+    } else if (slug === "ask") {
+      // Ask anything: AI routing to a visualiser (views/ask.js, server in src/ai/ask.ts).
+      const ask = await import("./views/ask.js");
+      if (id !== renderId) return;
+      setMeta(`Ask anything, see it happen · ${SITE.name}`, "Type or snap a CS question: Stepwise picks the right visualiser, fills in your numbers, and its engine works out and checks the answer step by step.", "/ask");
+      cleanup = ask.render(main) ?? null;
     } else if (!tool) {
       setMeta(`Page not found · ${SITE.name}`, "This page doesn't exist.", location.pathname);
       main.replaceChildren(failure("Page not found", "There's no tool at this address. Pick one from the menu, or start from the home page."));

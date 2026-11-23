@@ -16,6 +16,7 @@ export const PAGES = [
   { title: "Mistakes", href: "/mistakes", hint: "Questions you got wrong", keywords: "mistakes wrong errors notebook" },
   { title: "Mock test", href: "/mock", hint: "A timed GATE-style paper", keywords: "mock test exam paper timed" },
   { title: "Diagnostic", href: "/diagnostic", hint: "Find out where to start", keywords: "diagnostic test level placement assess" },
+  { title: "Ask anything", href: "/ask", hint: "Type or snap a question; AI picks the tool", keywords: "ask ai question solve photo snap camera help explain" },
   { title: "Home", href: "/", hint: "All tools", keywords: "home start catalogue all tools" },
 ];
 
@@ -93,6 +94,17 @@ export function rank(query, items, limit = 40) {
     .map((x) => x.item);
 }
 
+// When the search doesn't match well (nothing found, a weak best match, or a
+// question rather than a name), offer to ask the AI instead.
+export function askItem(query, results) {
+  const q = String(query ?? "").trim().replace(/\s+/g, " ");
+  if (!q) return null;
+  const words = norm(q).split(" ").filter(Boolean).length;
+  const best = results[0] ? score(q, results[0]) : 0;
+  const weak = !results.length || best < 40 * Math.max(1, words) || words >= 4 || /\?$/.test(q);
+  return weak ? { kind: "Ask", title: `Ask AI: ${q.slice(0, 120)}`, href: `/ask?q=${encodeURIComponent(q.slice(0, 600))}`, hint: "AI picks the tool" } : null;
+}
+
 // --- The dialog ---------------------------------------------------------------------
 
 let ui = null;
@@ -129,13 +141,16 @@ function build(navigate) {
   const draw = () => {
     const q = input.value;
     results = q.trim() ? rank(q, items, 40) : starters.slice(0, 30);
+    const ai = askItem(q, results);
+    if (ai) results = [...results.slice(0, 39), ai];
     list.replaceChildren(...results.map((r, k) => h("li", { role: "option", id: `pal-opt-${k}`, "aria-selected": "false", onmousemove: () => k !== active && setActive(k, false) },
       h("a", { href: r.href, tabindex: "-1", onclick: () => close(false) },
         h("span", { class: `pal-kind k-${r.kind.toLowerCase()}` }, r.kind),
         h("span", { class: "pal-title" }, r.title),
         r.hint ? h("span", { class: "pal-hint" }, r.hint) : null))));
-    status.textContent = q.trim() ? (results.length ? `${results.length} result${results.length === 1 ? "" : "s"}` : `Nothing matches “${q.trim()}”. Try a topic such as deadlock, B+ tree or subnetting.`) : "";
-    status.classList.toggle("empty", q.trim() !== "" && !results.length);
+    const found = results.length - (ai ? 1 : 0);
+    status.textContent = q.trim() ? (found ? `${found} result${found === 1 ? "" : "s"}` : `Nothing matches “${q.trim()}”. Press Enter to ask the AI, or try a topic such as deadlock, B+ tree or subnetting.`) : "";
+    status.classList.toggle("empty", q.trim() !== "" && !found);
     setActive(0);
   };
   const go = () => {

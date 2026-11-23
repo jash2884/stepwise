@@ -338,6 +338,7 @@ export function render(root) {
       h("div", { class: "hero-cta" },
         h("a", { class: "btn primary", href: "#catalogue" }, "Browse every tool"),
         h("a", { class: "btn ghost", href: "/roadmaps" }, "Follow a roadmap")),
+      h("form", { class: "home-ask", action: "/ask", method: "get", role: "search" }, h("input", { name: "q", type: "text", maxlength: 600, required: true, "aria-label": "Ask a question", placeholder: "Ask anything: “LRU faults for 7 0 1 2 0 3, 3 frames”" }), h("button", { type: "submit", class: "btn ghost small" }, "Ask")),
       h("button", { type: "button", class: "palette-hint", "data-palette": "" }, "Press ", kbd(), " to jump to any tool, topic or roadmap")),
     live.el);
 
