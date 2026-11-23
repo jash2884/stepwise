@@ -13,6 +13,8 @@
 import { ROADMAPS as PLACEMENTS } from "./roadmaps/placements.js";
 import { ROADMAPS as SEMESTER } from "./roadmaps/semester.js";
 import { ROADMAPS as AI } from "./roadmaps/ai.js";
+import { load } from "./learn/store.js";
+import { sanitiseLocal } from "./syllabus/assemble.js";
 
 const GFG = "https://www.geeksforgeeks.org";
 
@@ -336,7 +338,15 @@ export const ROADMAPS = [...GATE_CS, ...PLACEMENTS, ...SEMESTER, ...AI];
 
 // --- Lookups -----------------------------------------------------------------------
 
-export const roadmapOf = (id) => ROADMAPS.find((r) => r.id === id);
+// Personal roadmaps built from a syllabus live in the learning store on this
+// device (id "my-<hash>"), so only the browser can resolve them.
+const KNOWN_TOOLS = new Set(ROADMAPS.flatMap((r) => r.stages.flatMap((s) => s.modules.flatMap((m) => m.tools))));
+const KNOWN_GATE = new Set(ROADMAPS.flatMap((r) => r.stages.flatMap((s) => s.modules.flatMap((m) => m.gate ?? []))));
+export const localRoadmap = (id, state = load()) => (typeof id === "string" && id.startsWith("my-") ? sanitiseLocal(state.roadmaps?.[id], KNOWN_TOOLS, KNOWN_GATE) : null);
+export const localRoadmaps = (state = load()) => Object.keys(state.roadmaps ?? {}).map((id) => localRoadmap(id, state)).filter(Boolean).sort((a, b) => (b.updated ?? 0) - (a.updated ?? 0));
+export const allRoadmaps = (state = load()) => [...ROADMAPS, ...localRoadmaps(state)];
+
+export const roadmapOf = (id) => ROADMAPS.find((r) => r.id === id) ?? localRoadmap(id) ?? undefined;
 
 export const stageOf = (roadmap, id) => roadmap?.stages.find((s) => s.id === id);
 

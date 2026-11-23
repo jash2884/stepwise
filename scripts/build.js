@@ -13,6 +13,10 @@ import { ROADMAPS, hoursOf } from "../public/js/roadmaps.js";
 import { meta as roadmapMeta } from "../public/js/views/roadmap.js";
 import { LEARN_PAGES } from "../public/js/learn/pages.js";
 import { writeCards } from "./ai-cards.js";
+import { META as SYLLABUS } from "../public/js/views/syllabus.js";
+import { writeCatalogue } from "./syllabus-catalogue.js";
+
+await writeCatalogue(); // keeps the Worker's copy of the syllabus-matching catalogue current
 
 const root = new URL("..", import.meta.url).pathname;
 const src = join(root, "public"), out = join(root, "dist");
@@ -141,7 +145,11 @@ for (const p of LEARN_PAGES) {
     body: `<section class="static-content"><p class="eyebrow">${esc(p.title)}</p><h1>${esc(p.heading)}</h1><p class="lede">${esc(p.description)}</p><p><a href="/roadmap/gate-cs">The GATE CS roadmap</a> · <a href="/gate">GATE practice</a></p></section>`,
   }));
 }
-const learnPaths = LEARN_PAGES.map((p) => p.slug);
+// Syllabus to roadmap. Personal roadmaps (/roadmap/my-…) live on the device, so
+// they have no page here; the 404 page's app shell routes them.
+await writeFile(join(out, "syllabus.html"), pageHtml({ title: `${SYLLABUS.title} · ${SITE.name}`, description: SYLLABUS.description, path: "/syllabus",
+  body: `<section class="static-content"><p class="eyebrow">Your syllabus</p><h1>Upload your syllabus, get your roadmap</h1><p class="lede">${esc(SYLLABUS.description)}</p><p><a href="/roadmaps">Ready-made roadmaps</a> · <a href="/plan">Study planner</a></p></section>` }));
+const learnPaths = [...LEARN_PAGES.map((p) => p.slug), "syllabus"];
 
 await writeFile(join(out, "404.html"), pageHtml({
   title: `Page not found · ${SITE.name}`,

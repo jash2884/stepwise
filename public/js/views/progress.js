@@ -2,7 +2,7 @@
 // stage, weakest topics, reviews due, and the data controls (export, import,
 // reset). Everything comes from the learning store on this device.
 import { TOPICS } from "../gate-questions.js";
-import { ROADMAPS } from "../roadmaps.js";
+import { allRoadmaps } from "../roadmaps.js";
 import { h } from "../ui.js";
 import { bar, dateText, duration, header, moduleLink, pct, plural, subnav, weekdayLetter } from "../learn/common.js";
 import { topicTitle } from "../learn/question.js";
@@ -48,7 +48,7 @@ export function render(root) {
         action("/mock", "Mock tests", "Timed stage tests and full GATE-length mocks."),
         action("/diagnostic", "Diagnostic test", "20 mixed questions to find what you already know.")));
 
-    const stages = ROADMAPS.map((r) => {
+    const stages = allRoadmaps(s).map((r) => {
       const next = nextModule(s, r, now);
       return h("section", { class: "card" },
         h("div", { class: "row spread lp-tight" }, h("h2", null, `${r.title}: mastery by stage`),
