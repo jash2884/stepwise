@@ -7,17 +7,90 @@ const bySlug = new Map(TOOLS.map((t) => [t.slug, t]));
 let cleanup = null;
 let renderId = 0;
 
-// --- Navigation menus, generated from the registry -------------------------
+// --- Navigation, generated from the registry ----------------------------------------
+// A "Subjects" mega menu grouped by area (a new subject appears on its own),
+// top-level links, and on phones the same nav as a drawer opened by #menu-btn.
+const GROUPS = [["Core CS", ["dsa", "os", "dbms", "cn", "toc", "cd"]], ["Maths & hardware", ["digital-logic", "coa", "discrete-maths", "maths"]], ["AI", ["ai"]]];
+const groupOf = (s) => s.group ?? GROUPS.find(([, ids]) => ids.includes(s.id))?.[0] ?? "More";
+const toolsOf = (id) => TOOLS.filter((t) => t.subject === id);
 const nav = document.getElementById("nav");
-nav.replaceChildren(...SUBJECTS.map((s) => h("details", { class: "menu" },
-  h("summary", null, h("span", { class: "long" }, s.name), h("span", { class: "short" }, s.short)),
-  h("ul", null, TOOLS.filter((t) => t.subject === s.id).map((t) => h("li", null, h("a", { href: `/${t.slug}`, "data-slug": t.slug }, t.title)))))),
-  h("a", { class: "nav-gate nav-road", href: "/roadmaps", "data-slug": "roadmaps" }, h("span", { class: "long" }, "Roadmaps"), h("span", { class: "short" }, "Path")),
-  h("a", { class: "nav-gate", href: "/gate", "data-slug": "gate" }, h("span", { class: "long" }, "GATE practice"), h("span", { class: "short" }, "GATE")));
-const closeMenus = () => nav.querySelectorAll("details[open]").forEach((d) => d.removeAttribute("open"));
-document.addEventListener("click", (e) => { if (!e.target.closest(".menu")) closeMenus(); });
-document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeMenus(); });
-nav.addEventListener("toggle", (e) => { if (e.target.open) nav.querySelectorAll("details[open]").forEach((d) => { if (d !== e.target) d.removeAttribute("open"); }); }, true);
+const header = document.querySelector(".top");
+const menuBtn = document.getElementById("menu-btn");
+const isDrawer = () => header.classList.contains("nav-open");
+let picked = null;
+function pick(id) {
+  picked = id;
+  for (const b of nav.querySelectorAll(".sub-btn")) {
+    b.setAttribute("aria-expanded", String(b.dataset.subject === id));
+    b.parentElement.classList.toggle("on", b.dataset.subject === id);
+  }
+}
+const mega = h("details", { class: "mega" },
+  h("summary", null, "Subjects", h("span", { class: "mega-n" }, TOOLS.length)),
+  h("div", { class: "mega-panel" },
+    [...new Set(SUBJECTS.map(groupOf))].map((g) => h("div", { class: "mega-group" },
+      h("p", { class: "mega-label" }, g),
+      SUBJECTS.filter((s) => groupOf(s) === g).map((s) => h("div", { class: "sub" },
+        h("button", {
+          type: "button", class: "sub-btn", "data-subject": s.id, "aria-expanded": "false", "aria-controls": `sub-${s.id}`,
+          onclick: () => pick(isDrawer() && picked === s.id ? null : s.id),
+          onmouseenter: () => { if (!isDrawer() && matchMedia("(hover: hover)").matches) pick(s.id); },
+        }, h("span", null, s.name), h("span", { class: "n" }, toolsOf(s.id).length)),
+        h("div", { class: "sub-tools", id: `sub-${s.id}` },
+          h("p", { class: "sub-head" }, s.name),
+          h("ul", null, toolsOf(s.id).map((t) => h("li", null, h("a", { href: `/${t.slug}`, "data-slug": t.slug }, t.title)))),
+          h("a", { class: "sub-all", href: `/?subject=${s.id}#catalogue` }, `See all ${s.short} tools with previews →`))))))));
+const navLink = (href, slug, text) => h("a", { class: "nav-link", href, "data-slug": slug }, text);
+nav.replaceChildren(mega, navLink("/roadmaps", "roadmaps", "Roadmaps"), navLink("/gate", "gate", "Practice"), navLink("/progress", "progress", "Progress"));
+mega.addEventListener("toggle", () => {
+  if (!mega.open || isDrawer()) return;
+  const here = nav.querySelector('.sub-tools a[aria-current="page"]')?.closest(".sub")?.querySelector(".sub-btn")?.dataset.subject;
+  pick(here ?? picked ?? SUBJECTS[0]?.id);
+});
+function setDrawer(open) {
+  header.classList.toggle("nav-open", open);
+  document.documentElement.classList.toggle("drawer-open", open);
+  menuBtn.setAttribute("aria-expanded", String(open));
+  menuBtn.setAttribute("aria-label", open ? "Close menu" : "Open menu");
+  if (open) { mega.open = true; pick(nav.querySelector('.sub-tools a[aria-current="page"]')?.closest(".sub")?.querySelector(".sub-btn")?.dataset.subject ?? null); }
+}
+menuBtn.addEventListener("click", () => setDrawer(!isDrawer()));
+const closeMenus = () => {
+  mega.open = false;
+  if (isDrawer()) setDrawer(false);
+  closeThemePop();
+};
+document.addEventListener("click", (e) => {
+  if (!isDrawer() && !e.target.closest(".mega")) mega.open = false;
+  if (!e.target.closest(".theme-menu")) closeThemePop();
+});
+document.addEventListener("keydown", (e) => {
+  if (e.key !== "Escape" || document.documentElement.classList.contains("pal-open")) return;
+  const wasDrawer = isDrawer(), wasMega = mega.open && !wasDrawer;
+  closeMenus();
+  if (wasDrawer) menuBtn.focus();
+  else if (wasMega) mega.querySelector("summary").focus();
+});
+addEventListener("resize", () => { if (isDrawer() && matchMedia("(min-width: 861px)").matches) setDrawer(false); });
+
+// Footer: subjects come from the registry, roadmaps load when the browser is idle.
+const later = window.requestIdleCallback ?? ((f) => setTimeout(f, 300));
+document.getElementById("foot-subjects")?.replaceChildren(...SUBJECTS.map((s) => h("li", null, h("a", { href: `/?subject=${s.id}#catalogue` }, s.name))));
+later(() => import("./roadmaps.js").then(({ ROADMAPS }) => document.getElementById("foot-roadmaps")?.replaceChildren(
+  ...ROADMAPS.map((r) => h("li", null, h("a", { href: `/roadmap/${r.id}` }, r.title))),
+  h("li", null, h("a", { href: "/roadmaps" }, "All roadmaps")))).catch(() => {}));
+
+// --- Command palette (Ctrl/Cmd + K, or the search button) ----------------------------
+const isMac = /Mac|iPhone|iPad/.test(navigator.platform);
+for (const k of document.querySelectorAll("[data-kbd]")) k.textContent = isMac ? "⌘K" : "Ctrl K";
+const openPalette = () => import("./palette.js").then((m) => { closeMenus(); m.togglePalette(navigate); }).catch(() => {});
+document.addEventListener("click", (e) => { if (e.target.closest("[data-palette]")) { e.preventDefault(); openPalette(); } });
+document.addEventListener("keydown", (e) => {
+  const typing = /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) || e.target.isContentEditable;
+  if ((e.metaKey || e.ctrlKey) && !e.altKey && e.key.toLowerCase() === "k") { e.preventDefault(); openPalette(); }
+  else if (e.key === "/" && !typing && !e.metaKey && !e.ctrlKey) { e.preventDefault(); openPalette(); }
+});
+later(() => import("./palette.js").catch(() => {}));
 
 // --- Routing (History API) ------------------------------------------------------
 function setMeta(title, description, path) {
@@ -133,17 +206,55 @@ let rendered = "";
 addEventListener("popstate", () => { if (location.pathname + location.search !== rendered) route(); });
 route();
 
-// --- Theme ---------------------------------------------------------------------
-const toggle = document.getElementById("theme");
-// Light by default (set on <html>); a choice made with the toggle is remembered.
-const saved = (() => { try { return localStorage.getItem("theme"); } catch { return null; } })();
-if (saved) document.documentElement.dataset.theme = saved;
-toggle.addEventListener("click", () => {
-  const dark = document.documentElement.dataset.theme ? document.documentElement.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
-  const next = dark ? "light" : "dark";
-  document.documentElement.dataset.theme = next;
-  try { localStorage.setItem("theme", next); } catch { /* private mode */ }
+// --- Theme: light, dark or system, and an accent colour ------------------------------
+// js/theme-boot.js applies the saved choice before first paint; this is the menu.
+const MODES = [["light", "Light"], ["dark", "Dark"], ["system", "System"]];
+const ACCENTS = [["indigo", "Indigo"], ["ember", "Ember"], ["mint", "Mint"], ["violet", "Violet"]];
+const store = {
+  get: (k) => { try { return localStorage.getItem(k); } catch { return null; } },
+  set: (k, v) => { try { localStorage.setItem(k, v); } catch { /* private mode */ } },
+};
+const html = document.documentElement;
+const themeBtn = document.getElementById("theme");
+const themePop = h("div", { class: "pop theme-pop", id: "theme-pop", hidden: true },
+  h("p", { class: "pop-label", id: "mode-label" }, "Mode"),
+  h("div", { class: "seg", role: "group", "aria-labelledby": "mode-label" },
+    MODES.map(([id, label]) => h("button", { type: "button", "data-mode": id, "aria-pressed": "false", onclick: () => setTheme(id, null) }, label))),
+  h("p", { class: "pop-label", id: "accent-label" }, "Accent"),
+  h("div", { class: "swatches", role: "group", "aria-labelledby": "accent-label" },
+    ACCENTS.map(([id, label]) => h("button", { type: "button", "data-accent-id": id, "aria-pressed": "false", onclick: () => setTheme(null, id) }, h("i", { class: `sw sw-${id}`, "aria-hidden": "true" }), label))));
+themeBtn.after(themePop);
+function syncTheme() {
+  const mode = store.get("theme") ?? "light", accent = html.dataset.accent ?? "indigo";
+  for (const b of themePop.querySelectorAll("[data-mode]")) b.setAttribute("aria-pressed", String(b.dataset.mode === mode));
+  for (const b of themePop.querySelectorAll("[data-accent-id]")) b.setAttribute("aria-pressed", String(b.dataset.accentId === accent));
+  const bg = getComputedStyle(html).getPropertyValue("--bg").trim();
+  if (bg) document.querySelector('meta[name="theme-color"]')?.setAttribute("content", bg);
+}
+function setTheme(mode, accent) {
+  if (mode) {
+    store.set("theme", mode);
+    if (mode === "system") delete html.dataset.theme; else html.dataset.theme = mode;
+  }
+  if (accent) { store.set("accent", accent); html.dataset.accent = accent; }
+  syncTheme();
+}
+// A function declaration (and DOM lookups) so the router can call it before this runs.
+function closeThemePop() {
+  const pop = document.getElementById("theme-pop");
+  if (!pop || pop.hidden) return;
+  pop.hidden = true;
+  document.getElementById("theme").setAttribute("aria-expanded", "false");
+}
+themeBtn.addEventListener("click", () => {
+  const open = themePop.hidden;
+  themePop.hidden = !open;
+  themeBtn.setAttribute("aria-expanded", String(open));
+  if (open) themePop.querySelector('[aria-pressed="true"]')?.focus();
 });
+themePop.addEventListener("keydown", (e) => { if (e.key === "Escape") { closeThemePop(); themeBtn.focus(); } });
+matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change", syncTheme);
+syncTheme();
 
 // --- Offline support and unexpected errors ---------------------------------------
 if ("serviceWorker" in navigator && location.hostname !== "localhost") {

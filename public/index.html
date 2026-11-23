@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" data-theme="light">
+<html lang="en" data-theme="light" data-accent="indigo">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -16,6 +16,7 @@
   <link rel="icon" href="/icon.svg" type="image/svg+xml" />
   <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
   <link rel="manifest" href="/manifest.webmanifest" />
+  <script src="/js/theme-boot.js"></script>
   <link rel="modulepreload" href="/js/app.js" />
   <link rel="modulepreload" href="/js/ui.js" />
   <link rel="modulepreload" href="/js/tools.js" />
@@ -31,6 +32,7 @@
   <link rel="stylesheet" href="/css/ai.css" />
   <link rel="stylesheet" href="/css/gate-extra.css" />
   <link rel="stylesheet" href="/css/tracks.css" />
+  <!-- design.css holds the shared tokens and component polish: keep it last. -->
   <link rel="stylesheet" href="/css/design.css" />
 </head>
 <body>
@@ -38,17 +40,50 @@
   <header class="top">
     <div class="wrap top-inner">
       <a class="logo" href="/" aria-label="Stepwise home"><span class="logo-mark" aria-hidden="true"><i></i><i></i><i></i></span>Stepwise</a>
-      <nav id="nav" class="nav" aria-label="Tools"></nav>
-      <button id="theme" class="icon-btn" type="button" aria-label="Toggle dark mode">◐</button>
+      <nav id="nav" class="nav" aria-label="Main"></nav>
+      <div class="top-tools">
+        <button id="search-btn" class="search-btn" type="button" data-palette aria-label="Search Stepwise" aria-keyshortcuts="Control+K Meta+K">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="M20 20l-4-4" /></svg>
+          <span class="search-label">Search</span><kbd data-kbd>Ctrl K</kbd>
+        </button>
+        <div class="theme-menu">
+          <button id="theme" class="icon-btn" type="button" aria-label="Theme and accent colour" aria-haspopup="true" aria-expanded="false" aria-controls="theme-pop">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8" /><path d="M12 4a8 8 0 0 1 0 16z" class="fill" /></svg>
+          </button>
+        </div>
+        <button id="menu-btn" class="icon-btn menu-btn" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="nav">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" /></svg>
+        </button>
+      </div>
     </div>
   </header>
   <main id="app" class="wrap" tabindex="-1">
     <!--static-->
     <noscript><p class="notice info">Stepwise's visualisers need JavaScript. Please enable it to use the interactive tools.</p></noscript>
   </main>
-  <footer class="foot wrap">
-    <span>Built by <a href="https://jashparmar.com">Jash Parmar</a> · <a href="https://github.com/jash2884/stepwise">Source</a> · <a href="https://github.com/jash2884/stepwise/issues/new">Report a problem</a></span>
-    <span class="muted">Free, no sign-up, works on your phone and offline.</span>
+  <footer class="foot">
+    <div class="wrap foot-grid">
+      <div class="foot-brand">
+        <a class="logo" href="/" aria-label="Stepwise home"><span class="logo-mark" aria-hidden="true"><i></i><i></i><i></i></span>Stepwise</a>
+        <p class="muted">See every step of the algorithms in your syllabus, then test yourself. Free, no sign-up, works on your phone and offline.</p>
+        <button class="btn ghost small" type="button" data-palette>Search everything <kbd data-kbd>Ctrl K</kbd></button>
+      </div>
+      <nav class="foot-col" aria-label="Subjects"><h2>Subjects</h2><ul id="foot-subjects"></ul></nav>
+      <nav class="foot-col" aria-label="Roadmaps"><h2>Roadmaps</h2><ul id="foot-roadmaps"><li><a href="/roadmap/gate-cs">GATE CS</a></li><li><a href="/roadmaps">All roadmaps</a></li></ul></nav>
+      <nav class="foot-col" aria-label="Practice"><h2>Practice</h2><ul>
+        <li><a href="/gate">GATE practice</a></li><li><a href="/mock">Mock test</a></li><li><a href="/diagnostic">Diagnostic</a></li>
+        <li><a href="/review">Review</a></li><li><a href="/mistakes">Mistakes</a></li><li><a href="/plan">Study plan</a></li><li><a href="/progress">Progress</a></li>
+      </ul></nav>
+      <nav class="foot-col" aria-label="About"><h2>About</h2><ul>
+        <li><a href="https://github.com/jash2884/stepwise">Source code</a></li>
+        <li><a href="https://github.com/jash2884/stepwise/issues/new">Report a problem</a></li>
+        <li><a href="https://jashparmar.com">Jash Parmar</a></li>
+      </ul></nav>
+    </div>
+    <div class="wrap foot-base">
+      <span>Built by <a href="https://jashparmar.com">Jash Parmar</a> · <a href="https://github.com/jash2884/stepwise">Source</a> · <a href="https://github.com/jash2884/stepwise/issues/new">Report a problem</a></span>
+      <span class="muted">Free, no sign-up, works on your phone and offline.</span>
+    </div>
   </footer>
   <script type="module" src="/js/app.js"></script>
 </body>

@@ -1,5 +1,7 @@
 import { SUBJECTS, TOOLS } from "../tools.js";
-import { h } from "../ui.js";
+import { ROADMAPS, hoursOf } from "../roadmaps.js";
+import { GATE_SLUGS } from "../gate-link.js";
+import { h, reducedMotion } from "../ui.js";
 
 // Little previews drawn with CSS so the home page stays light.
 function art(kind) {
@@ -91,63 +93,288 @@ function art(kind) {
   }
 }
 
-const card = (t) => h("a", { class: "tool-card", href: `/${t.slug}`, "data-search": `${t.title} ${t.summary} ${t.description}`.toLowerCase() },
-  t.preview ? t.preview(h) : art(t.art),
-  h("h3", null, t.title),
-  h("p", null, t.summary),
-  h("span", { class: "tag" }, "Visualise + practice"));
+
+// --- Hero demo: a real bubble sort, stepping beside its pseudocode -------------------
+
+const CODE = ["for i ← 0 to n − 2", "  for j ← 0 to n − i − 2", "    if a[j] > a[j + 1]", "      swap(a[j], a[j + 1])", "  if no swaps: stop"];
+
+export function bubbleFrames(values) {
+  const a = values.map((v, k) => ({ v, k })), n = a.length, frames = [];
+  let cmp = 0, sw = 0;
+  const snap = (line, note, x = {}) => frames.push({ order: a.map((e) => e.k), line, note, cmp, sw, sortedFrom: n, i: null, j: null, pair: [], ...x });
+  snap(0, "Walk the array and swap neighbours that are out of order.");
+  for (let i = 0; i < n - 1; i++) {
+    let swapped = false;
+    for (let j = 0; j < n - 1 - i; j++) {
+      cmp++;
+      const out = a[j].v > a[j + 1].v, pair = [a[j].k, a[j + 1].k];
+      snap(2, `Compare ${a[j].v} and ${a[j + 1].v}: ${out ? "out of order" : "already in order"}.`, { i, j, pair, sortedFrom: n - i });
+      if (out) {
+        [a[j], a[j + 1]] = [a[j + 1], a[j]];
+        sw++; swapped = true;
+        snap(3, `Swap them, so ${a[j + 1].v} moves right.`, { i, j, pair, swap: true, sortedFrom: n - i });
+      }
+    }
+    if (!swapped) { snap(4, "A pass with no swaps, so the array is sorted.", { i, sortedFrom: 0 }); return frames; }
+    snap(0, `Pass ${i + 1} done: ${a[n - 1 - i].v} is in its final place.`, { i, sortedFrom: n - 1 - i });
+  }
+  snap(0, "Sorted.", { sortedFrom: 0 });
+  return frames;
+}
+
+function demo() {
+  const N = 7;
+  const shuffle = () => { const pool = [1, 2, 3, 4, 5, 6, 7, 8, 9]; for (let k = pool.length - 1; k > 0; k--) { const r = Math.floor(Math.random() * (k + 1)); [pool[k], pool[r]] = [pool[r], pool[k]]; } return pool.slice(0, N); };
+  let values = [5, 2, 8, 3, 9, 1, 6], frames = bubbleFrames(values), at = 0, timer = null, userPaused = false;
+
+  const bars = h("div", { class: "demo-bars", "aria-hidden": "true" });
+  const code = h("ol", { class: "demo-code", "aria-label": "Pseudocode" }, CODE.map((c) => h("li", null, c)));
+  const vars = h("dl", { class: "demo-vars" });
+  const note = h("p", { class: "demo-note" });
+  const count = h("span", { class: "demo-count" });
+  const progress = h("i");
+  const playBtn = h("button", { type: "button", class: "demo-ctl play", "aria-label": "Pause", onclick: () => (timer ? stop(true) : start()) });
+  const ctl = (label, glyph, fn) => h("button", { type: "button", class: "demo-ctl", "aria-label": label, title: label, onclick: () => { stop(true); fn(); } }, glyph);
+
+  const load = (vals) => {
+    values = vals; frames = bubbleFrames(values); at = 0;
+    bars.replaceChildren(...values.map((v, k) => h("span", { class: "demo-bar", "data-k": k, style: `--v:${v}` }, h("b", null, v))));
+    draw();
+  };
+  function draw() {
+    const f = frames[at];
+    f.order.forEach((k, pos) => {
+      const el = bars.children[k];
+      el.style.setProperty("--x", pos);
+      el.classList.toggle("cmp", f.pair.includes(k) && !f.swap);
+      el.classList.toggle("swap", f.pair.includes(k) && !!f.swap);
+      el.classList.toggle("done", pos >= f.sortedFrom);
+    });
+    [...code.children].forEach((li, n) => li.classList.toggle("on", n === f.line));
+    const v = (k, val) => [h("dt", null, k), h("dd", null, val)];
+    vars.replaceChildren(...v("i", f.i ?? "·"), ...v("j", f.j ?? "·"), ...v("comparisons", f.cmp), ...v("swaps", f.sw));
+    note.textContent = f.note;
+    count.textContent = `Step ${at + 1} of ${frames.length}`;
+    progress.style.width = `${((at + 1) / frames.length) * 100}%`;
+  }
+  const go = (n) => { at = Math.max(0, Math.min(frames.length - 1, n)); draw(); };
+  function tick() {
+    if (at < frames.length - 1) go(at + 1);
+    else load(shuffle());
+  }
+  function start() {
+    userPaused = false;
+    clearInterval(timer);
+    timer = setInterval(tick, 950);
+    playBtn.textContent = "❚❚"; playBtn.setAttribute("aria-label", "Pause");
+  }
+  function stop(byUser) {
+    if (byUser) userPaused = true;
+    clearInterval(timer); timer = null;
+    playBtn.textContent = "▶"; playBtn.setAttribute("aria-label", "Play");
+  }
+
+  const el = h("section", { class: "demo", "aria-label": "Live demo: bubble sort, step by step" },
+    h("div", { class: "demo-top" },
+      h("span", { class: "demo-dots", "aria-hidden": "true" }, h("i"), h("i"), h("i")),
+      h("span", { class: "demo-title" }, "Bubble sort ", h("span", { class: "muted" }, "· live")),
+      h("a", { class: "demo-open", href: "/sorting" }, "Open the full tool →")),
+    h("div", { class: "demo-body" },
+      h("div", { class: "demo-stage" }, bars, note),
+      h("div", { class: "demo-side" }, code, vars)),
+    h("div", { class: "demo-controls" },
+      ctl("Previous step", "◀", () => go(at - 1)), playBtn, ctl("Next step", "▶▶", () => go(at + 1)),
+      ctl("New numbers", "↻", () => load(shuffle())),
+      h("span", { class: "demo-progress", "aria-hidden": "true" }, progress), count));
+  load(values);
+  stop(false);
+
+  // Play only while it's on screen, and never on its own for reduced motion.
+  const auto = !reducedMotion();
+  const io = "IntersectionObserver" in window ? new IntersectionObserver(([e]) => {
+    if (e.isIntersecting && auto && !userPaused && !timer) start();
+    else if (!e.isIntersecting && timer) stop(false);
+  }) : null;
+  io?.observe(el);
+  if (!io && auto) start();
+  return { el, dispose: () => { stop(false); io?.disconnect(); } };
+}
+
+// --- Catalogue ----------------------------------------------------------------------------
+
+const KINDS = [["all", "Everything"], ["tool", "Visualisers"], ["practice", "Practice"], ["roadmap", "Roadmaps"]];
+const words = (q) => q.toLowerCase().split(/\s+/).filter(Boolean);
+const stageColour = (i) => `var(--series-${(i % 8) + 1})`;
+
+const badges = (t) => {
+  const list = [t.new ? h("span", { class: "badge-new" }, "New") : null, GATE_SLUGS.has(t.slug) ? h("span", { class: "badge-gate" }, "GATE") : null].filter(Boolean);
+  return list.length ? h("span", { class: "badges" }, list) : null;
+};
+
+const toolCard = (t) => h("a", { class: "tool-card", href: `/${t.slug}` },
+  h("div", { class: "art-wrap" }, t.preview ? t.preview(h) : art(t.art), badges(t)),
+  h("h4", null, t.title),
+  h("p", null, t.summary));
+
+const practiceCard = (p) => h("a", { class: "tool-card practice-card", href: `/gate?topic=${p.slug}` },
+  h("span", { class: "practice-mark", "aria-hidden": "true" }, "Q"),
+  h("h4", null, `GATE questions: ${p.title}`),
+  h("p", null, "MCQ, MSQ and NAT questions made fresh each time, marked the GATE way, with worked solutions."),
+  h("span", { class: "badges static" }, h("span", { class: "badge-gate" }, "Practice")));
+
+function roadmapCard(r, heading = "h3") {
+  const modules = r.stages.flatMap((s) => s.modules);
+  return h("a", { class: "rm-mini", href: `/roadmap/${r.id}` },
+    h("span", { class: "rm-mini-bar", "aria-hidden": "true" }, r.stages.map((s, i) => h("i", { style: `flex:${s.modules.length};background:${stageColour(i)}` }))),
+    h(heading, null, r.title),
+    h("p", null, r.summary),
+    h("span", { class: "rm-mini-facts" }, `${r.stages.length} stages · ${modules.length} topics · about ${hoursOf(modules)} h`));
+}
+
+function catalogue(initialSubject) {
+  const tools = new Map(TOOLS.map((t) => [t.slug, t]));
+  const practiceInfo = new Map();
+  for (const r of ROADMAPS) for (const s of r.stages) for (const m of s.modules) for (const g of m.gate ?? []) if (!practiceInfo.has(g)) practiceInfo.set(g, { slug: g, title: tools.get(g)?.title ?? m.title, subject: tools.get(g)?.subject ?? s.subject });
+  const subjects = SUBJECTS.map((s) => ({ ...s, n: TOOLS.filter((t) => t.subject === s.id).length }));
+
+  const items = [
+    ...TOOLS.map((t) => ({ kind: "tool", subjects: [t.subject], text: `${t.title} ${t.summary} ${t.description} ${t.slug}`.toLowerCase(), el: toolCard(t) })),
+    ...[...practiceInfo.values()].map((p) => ({ kind: "practice", subjects: [p.subject], text: `gate practice questions ${p.title} ${p.slug}`.toLowerCase(), el: practiceCard(p) })),
+    ...ROADMAPS.map((r) => ({ kind: "roadmap", subjects: [...new Set(r.stages.map((s) => s.subject))], text: `roadmap ${r.title} ${r.summary} ${r.stages.map((s) => s.title).join(" ")}`.toLowerCase(), el: roadmapCard(r, "h4") })),
+  ];
+  const state = { kind: "all", subject: subjects.some((s) => s.id === initialSubject) ? initialSubject : "all", q: [] };
+  const fits = (it, { kind = state.kind, subject = state.subject } = {}) =>
+    (kind === "all" || it.kind === kind) && (subject === "all" || it.subjects.includes(subject)) && state.q.every((w) => it.text.includes(w));
+
+  const groups = [
+    ...subjects.map((s) => ({ id: s.id, title: s.name, list: items.filter((it) => it.kind !== "roadmap" && it.subjects[0] === s.id) })),
+    { id: "roadmaps", title: "Roadmaps", list: items.filter((it) => it.kind === "roadmap") },
+  ];
+  // Practice for a subject with no tools of its own yet still needs a home.
+  const placed = new Set(groups.flatMap((g) => g.list));
+  groups.push({ id: "more", title: "More practice", list: items.filter((it) => !placed.has(it)) });
+  const sections = groups.filter((g) => g.list.length).map((g) => {
+    const n = h("span", { class: "count" });
+    const el = h("section", { class: "subject", "data-subject": g.id },
+      h("h3", { class: "subject-title" }, g.title, n),
+      h("div", { class: g.id === "roadmaps" ? "tool-grid rm-grid" : "tool-grid" }, g.list.map((it) => it.el)));
+    return { ...g, el, n };
+  });
+
+  const pill = (group, id, label) => h("button", { type: "button", class: "pill", "data-group": group, "data-id": id, "aria-pressed": "false", onclick: () => { state[group] = id; apply(true); } },
+    label, h("span", { class: "pill-n" }));
+  const kindPills = h("div", { class: "pills", role: "group", "aria-label": "Filter by kind" }, KINDS.map(([id, label]) => pill("kind", id, label)));
+  const subjectPills = h("div", { class: "pills scroll", role: "group", "aria-label": "Filter by subject" },
+    pill("subject", "all", "All subjects"), subjects.map((s) => pill("subject", s.id, s.short)));
+  const search = h("input", {
+    type: "search", class: "tool-search", placeholder: `Search ${TOOLS.length} tools: LRU, B+ tree, subnetting, LALR…`, "aria-label": "Search the catalogue",
+    oninput: (e) => { state.q = words(e.target.value); apply(false); },
+  });
+  const status = h("p", { class: "cat-status muted small", "aria-live": "polite" });
+  const empty = h("div", { class: "cat-empty", hidden: true },
+    h("p", null, "Nothing here matches that yet."),
+    h("button", { type: "button", class: "btn ghost small", onclick: () => { state.kind = "all"; state.subject = "all"; state.q = []; search.value = ""; apply(true); } }, "Clear filters"));
+
+  function apply(fromPill) {
+    let shown = 0;
+    for (const it of items) { it.el.hidden = !fits(it); if (!it.el.hidden) shown++; }
+    for (const s of sections) {
+      const n = s.list.filter((it) => !it.el.hidden).length;
+      s.el.hidden = n === 0;
+      s.n.textContent = ` ${n}`;
+    }
+    for (const b of [...kindPills.children, ...subjectPills.children]) {
+      const g = b.dataset.group, id = b.dataset.id;
+      const n = items.filter((it) => fits(it, { [g]: id })).length;
+      b.setAttribute("aria-pressed", String(state[g] === id));
+      b.classList.toggle("zero", n === 0 && state[g] !== id);
+      b.querySelector(".pill-n").textContent = n;
+    }
+    empty.hidden = shown > 0;
+    status.textContent = `${shown} ${shown === 1 ? "result" : "results"}`;
+    if (fromPill) {
+      const p = new URLSearchParams(location.search);
+      if (state.subject === "all") p.delete("subject"); else p.set("subject", state.subject);
+      if (state.kind === "all") p.delete("kind"); else p.set("kind", state.kind);
+      const q = p.toString();
+      history.replaceState(null, "", `/${q ? `?${q}` : ""}${location.hash}`);
+    }
+  }
+  const kindParam = new URLSearchParams(location.search).get("kind");
+  if (KINDS.some(([id]) => id === kindParam)) state.kind = kindParam;
+  apply(false);
+
+  return h("section", { class: "catalogue", id: "catalogue", "aria-labelledby": "cat-title" },
+    h("div", { class: "section-head" },
+      h("div", null, h("p", { class: "eyebrow" }, "Catalogue"), h("h2", { id: "cat-title" }, "Everything in one place")),
+      status),
+    h("div", { class: "cat-controls" }, search, kindPills, subjectPills),
+    empty,
+    sections.map((s) => s.el));
+}
+
+// --- The page ----------------------------------------------------------------------------
+
+const LEARN = [
+  ["/mock", "Mock test", "A timed paper in the GATE format.", "M"],
+  ["/diagnostic", "Diagnostic", "A short test that finds where to start.", "D"],
+  ["/plan", "Study plan", "Week by week, built from a roadmap.", "P"],
+  ["/review", "Review", "Bring back topics just before you forget them.", "R"],
+  ["/mistakes", "Mistakes", "Every question you missed, ready to retry.", "X"],
+  ["/progress", "Progress", "What you've covered, subject by subject.", "%"],
+];
 
 export function render(root) {
-  const sections = SUBJECTS.map((s) => h("section", { class: "subject", "data-subject": s.id },
-    h("h2", null, s.name, h("span", { class: "count" }, ` · ${TOOLS.filter((t) => t.subject === s.id).length} tools`)),
-    h("div", { class: "tool-grid" }, TOOLS.filter((t) => t.subject === s.id).map(card))));
-  const empty = h("p", { class: "muted", hidden: true }, "No tool matches that yet. Try “deadlock”, “join”, “subnet”, “DFA” or “parsing”.");
-  const search = h("input", {
-    type: "search", class: "tool-search", placeholder: `Search ${TOOLS.length} tools: LRU, B+ tree, subnetting, LALR…`, "aria-label": "Search tools",
-    oninput: (e) => {
-      const q = e.target.value.trim().toLowerCase();
-      let shown = 0;
-      for (const c of root.querySelectorAll(".tool-card")) { const hit = !q || c.dataset.search.includes(q); c.hidden = !hit; if (hit) shown++; }
-      for (const s of sections) s.hidden = ![...s.querySelectorAll(".tool-card")].some((c) => !c.hidden);
-      empty.hidden = shown > 0;
-    },
-  });
-  const stage = h("div", { class: "hero-3d", "aria-hidden": "true" });
-  const facts = h("ul", { class: "hero-facts" },
-    h("li", null, h("b", null, TOOLS.length), " visualisers"),
-    h("li", null, h("b", null, SUBJECTS.length), " subjects"),
-    h("li", null, h("b", null, "Pseudocode"), " + live variables"),
-    h("li", null, h("b", null, "AI tutor"), " on every step"));
-  root.replaceChildren(
-    h("div", { class: "hero-wrap" }, h("section", { class: "hero" },
-      h("p", { class: "eyebrow" }, `${TOOLS.length} CS visualisers: DSA, OS, DBMS, networks, theory, compilers`),
-      h("h1", null, "See every step."),
-      h("p", { class: "lede" }, "The algorithms in your data structures, operating systems, databases, networks, theory of computation and compiler design exams, animated one step at a time beside the pseudocode, with the line being run highlighted, the variables live and the reasoning written out. Then practise on fresh questions that check every answer."),
-      search, facts), stage),
-    h("a", { class: "card gate-link gate-home", href: "/gate" },
-      h("div", null,
-        h("h2", null, "New: GATE CS practice"),
-        h("p", { class: "muted small" }, "Endless MCQ, MSQ and NAT questions on OS and DBMS, marked the GATE way, each with a worked solution you can replay step by step.")),
-      h("span", { class: "btn primary" }, "Start practising →")),
-    h("a", { class: "card gate-link gate-home rm-home", href: "/roadmap/gate-cs" },
-      h("div", null,
-        h("h2", null, "New: the GATE CS roadmap"),
-        h("p", { class: "muted small" }, "Every GATE CS subject in order, each topic linked to its visualiser, practice questions and reading, so you always know what to study next.")),
-      h("span", { class: "btn primary" }, "See the roadmap →")),
-    empty,
-    ...sections,
-    h("section", { class: "why" },
-      h("div", null, h("h3", null, "Built for exams"), h("p", null, "Every tool states the conventions it uses (tie-breaking, split rules, what counts as head movement) so your answers match what your examiner expects.")),
-      h("div", null, h("h3", null, "Practice that checks you"), h("p", null, "Fresh questions every time, with each answer marked and the full working one click away.")),
-      h("div", null, h("h3", null, "Share any example"), h("p", null, "Every input is in the link, so you can send a classmate the exact question you're stuck on."))));
-  let disposeHero = null, gone = false;
-  const start = () => import("../hero3d.js").then(async ({ mountHero }) => {
-    const { webglAvailable } = await import("../three-kit.js");
-    if (gone || !webglAvailable()) { stage.hidden = !webglAvailable(); return; }
-    disposeHero = await mountHero(stage);
-    if (gone) disposeHero();
-  }).catch(() => { stage.hidden = true; });
-  (window.requestIdleCallback ?? ((f) => setTimeout(f, 200)))(start);
-  return () => { gone = true; disposeHero?.(); };
+  const isMac = /Mac|iPhone|iPad/.test(navigator.platform);
+  const subjectsLive = SUBJECTS.filter((s) => TOOLS.some((t) => t.subject === s.id));
+  const live = demo();
+  const kbd = () => h("kbd", null, isMac ? "⌘K" : "Ctrl K");
 
+  const hero = h("section", { class: "home-hero" },
+    h("div", { class: "hero-copy" },
+      h("p", { class: "eyebrow" }, `Free · ${TOOLS.length} interactive tools · ${subjectsLive.length} subjects`),
+      h("h1", null, "See every step."),
+      h("p", { class: "lede" }, "Step through the algorithms in your syllabus beside the pseudocode, then test yourself on questions that check every answer."),
+      h("div", { class: "hero-cta" },
+        h("a", { class: "btn primary", href: "#catalogue" }, "Browse every tool"),
+        h("a", { class: "btn ghost", href: "/roadmaps" }, "Follow a roadmap")),
+      h("button", { type: "button", class: "palette-hint", "data-palette": "" }, "Press ", kbd(), " to jump to any tool, topic or roadmap")),
+    live.el);
+
+  const roadmaps = h("section", { class: "home-band", "aria-labelledby": "rm-title" },
+    h("div", { class: "section-head" },
+      h("div", null, h("p", { class: "eyebrow" }, "Roadmaps"), h("h2", { id: "rm-title" }, "Know what to study next")),
+      h("a", { class: "link-more", href: "/roadmaps" }, "All roadmaps →")),
+    h("div", { class: "rm-strip" }, ROADMAPS.map((r) => roadmapCard(r))));
+
+  const learn = h("section", { class: "home-band", "aria-labelledby": "learn-title" },
+    h("div", { class: "section-head" },
+      h("div", null, h("p", { class: "eyebrow" }, "Practise and track"), h("h2", { id: "learn-title" }, "Test yourself, then fix the gaps"))),
+    h("div", { class: "bento" },
+      h("a", { class: "bento-main", href: "/gate" },
+        h("p", { class: "eyebrow" }, "GATE CS practice"),
+        h("h3", null, "Endless GATE-style questions"),
+        h("p", null, `MCQ, MSQ and NAT questions on ${GATE_SLUGS.size} topics, made by the same engines as the visualisers, marked the GATE way, each with a worked solution you can replay step by step.`),
+        h("span", { class: "btn primary" }, "Start practising →")),
+      LEARN.map(([href, title, text, mark]) => h("a", { class: "bento-item", href },
+        h("span", { class: "bento-mark", "aria-hidden": "true" }, mark),
+        h("span", null, h("b", null, title), h("span", { class: "muted small" }, text))))));
+
+  const how = h("section", { class: "home-band how", "aria-labelledby": "how-title" },
+    h("div", { class: "section-head" }, h("div", null, h("p", { class: "eyebrow" }, "How it works"), h("h2", { id: "how-title" }, "Three steps per topic"))),
+    h("ol", { class: "steps" }, [
+      ["See it", "Watch the algorithm run one step at a time, with the line of pseudocode, the live variables and the reason for each move."],
+      ["Try it", "Change the input and run it again. Every example lives in the link, so you can share the exact case you're stuck on."],
+      ["Test yourself", "Answer fresh questions that are marked as you go, with the full working one click away."],
+    ].map(([t, p], i, all) => h("li", null, h("span", { class: "step-n" }, `0${i + 1} / 0${all.length}`), h("h3", null, t), h("p", null, p)))));
+
+  const stats = h("section", { class: "stats-strip", "aria-label": "Stepwise in numbers" },
+    [[TOOLS.length, "interactive tools"], [subjectsLive.length, "subjects"], [ROADMAPS.length, ROADMAPS.length === 1 ? "roadmap" : "roadmaps"], [GATE_SLUGS.size, "GATE practice topics"]]
+      .map(([n, label]) => h("div", null, h("b", null, n), h("span", null, label))));
+
+  const cont = h("section", { id: "home-continue", hidden: true });
+  root.replaceChildren(hero, cont, roadmaps, catalogue(new URLSearchParams(location.search).get("subject")), learn, how, stats);
+  import("../learn/continue.js").then((m) => m.mountContinue(document.getElementById("home-continue"))).catch(() => {});
+  if (location.hash === "#catalogue") requestAnimationFrame(() => document.getElementById("catalogue")?.scrollIntoView());
+  return () => live.dispose();
 }
