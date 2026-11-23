@@ -111,7 +111,25 @@ function failure(title, text, retry) {
       h("a", { class: "btn ghost", href: "/" }, "Go to the home page")));
 }
 
+// Loader: a slim bar for slow page changes, and the first-load screen is
+// dismissed once the first page has rendered (see css/loader.css).
+const routeBar = document.getElementById("routebar");
+let barTimer = 0;
 async function route() {
+  clearTimeout(barTimer);
+  routeBar?.classList.remove("done");
+  const slow = setTimeout(() => routeBar?.classList.add("on"), 120);
+  try { await renderRoute(); } finally {
+    clearTimeout(slow);
+    if (routeBar?.classList.contains("on")) {
+      routeBar.classList.add("done");
+      barTimer = setTimeout(() => routeBar.classList.remove("on", "done"), 450);
+    }
+    document.documentElement.classList.add("booted");
+  }
+}
+
+async function renderRoute() {
   // Old links looked like /#/cpu?algo=rr: move them to /cpu-scheduling?algo=rr.
   if (location.hash.startsWith("#/")) {
     const [path, query] = location.hash.slice(2).split("?");
