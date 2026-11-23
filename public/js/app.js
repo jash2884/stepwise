@@ -121,6 +121,8 @@ async function route() {
   const tool = bySlug.get(slug);
   const id = ++renderId;
   rendered = location.pathname + location.search;
+  // Tools rewrite the URL as they render (dropping any #anchor), so note it now.
+  const anchor = decodeURIComponent(location.hash.slice(1));
   cleanup?.();
   cleanup = null;
   closeMenus();
@@ -175,6 +177,8 @@ async function route() {
       const [gateSlot, roadSlot, elseSlot] = [0, 1, 2].map(() => h("div", { class: "card-slot" }));
       main.replaceChildren(host, gateSlot, roadSlot, elseSlot);
       cleanup = view.render(host) ?? null;
+      // A link like /sliding-window?...#calc opens on that part of the tool.
+      if (anchor) document.getElementById(anchor)?.scrollIntoView();
       import("./learn/store.js").then((s) => s.update((st) => s.recordVisit(st, tool.slug))).catch(() => {});
       import("./tutor.js").then(({ mountTutor }) => { if (id === renderId) mountTutor(tool); }).catch(() => {});
       const fill = (slot, card) => { if (card && id === renderId) slot.replaceChildren(card); };
@@ -191,7 +195,7 @@ async function route() {
       offline ? "This tool hasn't been saved for offline use yet. Reconnect and try again." : "This page didn't load properly. Reloading usually fixes it; if not, please report it on GitHub.",
       () => location.reload()));
   }
-  if (!location.hash) window.scrollTo(0, 0);
+  if (!anchor) window.scrollTo(0, 0);
   main.querySelector("h1")?.setAttribute("tabindex", "-1");
   if (document.activeElement && document.activeElement !== document.body && !main.contains(document.activeElement)) main.querySelector("h1")?.focus({ preventScroll: true });
 }

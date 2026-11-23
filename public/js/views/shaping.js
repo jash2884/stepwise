@@ -112,7 +112,9 @@ export function render(root) {
   }
 
   function burstCard() {
-    const ins = { C: h("input", { type: "number", value: 250, min: 0.001, step: "any", "aria-label": "Bucket capacity in KB" }), rho: h("input", { type: "number", value: 2, min: 0.001, step: "any", "aria-label": "Token rate in MB/s" }), M: h("input", { type: "number", value: 25, min: 0.001, step: "any", "aria-label": "Maximum output rate in MB/s" }) };
+    // A GATE replay can open the calculator on its own numbers: ?bc=&brho=&bm=
+    const q = (k, d) => (p.get(k) !== null && Number.isFinite(Number(p.get(k))) ? Number(p.get(k)) : d);
+    const ins = { C: h("input", { type: "number", value: q("bc", 250), min: 0.001, step: "any", "aria-label": "Bucket capacity in KB" }), rho: h("input", { type: "number", value: q("brho", 2), min: 0.001, step: "any", "aria-label": "Token rate in MB/s" }), M: h("input", { type: "number", value: q("bm", 25), min: 0.001, step: "any", "aria-label": "Maximum output rate in MB/s" }) };
     const res = h("div");
     const calc = () => {
       try {
@@ -124,7 +126,7 @@ export function render(root) {
     };
     Object.values(ins).forEach((el) => el.addEventListener("input", calc));
     calc();
-    return h("section", { class: "card" }, h("h2", null, "Maximum burst: S = C / (M − ρ)"),
+    return h("section", { class: "card", id: "calc" }, h("h2", null, "Maximum burst: S = C / (M − ρ)"),
       h("div", { class: "row" }, h("label", { class: "inline" }, "C (KB) ", ins.C), h("label", { class: "inline" }, "ρ (MB/s) ", ins.rho), h("label", { class: "inline" }, "M (MB/s) ", ins.M)), res);
   }
 

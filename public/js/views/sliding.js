@@ -129,7 +129,9 @@ export function render(root) {
   }
 
   function efficiencyCard() {
-    const ins = { bw: h("input", { type: "number", value: 1, min: 0.001, step: "any", "aria-label": "Bandwidth in Mbps" }), size: h("input", { type: "number", value: 1000, min: 1, "aria-label": "Frame size in bits" }), tp: h("input", { type: "number", value: 5, min: 0.001, step: "any", "aria-label": "Propagation delay in ms" }), w: h("input", { type: "number", value: 7, min: 1, max: 1000, "aria-label": "Window" }) };
+    // A GATE replay can open the calculator on its own numbers: ?ebw=&esize=&etp=&ew=
+    const q = (k, d) => (p.get(k) !== null && Number.isFinite(Number(p.get(k))) ? Number(p.get(k)) : d);
+    const ins = { bw: h("input", { type: "number", value: q("ebw", 1), min: 0.001, step: "any", "aria-label": "Bandwidth in Mbps" }), size: h("input", { type: "number", value: q("esize", 1000), min: 1, "aria-label": "Frame size in bits" }), tp: h("input", { type: "number", value: q("etp", 5), min: 0.001, step: "any", "aria-label": "Propagation delay in ms" }), w: h("input", { type: "number", value: q("ew", 7), min: 1, max: 1000, "aria-label": "Window" }) };
     const res = h("div");
     const calc = () => {
       try {
@@ -148,7 +150,7 @@ export function render(root) {
     };
     Object.values(ins).forEach((el) => el.addEventListener("input", calc));
     calc();
-    return h("section", { class: "card" }, h("h2", null, "Efficiency calculator"),
+    return h("section", { class: "card", id: "calc" }, h("h2", null, "Efficiency calculator"),
       h("div", { class: "row" }, h("label", { class: "inline" }, "Bandwidth (Mbps) ", ins.bw), h("label", { class: "inline" }, "Frame (bits) ", ins.size), h("label", { class: "inline" }, "Propagation (ms) ", ins.tp), h("label", { class: "inline" }, "Window ", ins.w)), res);
   }
 

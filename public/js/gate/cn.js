@@ -6,11 +6,11 @@ import { analyse, vlsm, dotted, toInt, maskOf, randomAddress } from "../engines/
 import { lookup, randomTable, summarise, show as showPrefix } from "../engines/cidr.js";
 import { fragment } from "../engines/fragment.js";
 import { crc, divide, hammingEncode, hammingCheck, randomBits, GENERATORS } from "../engines/errors.js";
-import { simulate as slide, PROTOCOLS } from "../engines/sliding.js";
+import { simulate as slide, PROTOCOLS, efficiency, minSeqBits } from "../engines/sliding.js";
 import { parseNetwork, dijkstra, distanceVector, randomNetwork } from "../engines/routing.js";
 import { simulate as cwndSim, parseEvents, VARIANTS } from "../engines/congestion.js";
-import { leakyBucket, tokenBucket } from "../engines/shaping.js";
-import { throughput } from "../engines/mac.js";
+import { leakyBucket, tokenBucket, burst } from "../engines/shaping.js";
+import { throughput, minFrame } from "../engines/mac.js";
 import { dnsLookup, httpTiming, HTTP_MODES } from "../engines/dnshttp.js";
 
 const inf = (x) => (x === Infinity ? "∞" : String(x));
@@ -222,6 +222,37 @@ function errorDetection(r) {
 // --- Sliding window ---------------------------------------------------------------------
 
 function slidingWindow(r) {
+  const kind = pick(r, ["sim", "sim", "util", "bits"]);
+  if (kind === "util") {
+    const bwMbps = pick(r, [1, 2, 4, 10]), frameBits = pick(r, [1000, 2000, 4000, 8000]), tpMs = pick(r, [1, 2, 5, 10, 20]), W = int(r, 2, 15);
+    const e = efficiency({ bandwidth: bwMbps * 1e6, frameBits, propagation: tpMs / 1000, window: W });
+    const answer = round2(e.utilisation * 100);
+    if (answer >= 100) return null;
+    return {
+      topic: "sliding-window", type: "nat", marks: 2, answer, tolerance: 0.1,
+      stem: [`A ${bwMbps} Mbps link has a one-way propagation delay of ${tpMs} ms. The sender uses a sliding window of ${W} frames of ${frameBits} bits each. Ignore processing time, acknowledgement size and errors. What is the link utilisation, in percent? Give the answer to two decimal places.`],
+      solution: [
+        `Transmission time Tt = ${frameBits} / ${bwMbps * 1e6} s = ${show(round2(e.Tt * 1e3 * 1000) / 1000)} ms, so a = Tp / Tt = ${tpMs} / ${show(round2(e.Tt * 1e3 * 1000) / 1000)} = ${show(round2(e.a))}.`,
+        `Utilisation = W / (1 + 2a) = ${W} / (1 + 2 × ${show(round2(e.a))}) = ${show(answer)}% (it would be capped at 100% if the window covered a whole round trip).`,
+      ],
+      replay: `${query("/sliding-window", { ebw: bwMbps, esize: frameBits, etp: tpMs, ew: W })}#calc`,
+    };
+  }
+  if (kind === "bits") {
+    const protocol = pick(r, ["gbn", "sr"]), W = int(r, 3, 60);
+    const answer = minSeqBits(W, protocol);
+    return {
+      topic: "sliding-window", type: "nat", marks: 1, answer, tolerance: 0,
+      stem: [`A sender uses ${protocol === "gbn" ? "Go-Back-N" : "Selective Repeat"} with a sending window of ${W} frames${protocol === "sr" ? " (the receiver's window is the same size)" : " (the receiver accepts one frame at a time)"}. What is the minimum number of bits needed for the sequence number field?`],
+      solution: [
+        protocol === "gbn"
+          ? `Go-Back-N needs W ≤ 2ᵐ − 1, so 2ᵐ ≥ ${W + 1}.`
+          : `Selective Repeat needs sender + receiver windows ≤ 2ᵐ, so 2ᵐ ≥ 2 × ${W} = ${2 * W}.`,
+        `The smallest such m is ${answer}.`,
+      ],
+      replay: `${query("/sliding-window", { ebw: 1, esize: 1000, etp: 5, ew: W })}#calc`,
+    };
+  }
   {
     const protocol = pick(r, ["gbn", "gbn", "sr"]);
     const frames = int(r, 6, 10), window = int(r, 2, 4), k = pick(r, [3, 4, 5, 6]);
@@ -332,7 +363,21 @@ function tcpCongestion(r) {
 // --- Traffic shaping --------------------------------------------------------------------
 
 function trafficShaping(r) {
-  const variant = pick(r, ["leaky", "token"]);
+  const variant = pick(r, ["leaky", "token", "burst"]);
+  if (variant === "burst") {
+    const C = pick(r, [64, 100, 250, 500, 1000]), rho = pick(r, [1, 2, 4, 5]), M = pick(r, [10, 20, 25, 50]);
+    const b = burst({ C: C * 1e3, M: M * 1e6, rho: rho * 1e6 });
+    const answer = round2(b.S * 1000);
+    return {
+      topic: "traffic-shaping", type: "nat", marks: 2, answer, tolerance: 0.01,
+      stem: [`A host's output is controlled by a token bucket of capacity ${C} KB that fills at ${rho} MB/s, and the host can send at most ${M} MB/s. The bucket is full when a long burst of data arrives. For how long, in milliseconds, can the host send at the full ${M} MB/s? Take 1 KB = 10³ bytes and 1 MB = 10⁶ bytes, and give the answer to two decimal places.`],
+      solution: [
+        `During the burst the host spends the bucket's C bytes plus the tokens that arrive meanwhile: C + ρS = MS, so S = C / (M − ρ).`,
+        `S = ${C} KB / (${M} − ${rho}) MB/s = ${C * 1e3} / ${(M - rho) * 1e6} s = ${show(answer)} ms.`,
+      ],
+      replay: `${query("/traffic-shaping", { bc: C, brho: rho, bm: M })}#calc`,
+    };
+  }
   const ticks = int(r, 6, 9);
   const arrivals = Array.from({ length: ticks }, () => (r() < 0.45 ? 0 : int(r, 1, 8)));
   const capacity = int(r, 3, 7), rate = int(r, 1, 3);
@@ -375,6 +420,20 @@ function trafficShaping(r) {
 // --- MAC protocols ----------------------------------------------------------------------
 
 function macProtocols(r) {
+  if (r() < 0.4) {
+    const bwMbps = pick(r, [10, 100, 1000]), dist = pick(r, [200, 500, 1000, 2000, 2500]), v = pick(r, [2e8, 3e8]);
+    const f = minFrame({ bandwidth: bwMbps * 1e6, distance: dist, speed: v });
+    const answer = round2(f.bytes);
+    return {
+      topic: "mac-protocols", type: "nat", marks: 2, answer, tolerance: 0.01,
+      stem: [`A CSMA/CD network runs at ${bwMbps} Mbps over a cable of ${dist} m, with signals travelling at ${v / 1e8} × 10⁸ m/s. What is the minimum frame size, in bytes, so that a sender always detects a collision before it finishes sending? Ignore repeaters and the jam signal, and give the answer to two decimal places.`],
+      solution: [
+        `Propagation delay Tp = ${dist} / ${v} s = ${show(round2(f.tp * 1e6 * 100) / 100)} µs.`,
+        `The frame must last at least the round trip: L ≥ 2 × Tp × bandwidth = 2 × ${show(round2(f.tp * 1e6 * 100) / 100)} µs × ${bwMbps} Mbps = ${show(round2(f.bits))} bits = ${show(answer)} bytes.`,
+      ],
+      replay: `${query("/mac-protocols", { m: "csmacd", fbw: bwMbps, fd: dist, fv: v })}#calc`,
+    };
+  }
   {
     const mode = pick(r, ["pure", "slotted"]);
     const frameBits = pick(r, [200, 500, 1000, 2000]);

@@ -218,7 +218,9 @@ export function render(root) {
   }
 
   function minFrameCard() {
-    const ins = { bw: h("input", { type: "number", value: 10, min: 0.001, step: "any", "aria-label": "Bandwidth in Mbps" }), d: h("input", { type: "number", value: 2500, min: 1, step: "any", "aria-label": "Cable length in metres" }), v: h("input", { type: "number", value: 2e8, min: 1, step: "any", "aria-label": "Signal speed in metres per second" }) };
+    // A GATE replay can open the calculator on its own numbers: ?fbw=&fd=&fv=
+    const q = (k, d) => (p.get(k) !== null && Number.isFinite(Number(p.get(k))) ? Number(p.get(k)) : d);
+    const ins = { bw: h("input", { type: "number", value: q("fbw", 10), min: 0.001, step: "any", "aria-label": "Bandwidth in Mbps" }), d: h("input", { type: "number", value: q("fd", 2500), min: 1, step: "any", "aria-label": "Cable length in metres" }), v: h("input", { type: "number", value: q("fv", 2e8), min: 1, step: "any", "aria-label": "Signal speed in metres per second" }) };
     const res = h("div");
     const calc = () => {
       try {
@@ -229,7 +231,7 @@ export function render(root) {
     };
     Object.values(ins).forEach((el) => el.addEventListener("input", calc));
     calc();
-    return h("section", { class: "card" }, h("h2", null, "Minimum frame size"), h("div", { class: "row" }, h("label", { class: "inline" }, "Bandwidth (Mbps) ", ins.bw), h("label", { class: "inline" }, "Cable (m) ", ins.d), h("label", { class: "inline" }, "Signal speed (m/s) ", ins.v)), res);
+    return h("section", { class: "card", id: "calc" }, h("h2", null, "Minimum frame size"), h("div", { class: "row" }, h("label", { class: "inline" }, "Bandwidth (Mbps) ", ins.bw), h("label", { class: "inline" }, "Cable (m) ", ins.d), h("label", { class: "inline" }, "Signal speed (m/s) ", ins.v)), res);
   }
 
   const visual = h("div", { class: "panel-body" },
