@@ -9,6 +9,8 @@ import { cp, mkdir, readdir, readFile, rm, stat, writeFile } from "node:fs/promi
 import { join, relative } from "node:path";
 import { SITE, SUBJECTS, TOOLS } from "../public/js/tools.js";
 import { TOPICS as GATE_TOPICS } from "../public/js/gate-questions.js";
+import { ROADMAPS, hoursOf } from "../public/js/roadmaps.js";
+import { meta as roadmapMeta } from "../public/js/views/roadmap.js";
 
 const root = new URL("..", import.meta.url).pathname;
 const src = join(root, "public"), out = join(root, "dist");
@@ -91,6 +93,32 @@ await writeFile(join(out, "gate.html"), pageHtml({
   body: `<section class="static-content"><p class="eyebrow">GATE CS practice</p><h1>GATE-style questions, with every step shown</h1><p class="lede">Fresh MCQ, MSQ and NAT questions made by the same engines as the visualisers, marked the GATE way, with worked solutions.</p><ul>${GATE_TOPICS.map((t) => `<li><a href="/gate?topic=${t.slug}">${esc(t.title)}</a></li>`).join("")}</ul></section><script type="application/ld+json">${JSON.stringify(gateLd)}</script>`,
 }));
 
+// Roadmaps: an index, one page per roadmap and one per stage, all indexable.
+const roadmapPaths = ["roadmaps"];
+const toolTitle = (slug) => TOOLS.find((t) => t.slug === slug)?.title ?? slug;
+{
+  const m = roadmapMeta({ kind: "index" }, SITE.name);
+  await writeFile(join(out, "roadmaps.html"), pageHtml({ ...m, path: "/roadmaps",
+    body: `<section class="static-content"><p class="eyebrow">Roadmaps</p><h1>Know what to study next</h1><ul>${ROADMAPS.map((r) => `<li><a href="/roadmap/${r.id}">${esc(r.title)}</a>: ${esc(r.summary)}</li>`).join("")}</ul></section>` }));
+}
+for (const r of ROADMAPS) {
+  await mkdir(join(out, "roadmap", r.id), { recursive: true });
+  const m = roadmapMeta({ kind: "map", roadmap: r }, SITE.name);
+  const ld = { "@context": "https://schema.org", "@type": "Course", name: `${r.title} roadmap`, description: r.description, url: `${SITE.url}/roadmap/${r.id}`, isAccessibleForFree: true, inLanguage: "en", educationalLevel: "Undergraduate",
+    provider: { "@type": "Organization", name: SITE.name, url: SITE.url },
+    hasPart: r.stages.map((s) => ({ "@type": "Course", name: s.title, description: s.summary, url: `${SITE.url}/roadmap/${r.id}/${s.id}` })) };
+  await writeFile(join(out, "roadmap", `${r.id}.html`), pageHtml({ ...m, path: `/roadmap/${r.id}`,
+    body: `<section class="static-content"><p class="eyebrow">Roadmap</p><h1>${esc(r.title)} roadmap</h1><p class="lede">${esc(r.summary)}</p><ol>${r.stages.map((s) => `<li><a href="/roadmap/${r.id}/${s.id}">${esc(s.title)}</a>: ${esc(s.modules.map((x) => x.title).join(", "))}</li>`).join("")}</ol></section><script type="application/ld+json">${JSON.stringify(ld)}</script>` }));
+  roadmapPaths.push(`roadmap/${r.id}`);
+  for (const s of r.stages) {
+    const sm = roadmapMeta({ kind: "stage", roadmap: r, stage: s }, SITE.name);
+    const items = s.modules.map((x) => `<li><h2>${esc(x.title)}</h2><p>About ${x.hours} h.</p><ul>${x.outcomes.map((o) => `<li>${esc(o)}</li>`).join("")}</ul>${x.tools.length ? `<p>Visualisers: ${x.tools.map((t) => `<a href="/${t}">${esc(toolTitle(t))}</a>`).join(", ")}</p>` : ""}</li>`).join("");
+    await writeFile(join(out, "roadmap", r.id, `${s.id}.html`), pageHtml({ ...sm, path: `/roadmap/${r.id}/${s.id}`,
+      body: `<section class="static-content"><p class="eyebrow">${esc(r.title)} roadmap</p><h1>${esc(s.title)}</h1><p class="lede">${esc(s.summary)} ${s.modules.length} topics, about ${hoursOf(s.modules)} hours.</p><ol>${items}</ol></section>` }));
+    roadmapPaths.push(`roadmap/${r.id}/${s.id}`);
+  }
+}
+
 await writeFile(join(out, "404.html"), pageHtml({
   title: `Page not found · ${SITE.name}`,
   description: "This page doesn't exist.",
@@ -102,15 +130,15 @@ await writeFile(join(out, "404.html"), pageHtml({
 const today = new Date().toISOString().slice(0, 10);
 await writeFile(join(out, "sitemap.xml"), `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-${["", "gate", ...TOOLS.map((t) => t.slug)].map((s) => `  <url><loc>${SITE.url}/${s}</loc><lastmod>${today}</lastmod></url>`).join("\n")}
+${["", "gate", ...roadmapPaths, ...TOOLS.map((t) => t.slug)].map((s) => `  <url><loc>${SITE.url}/${s}</loc><lastmod>${today}</lastmod></url>`).join("\n")}
 </urlset>
 `);
 await writeFile(join(out, "robots.txt"), `User-agent: *\nAllow: /\nSitemap: ${SITE.url}/sitemap.xml\n`);
 
 // --- Service worker -----------------------------------------------------------------------
-const precache = ["/", "/gate", ...TOOLS.map((t) => `/${t.slug}`), ...all.filter((f) => /\.(js|css|svg|webmanifest)$/.test(f) && !f.includes("/test/") && !f.includes("/vendor/")).map((f) => `/${relative(out, f)}`)];
+const precache = ["/", "/gate", ...roadmapPaths.map((p) => `/${p}`), ...TOOLS.map((t) => `/${t.slug}`), ...all.filter((f) => /\.(js|css|svg|webmanifest)$/.test(f) && !f.includes("/test/") && !f.includes("/vendor/")).map((f) => `/${relative(out, f)}`)];
 const sw = (await readFile(join(src, "sw.js"), "utf8")).replace("__VERSION__", version).replace("__PRECACHE__", JSON.stringify(precache, null, 2));
 await writeFile(join(out, "sw.js"), sw);
 
 const size = (await Promise.all((await files(out)).map((f) => stat(f).then((s) => s.size)))).reduce((a, b) => a + b, 0);
-console.log(`Built ${TOOLS.length} tool pages, version ${version}, ${precache.length} files precached, ${(size / 1024).toFixed(0)} KB total.`);
+console.log(`Built ${TOOLS.length} tool pages, ${roadmapPaths.length} roadmap pages, version ${version}, ${precache.length} files precached, ${(size / 1024).toFixed(0)} KB total.`);

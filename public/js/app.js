@@ -12,6 +12,7 @@ const nav = document.getElementById("nav");
 nav.replaceChildren(...SUBJECTS.map((s) => h("details", { class: "menu" },
   h("summary", null, h("span", { class: "long" }, s.name), h("span", { class: "short" }, s.short)),
   h("ul", null, TOOLS.filter((t) => t.subject === s.id).map((t) => h("li", null, h("a", { href: `/${t.slug}`, "data-slug": t.slug }, t.title)))))),
+  h("a", { class: "nav-gate nav-road", href: "/roadmaps", "data-slug": "roadmaps" }, h("span", { class: "long" }, "Roadmaps"), h("span", { class: "short" }, "Path")),
   h("a", { class: "nav-gate", href: "/gate", "data-slug": "gate" }, h("span", { class: "long" }, "GATE practice"), h("span", { class: "short" }, "GATE")));
 const closeMenus = () => nav.querySelectorAll("details[open]").forEach((d) => d.removeAttribute("open"));
 document.addEventListener("click", (e) => { if (!e.target.closest(".menu")) closeMenus(); });
@@ -43,10 +44,12 @@ async function route() {
   const slug = location.pathname.replace(/^\/+|\/+$/g, "").replace(/\.html$/, "");
   const tool = bySlug.get(slug);
   const id = ++renderId;
+  rendered = location.pathname + location.search;
   cleanup?.();
   cleanup = null;
   closeMenus();
-  for (const a of nav.querySelectorAll("a")) a.setAttribute("aria-current", a.dataset.slug === slug ? "page" : "false");
+  const section = slug.startsWith("roadmap") ? "roadmaps" : slug;
+  for (const a of nav.querySelectorAll("a")) a.setAttribute("aria-current", a.dataset.slug === section ? "page" : "false");
   for (const d of nav.querySelectorAll("details")) d.classList.toggle("current", !!d.querySelector('[aria-current="page"]'));
 
   try {
@@ -61,6 +64,19 @@ async function route() {
       if (id !== renderId) return;
       setMeta(`GATE CS practice questions with step-by-step solutions · ${SITE.name}`, GATE_DESCRIPTION, "/gate");
       cleanup = gate.render(main) ?? null;
+    } else if (slug === "roadmaps" || slug.startsWith("roadmap/")) {
+      const roadmap = await import("./views/roadmap.js");
+      if (id !== renderId) return;
+      const page = roadmap.parse(slug);
+      if (!page) {
+        setMeta(`Page not found · ${SITE.name}`, "This page doesn't exist.", location.pathname);
+        main.replaceChildren(failure("Page not found", "There's no roadmap at this address.", null));
+      } else {
+        const m = roadmap.meta(page, SITE.name);
+        setMeta(m.title, m.description, `/${slug}`);
+        main.replaceChildren();
+        cleanup = roadmap.render(main, page) ?? null;
+      }
     } else if (!tool) {
       setMeta(`Page not found · ${SITE.name}`, "This page doesn't exist.", location.pathname);
       main.replaceChildren(failure("Page not found", "There's no tool at this address. Pick one from the menu, or start from the home page."));
@@ -69,19 +85,17 @@ async function route() {
       const view = await tool.load();
       if (id !== renderId) return;
       setMeta(`${tool.title}: step-by-step visualiser · ${SITE.name}`, tool.description, `/${tool.slug}`);
-      // The tool renders into its own box; practice links sit under it.
+      // The tool renders into its own box; the cards under it load separately
+      // and each fills its own slot, so their order never depends on timing.
       const host = h("div");
-      main.replaceChildren(host);
+      const [gateSlot, roadSlot, elseSlot] = [0, 1, 2].map(() => h("div", { class: "card-slot" }));
+      main.replaceChildren(host, gateSlot, roadSlot, elseSlot);
       cleanup = view.render(host) ?? null;
       import("./tutor.js").then(({ mountTutor }) => { if (id === renderId) mountTutor(tool); }).catch(() => {});
-      import("./gate-link.js").then(({ gateCard }) => {
-        const card = id === renderId ? gateCard(tool.slug) : null;
-        if (card) host.after(card);
-      }).catch(() => {});
-      import("./elsewhere.js").then(({ practiceElsewhere }) => {
-        const card = id === renderId ? practiceElsewhere(tool.slug) : null;
-        if (card) main.append(card);
-      }).catch(() => {});
+      const fill = (slot, card) => { if (card && id === renderId) slot.replaceChildren(card); };
+      import("./gate-link.js").then(({ gateCard }) => fill(gateSlot, gateCard(tool.slug))).catch(() => {});
+      import("./roadmap-link.js").then(({ roadmapCard }) => fill(roadSlot, roadmapCard(tool.slug))).catch(() => {});
+      import("./elsewhere.js").then(({ practiceElsewhere }) => fill(elseSlot, practiceElsewhere(tool.slug))).catch(() => {});
     }
   } catch (err) {
     console.error(err);
@@ -92,13 +106,13 @@ async function route() {
       offline ? "This tool hasn't been saved for offline use yet. Reconnect and try again." : "This page didn't load properly. Reloading usually fixes it; if not, please report it on GitHub.",
       () => location.reload()));
   }
-  window.scrollTo(0, 0);
+  if (!location.hash) window.scrollTo(0, 0);
   main.querySelector("h1")?.setAttribute("tabindex", "-1");
   if (document.activeElement && document.activeElement !== document.body && !main.contains(document.activeElement)) main.querySelector("h1")?.focus({ preventScroll: true });
 }
 
 export function navigate(path) {
-  if (path === location.pathname + location.search) return;
+  if (path === location.pathname + location.search + location.hash) return;
   history.pushState(null, "", path);
   route();
 }
@@ -109,10 +123,14 @@ document.addEventListener("click", (e) => {
   if (!a || e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || a.target === "_blank") return;
   const url = new URL(a.href, location.href);
   if (url.origin !== location.origin || /\.(png|svg|xml|txt|json)$/.test(url.pathname)) return;
+  // A jump within the same page (#module) is left to the browser.
+  if (url.hash && url.pathname === location.pathname && url.search === location.search) return;
   e.preventDefault();
-  navigate(url.pathname + url.search);
+  navigate(url.pathname + url.search + url.hash);
 });
-addEventListener("popstate", route);
+// Moving between #anchors on the same page also fires popstate; don't re-render for it.
+let rendered = "";
+addEventListener("popstate", () => { if (location.pathname + location.search !== rendered) route(); });
 route();
 
 // --- Theme ---------------------------------------------------------------------
