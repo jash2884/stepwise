@@ -65,7 +65,8 @@ export function diagnostic(topics, seed, n = DIAGNOSTIC.questions) {
 }
 
 // results: [{ topic, correct }]. A topic counts as known when every one of
-// its diagnostic questions (at least two) was right.
+// its diagnostic questions was right and either there were at least two or
+// the learner got at least 75% of that subject right.
 export function diagnosticReport(results, topics, roadmap) {
   const bySubject = new Map();
   const byTopic = new Map();
@@ -79,7 +80,11 @@ export function diagnosticReport(results, topics, roadmap) {
     k.total++; if (r.correct) k.right++;
     byTopic.set(r.topic, k);
   }
-  const known = [...byTopic].filter(([, k]) => k.total >= 2 && k.right === k.total).map(([slug]) => slug);
+  // With many topics a short diagnostic asks most topics once, so one right
+  // answer counts when the learner was strong across that whole subject.
+  const subjectOf = (slug) => topics.find((t) => t.slug === slug)?.subject;
+  const strong = (slug) => { const s = bySubject.get(subjectOf(slug)); return s && s.right / s.total >= 0.75; };
+  const known = [...byTopic].filter(([slug, k]) => k.right === k.total && (k.total >= 2 || strong(slug))).map(([slug]) => slug);
   const subjects = [...bySubject.values()].map((s) => ({
     ...s,
     known: known.filter((slug) => topics.find((t) => t.slug === slug)?.subject === s.subject),

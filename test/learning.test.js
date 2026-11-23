@@ -111,10 +111,13 @@ test("modules without GATE topics are mastered by ticking them off", () => {
 test("the next module is the first unmastered one whose needs are met", () => {
   const s = empty();
   assert.equal(nextModule(s, gate, NOW).module.id, gate.stages[0].modules[0].id);
-  setDone(s, "ds.arrays", true, NOW);
+  const first = gate.stages[0].modules[0];
+  // Master the first module: by its GATE topics if it has any, else by the checkbox.
+  if (first.gate?.length) for (const g of first.gate) for (let i = 0; i < 10; i++) answer(s, { topic: g, seed: i, correct: true }, NOW);
+  else setDone(s, first.id, true, NOW);
   const next = nextModule(s, gate, NOW).module;
-  assert.notEqual(next.id, "ds.arrays");
-  assert.ok(next.needs.every((n) => n === "ds.arrays" || s.done[n]));
+  assert.notEqual(next.id, first.id);
+  assert.ok(next.needs.every((n) => n === first.id || s.done[n]));
   const sp = stageProgress(s, gate.stages[0], NOW);
   assert.equal(sp.mastered, 1);
   assert.equal(sp.total, gate.stages[0].modules.length);
@@ -234,7 +237,12 @@ test("a full mock has 65 questions spread evenly over subjects", () => {
   const subjects = [...new Set(TOPICS.map((t) => t.subject))];
   const shares = subjects.map((sub) => mock.items.filter((q) => TOPICS.find((t) => t.slug === q.topic).subject === sub).length);
   assert.ok(Math.max(...shares) - Math.min(...shares) <= 1);
-  for (const t of TOPICS) assert.ok(mock.items.some((q) => q.topic === t.slug), `${t.slug} appears`);
+  // Each subject covers as many different topics as its share of questions allows.
+  subjects.forEach((sub, i) => {
+    const mine = TOPICS.filter((t) => t.subject === sub).map((t) => t.slug);
+    const seen = new Set(mock.items.map((q) => q.topic).filter((x) => mine.includes(x)));
+    assert.equal(seen.size, Math.min(mine.length, shares[i]), `${sub} topic coverage`);
+  });
   assert.deepEqual(fullMock(TOPICS, 12345), mock, "same seed, same paper");
   assert.equal(new Set(mock.items.map((q) => q.seed)).size, 65);
   assert.deepEqual(split(10, 3), [4, 3, 3]);
@@ -269,7 +277,9 @@ test("diagnostic results mark known topics and suggest a start", () => {
   const items = diagnostic(TOPICS, 5);
   const results = items.map((q) => ({ topic: q.topic, correct: TOPICS.find((t) => t.slug === q.topic).subject === "dbms" }));
   const rep = diagnosticReport(results, TOPICS, gate);
-  const dbms = TOPICS.filter((t) => t.subject === "dbms").map((t) => t.slug);
+  const asked = new Set(items.map((q) => q.topic));
+  const dbms = TOPICS.filter((t) => t.subject === "dbms" && asked.has(t.slug)).map((t) => t.slug);
+  assert.ok(dbms.length > 0);
   assert.deepEqual([...rep.known].sort(), [...dbms].sort());
   assert.equal(rep.weakest, "os");
   assert.equal(rep.start.module, "os.scheduling");
