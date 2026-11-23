@@ -1,6 +1,6 @@
 // Roadmaps: every tool, GATE topic, prerequisite and preset they point at must
-// exist, ids must be unique and stable-looking, and every visualiser must
-// belong somewhere in the GATE CS roadmap.
+// exist, ids must be unique (module ids across every roadmap) and stable-looking,
+// and every visualiser must belong somewhere in a roadmap.
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { ROADMAPS, modulesOf, placeOfTool, roadmapOf } from "../public/js/roadmaps.js";
@@ -29,6 +29,14 @@ test("ids are unique and URL-safe", () => {
         moduleIds.add(m.id);
       }
     }
+  }
+});
+
+test("module ids are unique across every roadmap", () => {
+  const seen = new Map();
+  for (const r of ROADMAPS) for (const { module: m } of modulesOf(r)) {
+    assert.ok(!seen.has(m.id), `${m.id} is in both ${seen.get(m.id)} and ${r.id}`);
+    seen.set(m.id, r.id);
   }
 });
 
@@ -84,9 +92,23 @@ test("try-it presets use values the engines accept", async () => {
     "sorting": (await import("../public/js/engines/sorting.js")).ALGORITHMS,
     "memory-allocation": (await import("../public/js/engines/memory.js")).ALGORITHMS,
     "lr-parsing": (await import("../public/js/engines/grammar.js")).LR_KINDS,
+    "searching": (await import("../public/js/engines/searching.js")).ALGORITHMS,
+    "graph-traversal": (await import("../public/js/engines/traversal.js")).ALGORITHMS,
+    "shortest-paths": (await import("../public/js/engines/paths.js")).ALGORITHMS,
+    "minimum-spanning-tree": (await import("../public/js/engines/mst.js")).ALGORITHMS,
+    "strongly-connected-components": (await import("../public/js/engines/scc.js")).ALGORITHMS,
+    "linked-list": (await import("../public/js/engines/lists.js")).KINDS,
+  };
+  // Other preset parameters that pick from a fixed list.
+  const named = {
+    "dynamic-programming": { problem: (await import("../public/js/engines/dp.js")).PROBLEMS },
+    "stacks-queues": { mode: (await import("../public/js/engines/stacks.js")).MODES },
+    "linked-list": { op: (await import("../public/js/engines/lists.js")).OPS },
+    "osi-encapsulation": { model: (await import("../public/js/engines/osi.js")).MODELS, tp: (await import("../public/js/engines/osi.js")).TRANSPORTS },
   };
   for (const r of ROADMAPS) for (const { module: m } of modulesOf(r)) for (const t of m.tryIt ?? []) {
     const q = new URLSearchParams(t.query);
+    for (const [param, list] of Object.entries(named[t.tool] ?? {})) if (q.has(param)) assert.ok(q.get(param) in list, `${m.id}: ${t.tool} has no ${param} "${q.get(param)}"`);
     const algo = q.get("algo") ?? q.get("kind");
     if (!algo) continue;
     assert.ok(keys[t.tool], `${m.id}: add ${t.tool}'s algorithm list to this test`);

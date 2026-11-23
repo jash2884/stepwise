@@ -27,7 +27,7 @@ export function parse(path) {
 // Title and description for the page, used by the router and the build.
 export function meta(page, siteName) {
   if (page.kind === "index") return {
-    title: `Study roadmaps for GATE CS · ${siteName}`,
+    title: `Study roadmaps for GATE, placements and semester exams · ${siteName}`,
     description: "Free step-by-step study roadmaps for computer science: every topic in order, linked to visualisers and practice questions.",
   };
   if (page.kind === "map") return {
@@ -79,9 +79,9 @@ function renderMap(root, roadmap) {
         h("li", null, h("b", null, all.length), " topics"),
         h("li", null, h("b", null, withTools), " with visualisers"),
         h("li", null, h("b", null, hoursText(hoursOf(all))), " of study"))),
-    h("section", { class: "card rm-howto" },
+    roadmap.howTo?.length ? h("section", { class: "card rm-howto" },
       h("h2", null, "How to use it"),
-      h("ol", null, roadmap.howTo.map((t) => h("li", null, t)))),
+      h("ol", null, roadmap.howTo.map((t) => h("li", null, t)))) : null,
     h("ol", { class: "rm-path" }, roadmap.stages.map((stage, i) => h("li", { class: "rm-stage", style: `--c:${stageColour(i)}` },
       h("span", { class: "rm-dot", "aria-hidden": "true" }, i + 1),
       h("div", { class: "card" },
