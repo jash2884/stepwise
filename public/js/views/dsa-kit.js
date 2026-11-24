@@ -1,6 +1,8 @@
 // Pieces shared by the data-structure tools (BST, AVL, heap, trie, union-find):
 // tree layouts, a keyed SVG that morph() can glide, the step card with
 // pseudocode and variables, and a per-operation complexity table.
+import { blockStage } from "../view3d.js";
+import { treeFrame } from "../frames3d.js";
 import { codePanel, traceLayout, varsPanel } from "../code.js";
 import { h, morph, stepper } from "../ui.js";
 
@@ -148,9 +150,11 @@ export function treeSvg({ nodes, edges = [], cells = [], extra = [], W, H, aria,
       h("rect", { x: f1(c.x - w / 2), y: f1(c.y - 15), width: w, height: 30, rx: 6 }),
       h("text", { x: f1(c.x), y: f1(c.y + 5), "text-anchor": "middle" }, c.label));
   });
-  return h("svg", { viewBox: `0 0 ${Math.ceil(W)} ${Math.ceil(H)}`, class: `dsa-tree ${cls}`, role: "img", "aria-label": aria, style: `min-width:${Math.min(Math.ceil(W), 460)}px;max-width:${Math.max(Math.ceil(W * 1.15), 220)}px` },
+  const svg = h("svg", { viewBox: `0 0 ${Math.ceil(W)} ${Math.ceil(H)}`, class: `dsa-tree ${cls}`, role: "img", "aria-label": aria, style: `min-width:${Math.min(Math.ceil(W), 460)}px;max-width:${Math.max(Math.ceil(W * 1.15), 220)}px` },
     arrows ? h("defs", null, h("marker", { id: "dt-arrow", viewBox: "0 0 10 10", refX: 9, refY: 5, markerWidth: 6, markerHeight: 6, orient: "auto-start-reverse" }, h("path", { d: "M 0 0 L 10 5 L 0 10 z", class: "dt-arrowhead" }))) : null,
     extra, edgeEls, nodeEls, cellEls);
+  svg.tree3d = { nodes, edges, cells, arrows }; // the same tree, for the 3D stage
+  return svg;
 }
 
 // A row of chips: the visit order, the recursion stack or the BFS queue.
@@ -161,14 +165,16 @@ export function chips(label, items, cls = "") {
 
 // Player + note + (visual | pseudocode, variables). draw(step) returns the SVG;
 // below(step) returns any HTML to show under it.
-export function stepCard(steps, { title, code, draw, below, interval = 950, start = 0 }) {
+export function stepCard(steps, { title, code, draw, below, interval = 950, start = 0, v3 = null }) {
   const cp = codePanel(code), vp = varsPanel();
   const stage = h("div", { class: "chart-wrap dt-stage" }), extra = h("div"), note = h("p", { class: "step-note", "aria-live": "polite" });
+  const st3 = v3 ? blockStage(v3, stage, steps.length, (i) => treeFrame(draw(steps[i]).tree3d), { tilt: 0.3, turn: 0.22, aria: "Tree in 3D" }) : { el: stage, show() {} };
   const player = stepper({
     count: steps.length, interval, start,
     render: (i) => {
       const s = steps[i];
       morph(stage, draw(s));
+      st3.show(i);
       extra.replaceChildren(...[below?.(s)].flat().filter(Boolean));
       cp.show(s.line);
       vp.show(s.vars);
@@ -176,7 +182,7 @@ export function stepCard(steps, { title, code, draw, below, interval = 950, star
       note.className = `step-note${s.done ? " good" : s.bad ? " bad" : ""}`;
     },
   });
-  const card = h("section", { class: "card" }, title ? h("h2", null, title) : null, player.el, note, traceLayout(h("div", null, stage, extra), cp, vp));
+  const card = h("section", { class: "card" }, title ? h("h2", null, title) : null, player.el, note, traceLayout(h("div", null, st3.el, extra), cp, vp));
   return { card, player };
 }
 

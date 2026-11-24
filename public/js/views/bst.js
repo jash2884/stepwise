@@ -1,3 +1,4 @@
+import { view3d } from "../view3d.js";
 import { BST, buildBst, CODE, countOf, OPS, traversal } from "../engines/bst.js";
 import { copyLink, h, notice, page, readParams, rng, writeParams } from "../ui.js";
 import { choice, exampleSelect, mountTabs, numberQuestion, stat } from "./kit.js";
@@ -28,6 +29,7 @@ export function render(root) {
   const p = readParams();
   const state = { ops: parseOps(p.get("ops") ?? "i50,i30,i70,i20,i40,i60,i80,i35", "id").map(([k, v]) => [k, Number(v)]), q: p.get("q"), from: null };
   let player = null;
+  const v3 = view3d("binary-search-tree");
 
   const head = page({
     subject: "Data structures & algorithms", title: "Binary search tree",
@@ -96,9 +98,10 @@ export function render(root) {
 
   function show(t, steps, code, row) {
     player?.destroy();
+    v3.disposeAll();
     const n = countOf(t.root), leaves = (function count(x) { return !x ? 0 : !x.left && !x.right ? 1 : count(x.left) + count(x.right); })(t.root);
     const title = { insert: "Insert", delete: "Delete", search: "Search", successor: "Successor", min: "Minimum", max: "Maximum", height: "Height", ...TRAVERSALS }[code];
-    const sc = stepCard(steps, {
+    const sc = stepCard(steps, { v3,
       title, code: CODE[code], draw: (s) => bstSvg(s),
       below: (s) => [
         s.visit ? chips("Visit order", s.visit, "visit") : null,
@@ -117,7 +120,7 @@ export function render(root) {
   }
 
   const visual = h("div", { class: "panel-body" },
-    h("section", { class: "card inputs" },
+    h("section", { class: "card inputs" }, v3.el,
       h("div", { class: "row" },
         exampleSelect(EXAMPLES, (ex) => { build(ex.keys); if (ex.then) { state.from = state.ops.length; state.ops.push(ex.then); rebuild(); } else if (ex.q) ask(ex.q); }),
         btn("Random", () => { const r = rng(); build(shuffle(Array.from({ length: 99 }, (_, i) => i + 1), r).slice(0, 8 + Math.floor(r() * 5))); }),
@@ -161,5 +164,5 @@ export function render(root) {
 
   mountTabs(root, head, visual, practice, newQuestion);
   rebuild();
-  return () => player?.destroy();
+  return () => { player?.destroy(); v3.disposeAll(); };
 }

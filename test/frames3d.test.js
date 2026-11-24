@@ -36,3 +36,15 @@ test("every topic is on exactly one subject page", () => {
   assert.equal(all.length, TOOLS.length); assert.equal(new Set(all).size, TOOLS.length);
   for (const s of SUBJECTS) assert.ok(meta(s, "drishi").description.length <= 170, s.id);
 });
+
+test("tree frames keep left, right and level", () => {
+  const f = F.treeFrame({ nodes: [{ id: 1, x: 100, y: 32, label: "8", cls: "cur" }, { id: 2, x: 50, y: 96, label: "3", cls: "", badge: "+1" }, { id: 3, x: 150, y: 96, label: "10", cls: "found" }], edges: [{ from: 1, to: 2 }, { from: 1, to: 3 }], cells: [{ k: "a1", x: 60, y: 180, label: 8, cls: "" }] });
+  ok(f, "tree");
+  const at = Object.fromEntries(f.items.map((i) => [i.k, i]));
+  assert.ok(at["n:2"].x < at["n:1"].x && at["n:1"].x < at["n:3"].x, "left stays left");
+  assert.ok(at["n:1"].y > at["n:2"].y && at["n:2"].z > at["n:1"].z, "children are lower and nearer");
+  assert.equal(at["n:1"].tone, "accent"); assert.equal(at["n:3"].tone, "good"); assert.equal(f.bars.length, 2);
+  const e = F.treeFrame({ nodes: [], edges: [], cells: [] }); assert.equal(e.items.length, 0);
+  const k = F.keyTreeFrame({ cell: 34, nodes: [{ id: "r", x: 10, y: 20, w: 100, lit: true, kind: "path" }, { id: "a", x: 0, y: 90, w: 100 }], keys: [{ id: "5", x: 10, y: 20, label: 5, hot: true }], edges: [{ from: "r", to: "a" }], links: [] });
+  ok(k, "btree"); assert.equal(k.bars[0].from, "n:r");
+});

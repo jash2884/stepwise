@@ -4,7 +4,7 @@
 import { loadThree, scene3d } from "./three-kit.js";
 import { reducedMotion } from "./ui.js";
 
-export const TONES = { base: "--block", dim: "--block-dim", floor: "--block-floor", range: "--block-range", compare: "--series-2", move: "--series-8", pivot: "--series-7", min: "--series-2", key: "--series-5", done: "--series-3", good: "--good", bad: "--bad", accent: "--accent", ghost: "--accent", muted: "--muted", text: "--text", ...Object.fromEntries(Array.from({ length: 8 }, (_, i) => [`s${i + 1}`, `--series-${i + 1}`])) };
+export const TONES = { base: "--block", dim: "--block-dim", floor: "--block-floor", range: "--block-range", compare: "--series-4", move: "--series-8", pivot: "--series-7", min: "--series-2", key: "--series-5", done: "--series-3", good: "--good", bad: "--bad", accent: "--accent", ghost: "--accent", muted: "--muted", text: "--text", paper: "--surface", node: "--block-node", ...Object.fromEntries(Array.from({ length: 8 }, (_, i) => [`s${i + 1}`, `--series-${i + 1}`])) };
 
 // The box that holds every frame of a run, so the camera never has to move.
 export function extent(frames) {
@@ -12,6 +12,7 @@ export function extent(frames) {
   for (const f of frames) for (const b of [...f.items, ...f.marks.map((m) => ({ ...m, w: 0.8, d: 0.4, h: 0.5 }))]) {
     [[b.x - b.w / 2, b.x + b.w / 2], [b.y, b.y + b.h], [b.z - b.d / 2, b.z + b.d / 2]].forEach(([a, c], i) => { lo[i] = Math.min(lo[i], a); hi[i] = Math.max(hi[i], c); });
   }
+  if (lo[0] > hi[0]) return { mid: [0, 0, 0], size: [6, 3, 3] };
   return { mid: lo.map((v, i) => (v + hi[i]) / 2), size: lo.map((v, i) => Math.max(1, hi[i] - v)) };
 }
 
@@ -33,6 +34,8 @@ export async function blocksScene(box, { frames, aria = "3D view", tilt = 0.42, 
   shadow.rotation.x = -Math.PI / 2; shadow.position.y = mid[1] - size[1] / 2 - 0.03; shadow.receiveShadow = true; scene.add(shadow);
 
   const geo = new THREE.BoxGeometry(1, 1, 1); geo.translate(0, 0.5, 0);
+  const ball = new THREE.SphereGeometry(0.5, 28, 20); ball.translate(0, 0.5, 0);
+  const rod = new THREE.CylinderGeometry(0.045, 0.045, 1, 10), tipGeo = new THREE.ConeGeometry(0.12, 0.28, 14), bars = new Map(), up = new THREE.Vector3(0, 1, 0), A = new THREE.Vector3(), B = new THREE.Vector3(), D = new THREE.Vector3();
   const mats = new Map();
   const mat = (tone, opacity) => {
     const key = `${tone}|${opacity}`;
@@ -41,7 +44,7 @@ export async function blocksScene(box, { frames, aria = "3D view", tilt = 0.42, 
   };
   const live = new Map(), marks = new Map(), links = new Map();
   let last = null, first = true;
-  s.onTheme(() => { for (const [k, m] of mats) m.color.copy(s.colour(TONES[k.split("|")[0]])); for (const e of [...live.values(), ...marks.values()]) e.stale = true; if (last) show(last); });
+  s.onTheme(() => { for (const [k, m] of mats) m.color.copy(s.colour(TONES[k.split("|")[0]])); for (const e of [...live.values(), ...marks.values(), ...bars.values()]) e.stale = true; if (last) show(last); });
   const free = (o) => { scene.remove(o); o.material?.map?.dispose?.(); if (o.isSprite) o.material.dispose(); };
   const setText = (e, text, sz, tone) => {
     const want = text == null ? "" : String(text);
@@ -59,16 +62,16 @@ export async function blocksScene(box, { frames, aria = "3D view", tilt = 0.42, 
       let e = live.get(b.k);
       const to = { x: b.x, y: b.y, z: b.z, w: b.w, h: b.h, d: b.d };
       if (!e) {
-        const mesh = new THREE.Mesh(geo); mesh.castShadow = true; mesh.receiveShadow = true; scene.add(mesh);
+        const mesh = new THREE.Mesh(b.ball ? ball : geo); mesh.castShadow = true; mesh.receiveShadow = true; scene.add(mesh);
         e = { mesh, at: first || still ? { ...to } : { ...to, y: b.y + (b.tone === "floor" || b.tone === "range" ? 0 : 1.1), h: 0.01 }, from: null, p: 1 };
         live.set(b.k, e);
       }
       e.gone = false;
       const op = b.tone === "ghost" ? 0.4 : b.ghost ?? (b.tone === "range" ? 0.55 : b.tone === "dim" ? 0.55 : 1);
       e.mesh.material = mat(b.tone ?? "base", op); e.mesh.castShadow = op > 0.5;
-      setText(e, b.text, b.size ?? 0.5, "text");
+      e.inside = !!b.inside; setText(e, b.text, b.size ?? 0.5, b.ink ?? "text");
       e.from = { ...e.at }; e.to = to; e.p = first || still ? 1 : 0;
-      e.arc = Math.abs(to.x - e.at.x) > 0.6 && Math.abs(to.z - e.at.z) < 0.3 ? Math.min(1.6, Math.abs(to.x - e.at.x) * 0.4) * lift * (to.x > e.at.x ? 1 : -0.6) : 0;
+      e.arc = Math.abs(to.x - e.at.x) > 0.6 ? Math.min(1.6, Math.abs(to.x - e.at.x) * 0.4) * lift * (to.x > e.at.x ? 1 : -0.6) : 0;
     }
     for (const [k, e] of live) if (!seen.has(k)) { if (first || still) drop(k, e); else if (!e.gone) { e.gone = true; e.from = { ...e.at }; e.to = { ...e.at, h: 0.001, w: e.at.w * 0.6, d: e.at.d * 0.6 }; e.p = 0; e.arc = 0; setText(e, "", 1, "text"); } }
     const seenM = new Set();
@@ -79,6 +82,15 @@ export async function blocksScene(box, { frames, aria = "3D view", tilt = 0.42, 
       e.from = { ...e.at }; e.to = { x: m.x, y: m.y, z: m.z }; e.p = first || still ? 1 : 0;
     }
     for (const [k, e] of marks) if (!seenM.has(k)) { if (e.sprite) free(e.sprite); marks.delete(k); }
+    const seenB = new Set();
+    for (const l of f.bars ?? []) {
+      seenB.add(l.k);
+      let e = bars.get(l.k);
+      if (!e) { e = { rod: new THREE.Mesh(rod), tip: l.arrow ? new THREE.Mesh(tipGeo) : null }; scene.add(e.rod); if (e.tip) scene.add(e.tip); bars.set(l.k, e); }
+      e.from = l.from; e.to = l.to; e.rod.material = mat(l.tone ?? "muted", 1); if (e.tip) e.tip.material = e.rod.material;
+      const sz = l.text == null ? "" : String(l.text); setText(e, sz, 0.4, "text");
+    }
+    for (const [k, e] of bars) if (!seenB.has(k)) { scene.remove(e.rod); if (e.tip) scene.remove(e.tip); if (e.sprite) free(e.sprite); bars.delete(k); }
     for (const [, o] of links) for (const x of o) { scene.remove(x); x.geometry.dispose(); }
     links.clear();
     for (const l of f.links ?? []) {
@@ -99,13 +111,23 @@ export async function blocksScene(box, { frames, aria = "3D view", tilt = 0.42, 
       const q = ease(e.p); for (const c of ["x", "y", "z", "w", "h", "d"]) e.at[c] = e.from[c] + (e.to[c] - e.from[c]) * q;
       const z = e.at.z + Math.sin(q * Math.PI) * e.arc;
       e.mesh.position.set(e.at.x, e.at.y, z); e.mesh.scale.set(e.at.w, Math.max(0.001, e.at.h), e.at.d);
-      if (e.sprite) e.sprite.position.set(e.at.x, e.at.y + e.at.h + 0.3, z);
+      if (e.sprite) e.sprite.position.set(e.at.x, e.inside ? e.at.y + e.at.h / 2 : e.at.y + e.at.h + 0.3, z);
       if (e.gone && e.p >= 1) drop(k, e);
+    }
+    for (const e of bars.values()) {
+      const a = live.get(e.from), b = live.get(e.to), on = !!a && !!b;
+      e.rod.visible = on; if (e.tip) e.tip.visible = on;
+      if (!on) continue;
+      A.copy(a.mesh.position); A.y += a.at.h / 2; B.copy(b.mesh.position); B.y += b.at.h / 2;
+      D.copy(B).sub(A); const len = D.length() || 0.001; D.divideScalar(len);
+      e.rod.position.copy(A).add(B).multiplyScalar(0.5); e.rod.scale.y = len; e.rod.quaternion.setFromUnitVectors(up, D);
+      if (e.tip) { e.tip.position.copy(B).addScaledVector(D, -b.at.w * 0.5 - 0.14); e.tip.quaternion.copy(e.rod.quaternion); }
+      if (e.sprite) e.sprite.position.copy(e.rod.position).setY(e.rod.position.y + 0.22);
     }
     for (const e of marks.values()) { if (e.p < 1) e.p = Math.min(1, e.p + dt / 0.5); const q = ease(e.p); for (const c of ["x", "y", "z"]) e.at[c] = e.from[c] + (e.to[c] - e.from[c]) * q; e.sprite?.position.set(e.at.x, e.at.y + 0.15, e.at.z); }
   }
   s.onFrame((dt) => step(dt));
   // Throttled tabs: land every block where it belongs.
   const land = setInterval(() => { if (document.hidden) step(1); }, 700);
-  return { show, reset: () => s.resetView?.(), dispose() { clearInterval(land); geo.dispose(); for (const m of mats.values()) m.dispose(); s.dispose(); } };
+  return { show, reset: () => s.resetView?.(), dispose() { clearInterval(land); geo.dispose(); ball.dispose(); rod.dispose(); tipGeo.dispose(); for (const m of mats.values()) m.dispose(); s.dispose(); } };
 }

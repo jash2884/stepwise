@@ -1,3 +1,4 @@
+import { view3d } from "../view3d.js";
 import { CODE, nodeCount, OPS, parseWords, Trie } from "../engines/trie.js";
 import { copyLink, h, notice, page, readParams, rng, writeParams } from "../ui.js";
 import { choice, exampleSelect, mountTabs, numberQuestion, stat } from "./kit.js";
@@ -34,6 +35,7 @@ export function render(root) {
   const p = readParams();
   const state = { ops: (p.get("ops") ?? "icar,icard,icare,icat,idog").split(",").filter((s) => /^[id][a-z]+$/.test(s)), q: /^[spa][a-z]*$/.test(p.get("q") ?? "") ? p.get("q") : null, from: null };
   let player = null;
+  const v3 = view3d("trie");
 
   const head = page({
     subject: "Data structures & algorithms", title: "Trie",
@@ -100,7 +102,8 @@ export function render(root) {
 
   function show(t, steps, code) {
     player?.destroy();
-    const sc = stepCard(steps, {
+    v3.disposeAll();
+    const sc = stepCard(steps, { v3,
       title: { insert: "Insert", delete: "Delete", search: "Search", prefix: "Starts with", complete: "Autocomplete" }[code], code: CODE[code], draw: trieSvg,
       below: (s) => [wordStrip(s), s.found ? chips("Suggestions", s.found, "visit") : null, legend(LEGEND)],
     });
@@ -114,7 +117,7 @@ export function render(root) {
   }
 
   const visual = h("div", { class: "panel-body" },
-    h("section", { class: "card inputs" },
+    h("section", { class: "card inputs" }, v3.el,
       h("div", { class: "row" },
         exampleSelect(EXAMPLES, (ex) => { build(ex.words); if (ex.then) { state.from = state.ops.length; state.ops.push(ex.then); rebuild(); } else if (ex.q) { state.q = ex.q; rebuild(); } }),
         btn("Random", () => { const r = rng(); build(shuffle(WORD_BANK, r).slice(0, 5 + Math.floor(r() * 4))); }),
@@ -159,5 +162,5 @@ export function render(root) {
 
   mountTabs(root, head, visual, practice, newQuestion);
   rebuild();
-  return () => player?.destroy();
+  return () => { player?.destroy(); v3.disposeAll(); };
 }

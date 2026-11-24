@@ -1,3 +1,5 @@
+import { blockStage, view3d } from "../view3d.js";
+import { keyTreeFrame } from "../frames3d.js";
 import { BPlusTree } from "../engines/bptree.js";
 import { BTree, CLRS_18_8, CODE, parseKeys } from "../engines/btree.js";
 import { codePanel, traceLayout, varsPanel } from "../code.js";
@@ -27,15 +29,17 @@ const EXAMPLES = {
   succ: { name: "Case 2b: delete 20 (successor)", t: 2, start: "20 / 10 | 30 40", ops: "d20" },
 };
 
-function playFrames(frames, t, holder) {
+function playFrames(frames, t, holder, v3) {
   const panels = Object.fromEntries(Object.keys(CODE).map((k) => [k, codePanel(CODE[k], { title: `${OPS[k]} (pseudocode)` })]));
   const codeBox = h("div"), vars = varsPanel();
   const stage = h("div", { class: "tree-wrap" }), note = h("p", { class: "step-note", "aria-live": "polite" });
+  const st3 = blockStage(v3, stage, frames.length, (i) => keyTreeFrame(treeSvg(frames[i], t).tree3d), { tilt: 0.34, turn: 0.2, aria: "Tree in 3D" });
   const p = stepper({
     count: frames.length, label: "Step", interval: 1400,
     render: (i) => {
       const f = frames[i];
       morph(stage, treeSvg(f, t));
+      st3.show(i);
       const panel = panels[f.op ?? "insert"];
       if (codeBox.firstChild !== panel.el) codeBox.replaceChildren(panel.el);
       panel.show(f.line);
@@ -44,7 +48,7 @@ function playFrames(frames, t, holder) {
       note.className = `step-note${f.kind === "found" || f.kind === "changed" ? " good" : f.kind === "missing" ? " bad" : ""}`;
     },
   });
-  holder.replaceChildren(p.el, note, traceLayout(h("div", null, stage,
+  holder.replaceChildren(p.el, note, traceLayout(h("div", null, st3.el,
     h("div", { class: "legend-chips" }, LEGEND.map(([text, c]) => h("span", null, h("i", { style: `--c:var(--series-${c})` }), text)))), { el: codeBox }, vars));
   return p;
 }
@@ -60,6 +64,7 @@ export function render(root) {
     ops: p.has("ops") ? p.get("ops").split(",").filter(Boolean) : EXAMPLES.clrs188.ops.split(","),
   };
   let tree, player = null;
+  const v3 = view3d("b-tree");
 
   const head = page({
     subject: "Databases", title: "B-tree",
@@ -101,8 +106,9 @@ export function render(root) {
 
   function show(frames) {
     player?.destroy();
+    v3.disposeAll();
     const holder = h("div");
-    player = playFrames(frames, state.t, holder);
+    player = playFrames(frames, state.t, holder, v3);
     const facts = tree.facts();
     // The same keys in a B+ tree with the same maximum fan-out (order 2t).
     let compare = null;
@@ -139,7 +145,7 @@ export function render(root) {
   }
 
   const visual = h("div", { class: "panel-body" },
-    h("section", { class: "card inputs" },
+    h("section", { class: "card inputs" }, v3.el,
       h("div", { class: "row" }, tSel, keysIn,
         h("button", { type: "button", class: "btn primary", onclick: () => act("i") }, "Insert"),
         h("button", { type: "button", class: "btn ghost", onclick: () => act("d") }, "Delete"),
@@ -197,5 +203,5 @@ export function render(root) {
 
   mountTabs(root, head, visual, practice, newQuestion);
   try { rebuild(p.has("ops") ? 1 : state.ops.length); } catch (e) { state.start = ""; state.ops = []; rebuild(); msg.replaceChildren(notice("error", e.message)); }
-  return () => player?.destroy();
+  return () => { player?.destroy(); v3.disposeAll(); };
 }

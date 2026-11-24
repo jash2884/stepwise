@@ -1,3 +1,5 @@
+import { blockStage, view3d } from "../view3d.js";
+import { keyTreeFrame } from "../frames3d.js";
 import { BPlusTree, CODE, parseKeys } from "../engines/bptree.js";
 import { codePanel, traceLayout, varsPanel } from "../code.js";
 import { copyLink, h, morph, notice, page, readParams, rng, stepper, writeParams } from "../ui.js";
@@ -23,11 +25,12 @@ const LEGEND = [["Search path", 1], ["Changed / found", 3], ["Overflow / underfl
 
 // One stepper with the visual beside the pseudocode of whichever operation the
 // current frame belongs to, and its variables.
-function playFrames(frames, order, holder) {
+function playFrames(frames, order, holder, v3) {
   const panels = Object.fromEntries(Object.keys(CODE).map((k) => [k, codePanel(CODE[k], { title: `${OPS[k]} (pseudocode)` })]));
   const codeBox = h("div"), vars = varsPanel();
   const stage = h("div", { class: "tree-wrap" }), note = h("p", { class: "step-note", "aria-live": "polite" });
   let last = -1;
+  const st3 = blockStage(v3, stage, frames.length, (i) => keyTreeFrame(treeSvg(frames[i], order).tree3d), { tilt: 0.34, turn: 0.2, aria: "Tree in 3D" });
   const p = stepper({
     count: frames.length, label: "Step", interval: 1300,
     render: (i) => {
@@ -35,6 +38,7 @@ function playFrames(frames, order, holder) {
       const svg = morph(stage, treeSvg(f, order));
       if (f.fly != null && i === last + 1) flyFrom(svg, `I${f.fly}`, `L${f.fly}`);
       last = i;
+      st3.show(i);
       const panel = panels[f.op ?? "insert"];
       if (codeBox.firstChild !== panel.el) codeBox.replaceChildren(panel.el);
       panel.show(f.line);
@@ -43,7 +47,7 @@ function playFrames(frames, order, holder) {
       note.className = `step-note${f.kind === "found" || f.kind === "changed" ? " good" : f.kind === "overflow" || f.kind === "missing" ? " bad" : ""}`;
     },
   });
-  holder.replaceChildren(p.el, note, traceLayout(h("div", null, stage,
+  holder.replaceChildren(p.el, note, traceLayout(h("div", null, st3.el,
     h("div", { class: "legend-chips" }, LEGEND.map(([t, c]) => h("span", null, h("i", { style: `--c:var(--series-${c})` }), t)))), { el: codeBox }, vars));
   return p;
 }
@@ -52,6 +56,7 @@ export function render(root) {
   const params = readParams();
   const state = { order: Number(params.get("order")) || 4, ops: params.get("ops") ? params.get("ops").split(",") : ["i10", "i20", "i5", "i6", "i12", "i30", "i7", "i17"] };
   let tree, player = null;
+  const v3 = view3d("b-plus-tree");
 
   const head = page({
     subject: "Databases",
@@ -89,8 +94,9 @@ export function render(root) {
 
   function show(frames) {
     player?.destroy();
+    v3.disposeAll();
     const holder = h("div");
-    player = playFrames(frames, state.order, holder);
+    player = playFrames(frames, state.order, holder, v3);
     const facts = tree.facts();
     out.replaceChildren(h("section", { class: "card" }, holder,
       h("div", { class: "stats-row" },
@@ -126,7 +132,7 @@ export function render(root) {
   }
 
   const visual = h("div", { class: "panel-body" },
-    h("section", { class: "card inputs" },
+    h("section", { class: "card inputs" }, v3.el,
       h("div", { class: "row" }, orderSel, keysIn,
         h("button", { type: "button", class: "btn primary", onclick: () => act("i") }, "Insert"),
         h("button", { type: "button", class: "btn ghost", onclick: () => act("d") }, "Delete"),
@@ -207,5 +213,5 @@ export function render(root) {
 
   mountTabs(root, head, visual, practice, newQuestion);
   rebuild();
-  return () => player?.destroy();
+  return () => { player?.destroy(); v3.disposeAll(); };
 }

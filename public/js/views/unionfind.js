@@ -1,3 +1,4 @@
+import { view3d } from "../view3d.js";
 import { code, compare, DSU, MODES, opText, OPS, parseOps } from "../engines/unionfind.js";
 import { copyLink, h, notice, page, readParams, rng, writeParams } from "../ui.js";
 import { choice, exampleSelect, mountTabs, numberQuestion, stat } from "./kit.js";
@@ -46,6 +47,7 @@ export function render(root) {
   const state = { n: Math.min(16, Math.max(2, Number(p.get("n")) || 8)), mode: MODES[p.get("mode")] ? p.get("mode") : "rank", pc: p.get("pc") !== "0", ops: [] };
   try { state.ops = parseOps(p.get("ops") ?? EXAMPLES.textbook.ops, state.n); } catch { state.ops = []; }
   let player = null;
+  const v3 = view3d("union-find");
 
   const head = page({
     subject: "Data structures & algorithms", title: "Union-find (disjoint sets)",
@@ -97,8 +99,9 @@ export function render(root) {
 
   function show(d, steps) {
     player?.destroy();
+    v3.disposeAll();
     const last = state.ops.at(-1);
-    const sc = stepCard(steps, {
+    const sc = stepCard(steps, { v3,
       title: last ? (last[0] === "u" ? `union(${last[1]}, ${last[2]})` : `find(${last[1]})`) : "Start", code: code(state.mode), interval: 1000,
       draw: (s) => ufSvg(s, state.n, state.mode),
       below: () => [legend(LEGEND), h("p", { class: "muted small" }, `Arrows point from a child to its parent.${state.mode === "naive" ? "" : ` The number above each root is its ${state.mode}.`}${state.pc ? "" : " Path compression is off."}`)],
@@ -122,7 +125,7 @@ export function render(root) {
   }
 
   const visual = h("div", { class: "panel-body" },
-    h("section", { class: "card inputs" },
+    h("section", { class: "card inputs" }, v3.el,
       h("div", { class: "row" }, nSel, modeSel, h("label", { class: "inline" }, pcBox, "Path compression"),
         exampleSelect(EXAMPLES, (ex) => { Object.assign(state, { n: ex.n, mode: ex.mode, pc: ex.pc, ops: parseOps(ex.ops, ex.n) }); msg.replaceChildren(); rebuild(); }),
         btn("Random", () => { const r = rng(); state.ops = Array.from({ length: state.n + 2 }, (_, i) => (i === state.n + 1 ? ["f", Math.floor(r() * state.n)] : ["u", Math.floor(r() * state.n), Math.floor(r() * state.n)])); rebuild(); }),
@@ -171,5 +174,5 @@ export function render(root) {
 
   mountTabs(root, head, visual, practice, newQuestion);
   rebuild();
-  return () => player?.destroy();
+  return () => { player?.destroy(); v3.disposeAll(); };
 }

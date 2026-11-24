@@ -2,7 +2,7 @@
    Misty paper, ink blue, one peacock accent. No shadows, few boxes: space and
    type do the separating, and the 3D eye is the only loud thing. */
 :root, :root[data-accent] {
-  --bg: #eef2f3; --surface: #f7f9f9; --surface-2: #e5ebed; --line: #d3dcdf; --line-strong: #aebcc1; --unlit: #c6d1d5; --block: #8fb4bd; --block-dim: #c3cfd3; --block-floor: #dbe3e6; --block-range: #b7d5d9;
+  --bg: #eef2f3; --surface: #f7f9f9; --surface-2: #e5ebed; --line: #d3dcdf; --line-strong: #aebcc1; --unlit: #c6d1d5; --block: #8fb4bd; --block-node: #d7e3e6; --block-dim: #c3cfd3; --block-floor: #dbe3e6; --block-range: #b7d5d9;
   --text: #10233a; --muted: #50636f;
   --accent: #006a7b; --accent-2: #2a1e9a; --on-accent: #ffffff;
   --accent-soft: color-mix(in srgb, var(--accent) 10%, var(--bg)); --accent-line: color-mix(in srgb, var(--accent) 40%, var(--line));
@@ -15,7 +15,7 @@
 }
 :root[data-theme="dark"], :root[data-theme="dark"][data-accent] {
   color-scheme: dark;
-  --bg: #07191f; --surface: #0c2129; --surface-2: #123039; --line: #1d3d47; --line-strong: #34606c; --unlit: #1f3b44; --block: #3f7f8c; --block-dim: #23434c; --block-floor: #16323b; --block-range: #1f5560;
+  --bg: #07191f; --surface: #0c2129; --surface-2: #123039; --line: #1d3d47; --line-strong: #34606c; --unlit: #1f3b44; --block: #3f7f8c; --block-node: #2b5560; --block-dim: #23434c; --block-floor: #16323b; --block-range: #1f5560;
   --text: #e4f0ef; --muted: #9bb4b8; --accent: #5cd0c6; --accent-2: #a9a2ff; --on-accent: #07191f;
   --good: #6fd3a0; --good-soft: #11342a; --bad: #ff9a86; --bad-soft: #3a201c; --warn-soft: #33301a;
   --series-1: #4ac4d0; --series-2: #e3a652; --series-3: #6fcf97; --series-4: #9b92ff; --series-5: #e58fc0; --series-6: #a6cf66; --series-7: #b6a8ff; --series-8: #f0917c;

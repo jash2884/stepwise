@@ -1,3 +1,4 @@
+import { view3d } from "../view3d.js";
 import { buildSwaps, CODE, Heap, OPS, parent } from "../engines/heap.js";
 import { copyLink, h, notice, page, readParams, rng, writeParams } from "../ui.js";
 import { choice, exampleSelect, mountTabs, numberQuestion, stat } from "./kit.js";
@@ -41,6 +42,7 @@ export function render(root) {
   const p = readParams();
   const state = { kind: p.get("kind") === "max" ? "max" : "min", ops: (p.get("ops") ?? "f9.4.7.1.8.2.6.3.5").split(",").filter(Boolean) };
   let player = null;
+  const v3 = view3d("binary-heap");
 
   const head = page({
     subject: "Data structures & algorithms", title: "Binary heap",
@@ -112,8 +114,9 @@ export function render(root) {
 
   function show(hp, steps, code, build) {
     player?.destroy();
+    v3.disposeAll();
     const name = { floyd: "Build-heap (Floyd, bottom-up)", inserts: "Build-heap (one insert at a time)", insert: "Insert (sift up)", extract: `Extract ${state.kind} (sift down)`, key: state.kind === "min" ? "Decrease-key" : "Increase-key" }[code];
-    const sc = stepCard(steps, {
+    const sc = stepCard(steps, { v3,
       title: name, code: CODE[code], draw: heapSvg, interval: 900,
       below: (s) => [
         h("div", { class: "stats-row" }, stat("Swaps", s.swaps ?? 0), stat("Comparisons", s.comps ?? 0)),
@@ -135,7 +138,7 @@ export function render(root) {
   }
 
   const visual = h("div", { class: "panel-body" },
-    h("section", { class: "card inputs" },
+    h("section", { class: "card inputs" }, v3.el,
       h("div", { class: "row" }, kindSel,
         exampleSelect(EXAMPLES, (ex) => { state.kind = ex.kind; kindSel.value = ex.kind; state.ops = [ex.method + ex.values.join("."), ...(ex.then ?? [])]; msg.replaceChildren(); rebuild(); }),
         btn("Random", () => { const r = rng(); valsIn.value = shuffle(Array.from({ length: 60 }, (_, i) => i + 1), r).slice(0, 8 + Math.floor(r() * 5)).join(" "); act("f"); }),
@@ -178,5 +181,5 @@ export function render(root) {
 
   mountTabs(root, head, visual, practice, newQuestion);
   rebuild();
-  return () => player?.destroy();
+  return () => { player?.destroy(); v3.disposeAll(); };
 }

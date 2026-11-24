@@ -39,15 +39,18 @@ export function keyTreeSvg(snap, { cells, keyId, leafLinks = false, aria }) {
   const { pos, byId, width, w, h: height } = layout(snap, cells);
   const lit = new Set(snap.highlight), hot = new Set(snap.keyHot ?? []);
   const kind = snap.kind ?? "path";
-  const edges = [], nodes = [], keys = [], links = [];
+  const edges = [], nodes = [], keys = [], links = [], t3 = { cell: CELL, nodes: [], keys: [], edges: [], links: [] };
   for (const n of snap.nodes) {
     const p = pos.get(n.id), nw = width(n), slots = Math.max(cells, n.keys.length, 1);
+    t3.nodes.push({ id: n.id, x: p.x, y: p.y, w: nw, lit: lit.has(n.id), kind });
     n.children.forEach((c, i) => {
       const cp = pos.get(c);
+      t3.edges.push({ from: n.id, to: c });
       edges.push(h("line", { x1: p.x + i * CELL, y1: p.y + NODE_H, x2: cp.x + width(byId.get(c)) / 2, y2: cp.y, class: "edge", "data-k": `e:${n.id}>${c}`, "data-ends": `${n.id}|${c}` }));
     });
     if (leafLinks && n.leaf && n.next && pos.has(n.next)) {
       const np = pos.get(n.next);
+      t3.links.push({ from: n.id, to: n.next });
       links.push(h("line", { x1: p.x + nw, y1: p.y + NODE_H / 2, x2: np.x - 2, y2: np.y + NODE_H / 2, class: "leaf-link", "marker-end": "url(#arrow)", "data-k": `l:${n.id}`, "data-ends": `${n.id}|${n.next}` }));
     }
     nodes.push(h("g", { class: `node${n.leaf ? " leaf" : ""}${lit.has(n.id) ? ` lit ${kind}` : ""}`, "data-k": `n:${n.id}`, "data-x": p.x, "data-y": p.y },
@@ -57,14 +60,17 @@ export function keyTreeSvg(snap, { cells, keyId, leafLinks = false, aria }) {
     n.keys.forEach((k, i) => {
       const x = p.x + i * CELL, y = p.y;
       const id = keyId(n, k);
+      t3.keys.push({ id, x, y, label: k, hot: hot.has(k) });
       keys.push(h("g", { class: `tkey${hot.has(k) ? " hot" : ""}${id.includes("#") ? " dup" : ""}`, "data-k": `k:${id}`, "data-x": x, "data-y": y },
         h("rect", { x: x + 3, y: y + 3, width: CELL - 6, height: NODE_H - 6, rx: 5 }),
         h("text", { x: x + CELL / 2, y: y + NODE_H / 2 + 5, "text-anchor": "middle" }, k)));
     });
   }
-  return h("svg", { viewBox: `0 0 ${w} ${height}`, width: w, height, class: "tree keytree", role: "img", "aria-label": aria ?? describe(snap) },
+  const svg = h("svg", { viewBox: `0 0 ${w} ${height}`, width: w, height, class: "tree keytree", role: "img", "aria-label": aria ?? describe(snap) },
     h("defs", null, h("marker", { id: "arrow", viewBox: "0 0 10 10", refX: 9, refY: 5, markerWidth: 6, markerHeight: 6, orient: "auto-start-reverse" }, h("path", { d: "M 0 0 L 10 5 L 0 10 z", class: "arrowhead" }))),
     edges, links, nodes, keys);
+  svg.tree3d = t3;
+  return svg;
 }
 
 export function describe(snap) {

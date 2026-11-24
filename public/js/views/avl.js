@@ -1,3 +1,4 @@
+import { view3d } from "../view3d.js";
 import { AVL, buildAvl, CODE, OPS, rotationCase } from "../engines/avl.js";
 import { buildBst, CODE as BST_CODE, countOf, heightOf, traversal } from "../engines/bst.js";
 import { copyLink, h, notice, page, readParams, rng, writeParams } from "../ui.js";
@@ -24,6 +25,7 @@ export function render(root) {
   const p = readParams();
   const state = { ops: parseOps(p.get("ops") ?? "i50,i20,i60,i10,i8,i15,i32,i46,i11,i48", "id").map(([k, v]) => [k, Number(v)]), from: null };
   let player = null;
+  const v3 = view3d("avl-tree");
 
   const head = page({
     subject: "Data structures & algorithms", title: "AVL tree",
@@ -95,11 +97,12 @@ export function render(root) {
 
   function show(t, steps, code) {
     player?.destroy();
+    v3.disposeAll();
     const rotations = steps.filter((s) => s.vars?.case).map((s) => s.vars.case);
     // One frame for the whole run: the root's x and the canvas width stay put,
     // so only real changes of shape (rotations, new leaves) move nodes.
     const frame = tidyFrame(steps.map((s) => s.tree));
-    const sc = stepCard(steps, {
+    const sc = stepCard(steps, { v3,
       title: { insert: "Insert", delete: "Delete", search: "Search" }[code],
       code: code === "search" ? BST_CODE.search : CODE[code], interval: 1100,
       draw: (s) => bstSvg(s, { badge, aria: "AVL tree", layout: "tidy", frame }),
@@ -119,7 +122,7 @@ export function render(root) {
   }
 
   const visual = h("div", { class: "panel-body" },
-    h("section", { class: "card inputs" },
+    h("section", { class: "card inputs" }, v3.el,
       h("div", { class: "row" },
         exampleSelect(EXAMPLES, (ex) => {
           if (ex.del != null) { build(ex.keys, ex.keys.length); state.from = state.ops.length; state.ops.push(["d", ex.del]); rebuild(); }
@@ -169,5 +172,5 @@ export function render(root) {
 
   mountTabs(root, head, visual, practice, newQuestion);
   rebuild();
-  return () => player?.destroy();
+  return () => { player?.destroy(); v3.disposeAll(); };
 }

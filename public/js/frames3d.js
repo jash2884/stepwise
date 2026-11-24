@@ -34,7 +34,7 @@ export function sortingFrame(st, n, max, aux) {
 // Sorted values climb like stairs; ruled-out ones sink, the probe lifts.
 export function searchingFrame(A, st, end) {
   const n = A.length, lo = Math.min(...A), span = Math.max(1, Math.max(...A) - lo), out = new Set(st.out ?? []), X = (i) => (i - (n - 1) / 2) * 1.12, items = [], marks = [];
-  A.forEach((v, i) => items.push({ k: `c${i}`, x: X(i), y: out.has(i) ? -0.45 : st.probe === i || st.found === i ? 0.35 : 0, z: 0, w: 0.9, d: 0.9, h: 0.5 + ((v - lo) / span) * 2.6, text: v, tone: st.found === i ? "done" : st.probe === i ? "compare" : out.has(i) ? "dim" : "base" }));
+  A.forEach((v, i) => items.push({ k: `c${i}`, x: X(i), y: out.has(i) ? -0.45 : st.probe === i || st.found === i ? 0.35 : 0, z: 0, w: 0.9, d: 0.9, h: 0.5 + ((v - lo) / span) * 2.6, text: v, tone: st.found === i ? "good" : st.probe === i ? "compare" : out.has(i) ? "dim" : "base" }));
   if (end) items.push({ k: "end", x: X(n), y: 0, z: 0, w: 0.9, d: 0.9, h: 0.5, text: "end", tone: "floor" });
   if (st.range && st.range[1] >= st.range[0]) items.push({ k: "range", x: (X(st.range[0]) + X(Math.min(n, st.range[1]))) / 2, y: -0.52, z: 0, w: (st.range[1] - st.range[0] + 1) * 1.12, d: 1.3, h: 0.06, tone: "range" });
   for (let i = 0; i < n; i++) marks.push({ k: `i${i}`, x: X(i), y: -0.4, z: 0.85, text: i, tone: "muted", size: 0.34 });
@@ -94,7 +94,7 @@ export function exprFrame(st) {
 export function listFrame(st, maxX) {
   const X = (x) => (x - maxX / 2) * 1.9, hot = new Set(st.hot ?? []), links = new Set(st.hotLinks ?? []), found = new Set([st.found, st.meet].filter((x) => x != null));
   const at = new Map(st.nodes.map((n) => [n.id, [X(n.x), n.gone ? -1.4 : 0, (n.y || 0) * 1.8]])), items = [], marks = [], L = [];
-  for (const n of st.nodes) { const [x, y, z] = at.get(n.id); items.push({ k: `n${n.id}`, x, y, z, w: 1.1, d: 0.85, h: 0.7, text: n.v, tone: n.gone ? "bad" : found.has(n.id) ? "done" : hot.has(n.id) ? "accent" : "base" }); }
+  for (const n of st.nodes) { const [x, y, z] = at.get(n.id); items.push({ k: `n${n.id}`, x, y, z, w: 1.1, d: 0.85, h: 0.7, text: n.v, tone: n.gone ? "bad" : found.has(n.id) ? "good" : hot.has(n.id) ? "accent" : "base" }); }
   for (const n of st.nodes) for (const [f, lift] of [["next", 0.35], ["prev", 0.62]]) {
     if (n[f] == null || !at.has(n[f])) continue;
     const a = at.get(n.id), b = at.get(n[f]), dir = Math.sign(b[0] - a[0]) || 1, far = Math.abs(b[0] - a[0]) > 2.1 || (dir < 0 && f === "next");
@@ -115,7 +115,7 @@ export function dpFrame(res, st) {
   for (let i = 0; i < R; i++) for (let j = 0; j < C; j++) {
     if (res.lower && i > j) continue;
     const c = st.cells[i][j], k = `${i},${j}`;
-    items.push({ k, x: X(j), y: 0, z: Z(i), w: 0.9, d: 0.9, h: c ? H(c) : 0.06, text: c ? c.t : "", tone: !c ? (cur === k ? "accent" : "floor") : path.has(k) ? "done" : cur === k ? "accent" : best.has(k) ? "min" : deps.has(k) ? "compare" : "base", size: 0.42 });
+    items.push({ k, x: X(j), y: 0, z: Z(i), w: 0.9, d: 0.9, h: c ? H(c) : 0.06, text: c ? c.t : "", tone: !c ? (cur === k ? "accent" : "floor") : path.has(k) ? "good" : cur === k ? "accent" : best.has(k) ? "min" : deps.has(k) ? "compare" : "base", size: 0.42 });
   }
   res.colHeads.forEach((t, j) => marks.push({ k: `c${j}`, x: X(j), y: 0.1, z: Z(0) - 1, text: t === "" ? "∅" : t, tone: "muted", size: 0.4 }));
   res.rowHeads.forEach((t, i) => marks.push({ k: `r${i}`, x: X(0) - 1, y: 0.1, z: Z(i), text: t === "" ? "∅" : t, tone: "muted", size: 0.4 }));
@@ -172,4 +172,35 @@ export function kmapFrame(n, values, s, all) {
     for (const m of pi.ms) { const [x, z] = P(m); items.push({ k: `g${colour}:${m}`, x, y: 0.9 + q * 0.17, z, w: 1.32, d: 1.32, h: 0.06, tone: `s${((colour < 0 ? q : colour) % 8) + 1}`, ghost: on ? 0.72 : 0.2 }); }
   });
   return { items, marks, links: [] };
+}
+
+// Trees. `t` is what the 2D tree drawing was given (dsa-kit's treeSvg). Left and
+// right keep their meaning, and every level steps towards you, so depth is real.
+const NODE_TONES = [[/\bbad\b/, "bad"], [/\bswap\b/, "s8"], [/\brot\b|\bqueued\b/, "s7"], [/\bcur\b/, "accent"], [/\bbest\b/, "s3"], [/\bfound\b|\bnew\b/, "good"], [/\bcmp\b|\bsucc\b/, "s4"], [/\bpath\b/, "s1"], [/\bdone\b/, "dim"]];
+const CELL_TONES = [[/\bbad\b/, "bad"], [/\bswap\b/, "s8"], [/\bcur\b|\bprobe\b/, "accent"], [/\bbest\b/, "s3"], [/\bfound\b|\bnew\b|\bdone\b/, "good"], [/\bcmp\b|\bchanged\b|\bout\b/, "s4"], [/\boutside\b/, "dim"]];
+const toneOf = (list, cls, base) => list.find(([re]) => re.test(cls ?? ""))?.[1] ?? base;
+export function treeFrame(t) {
+  const items = [], marks = [], bars = [], S = 40, ys = t.nodes.map((n) => n.y), y0 = ys.length ? Math.min(...ys) : 0, y1 = ys.length ? Math.max(...ys) : 0, floor = (y1 - y0) / S;
+  const xs = [...t.nodes, ...t.cells].map((n) => n.x), mid = xs.length ? (Math.min(...xs) + Math.max(...xs)) / 2 : 0;
+  for (const n of t.nodes) {
+    const x = (n.x - mid) / S, y = (y1 - n.y) / S, z = ((n.y - y0) / S) * 0.62, tone = toneOf(NODE_TONES, n.cls, "node");
+    items.push({ k: `n:${n.id}`, x, y, z, w: 0.92, d: 0.92, h: 0.92, ball: true, inside: true, text: n.label, ink: tone === "node" || tone === "dim" ? "text" : "paper", tone, size: String(n.label).length > 3 ? 0.36 : 0.46 });
+    if (n.badge != null) marks.push({ k: `b:${n.id}`, x: x + 0.62, y: y + 0.7, z, text: n.badge, tone: /bad/.test(n.badgeCls ?? "") ? "bad" : "muted", size: 0.36 });
+    if (n.sub != null) marks.push({ k: `u:${n.id}`, x, y: y - 0.32, z: z + 0.3, text: n.sub, tone: "muted", size: 0.3 });
+  }
+  const have = new Set(t.nodes.map((n) => n.id));
+  for (const e of t.edges) if (have.has(e.from) && have.has(e.to)) bars.push({ k: `e:${e.to}`, from: t.arrows ? `n:${e.to}` : `n:${e.from}`, to: t.arrows ? `n:${e.from}` : `n:${e.to}`, arrow: !!t.arrows, text: e.label, tone: toneOf(NODE_TONES, e.cls, "muted") });
+  const zc = floor * 0.62 + 1.7;
+  for (const c of t.cells) items.push({ k: `c:${c.k}`, x: (c.x - mid) / S, y: -0.5, z: zc, w: ((c.w ?? 36) / S) * 0.94, d: 0.8, h: 0.5, text: c.label, tone: toneOf(CELL_TONES, c.cls, "base"), size: 0.4 });
+  return { items, marks, links: [], bars };
+}
+// B-trees: a shelf for each node with its keys standing on it.
+export function keyTreeFrame(t) {
+  const items = [], bars = [], S = 42, ys = t.nodes.map((n) => n.y), y0 = Math.min(...ys), y1 = Math.max(...ys), mid = (Math.min(...t.nodes.map((n) => n.x)) + Math.max(...t.nodes.map((n) => n.x + n.w))) / 2;
+  const place = (n) => [(n.y - y0) / S, (y1 - n.y) / S * 1.05, ((n.y - y0) / S) * 0.75];
+  for (const n of t.nodes) { const [, y, z] = place(n); items.push({ k: `n:${n.id}`, x: (n.x + n.w / 2 - mid) / S, y: y - 0.12, z, w: n.w / S, d: 1.05, h: 0.12, tone: n.lit ? (n.kind === "found" || n.kind === "changed" ? "good" : n.kind === "missing" || n.kind === "overflow" ? "bad" : "accent") : "range" }); }
+  for (const k of t.keys) { const [, y, z] = place(k); items.push({ k: `k:${k.id}`, x: (k.x + t.cell / 2 - mid) / S, y, z, w: (t.cell / S) * 0.8, d: 0.8, h: 0.62, text: k.label, tone: k.hot ? "s2" : "node", size: 0.46 }); }
+  for (const e of t.edges) bars.push({ k: `e:${e.from}>${e.to}`, from: `n:${e.from}`, to: `n:${e.to}`, tone: "muted" });
+  for (const l of t.links) bars.push({ k: `l:${l.from}`, from: `n:${l.from}`, to: `n:${l.to}`, tone: "s3", arrow: true });
+  return { items, marks: [], links: [], bars };
 }
