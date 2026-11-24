@@ -23,7 +23,7 @@ export function calm(host) {
   inputBtn = toggle("Change the input", broken || !!saved.inputs, (on, save_) => { host.classList.toggle("no-inputs", !on); if (save_) { save({ inputs: on }); if (on) reveal(".inputs", howBtn); } });
   codeBtn = toggle("Code and variables", saved.code ?? matchMedia("(min-width: 900px)").matches, (on, save_) => { host.classList.toggle("no-code", !on); if (save_) { save({ code: on }); if (on) reveal(".trace-side", howBtn); } });
   const theory = host.querySelector("details.theory");
-  howBtn = theory ? toggle("How it works", false, (on, by) => { theory.open = on; if (on && by) inputBtn.close(); }) : null;
+  howBtn = theory ? toggle("How it works", false, (on, by) => { theory.open = on; if (on && by) { inputBtn.close(); if (theory.classList.contains("has-lesson")) requestAnimationFrame(() => theory.scrollIntoView({ block: "start", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" })); } }) : null;
   bar.append(inputBtn, codeBtn, ...(howBtn ? [howBtn] : []));
   (host.querySelector(".tool-head") ?? host.firstElementChild)?.after(bar);
   // The description is for first-timers: it opens with the explanation.

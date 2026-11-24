@@ -172,6 +172,7 @@ async function renderRoute() {
       main.replaceChildren(host, nextRow, tray([["Practise exam questions", gateSlot], ["Where this fits in the roadmap", roadSlot], ["Practise on other sites", elseSlot]]));
       const undo = view.render(host) ?? null, stopCalm = calm(host);
       cleanup = () => { stopCalm(); undo?.(); };
+      import("./lessons/lesson.js").then(({ mountLesson }) => { if (id === renderId) mountLesson(host, tool.slug); }).catch(() => {});
       // A link like /sliding-window?...#calc opens on that part of the tool.
       if (anchor) document.getElementById(anchor)?.scrollIntoView();
       import("./learn/store.js").then((s) => s.update((st) => s.recordVisit(st, tool.slug))).catch(() => {});
