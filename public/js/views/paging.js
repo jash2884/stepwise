@@ -214,7 +214,7 @@ export function render(root) {
     if (clock) box.replaceChildren(clock.el);
     const buckets = nru ? h("div", { class: "chart-wrap pf-wrap" }) : null, bucketCap = nru ? h("p", { class: "muted small" }) : null;
     const running = h("div", { class: "stats-row" });
-    const st3 = blockStage(v3, box, refs.length, (i) => pagingFrame(result.steps, i, state.frames), { tilt: 0.55, turn: 0.22, aria: "Frames in 3D, with past references behind" });
+    const st3 = blockStage(v3, box, refs.length, (i) => pagingFrame(result.steps, i, state.frames), { tilt: 0.4, turn: 0.2, aria: "Page frames in 3D" });
     player = stepper({
       count: refs.length, label: "Reference", interval: 1000, start: 0,
       render: (i) => {

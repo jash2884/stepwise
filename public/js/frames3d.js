@@ -42,20 +42,21 @@ export function searchingFrame(A, st, end) {
   return { items, marks, links: [] };
 }
 
-// Frames stand at the front; every past reference steps one row back in time.
-export const PAST = 4;
+// Only the frames: the page that arrives waits above, the one thrown out lies in
+// front. The history stays in the flat table below, where it reads better.
+export const PAST = 0;
 export function pagingFrame(steps, i, n) {
   const s = steps[i], next = steps[i + 1], X = (k) => (k - (n - 1) / 2) * 1.5, items = [], marks = [];
   for (let t = Math.max(0, i - PAST); t <= i; t++) {
     const z = -(i - t) * 1.2, now = t === i, st = steps[t];
     for (let k = 0; k < n; k++) {
-      items.push({ k: `t${t}:f${k}`, x: X(k), y: -0.06, z, w: 1.3, d: 1.1, h: 0.06, tone: now ? "range" : "floor" });
-      if (st.frames[k] != null) items.push({ k: `t${t}:p${k}`, x: X(k), y: 0, z, w: 1.06, d: 0.9, h: now ? 0.95 : 0.6, text: st.frames[k], tone: k === st.slot ? (st.hit ? "done" : "move") : now ? "base" : "dim", size: now ? 0.62 : 0.44 });
+      items.push({ k: `f${k}`, x: X(k), y: -0.06, z, w: 1.3, d: 1.1, h: 0.06, tone: now ? "range" : "floor" });
+      if (st.frames[k] != null) items.push({ k: `pg${st.frames[k]}`, x: X(k), y: 0, z, w: 1.06, d: 0.9, h: now ? 0.95 : 0.6, text: st.frames[k], tone: k === st.slot ? (st.hit ? "done" : "move") : now ? "base" : "dim", size: now ? 0.62 : 0.44 });
     }
-    marks.push({ k: `t${t}:r`, x: X(0) - 1.5, y: 0.2, z, text: now ? `page ${st.page}` : st.page, tone: now ? "text" : "muted", size: now ? 0.5 : 0.4 }, { k: `t${t}:o`, x: X(n - 1) + 1.35, y: 0.2, z, text: st.hit ? "hit" : "fault", tone: st.hit ? "good" : "bad", size: now ? 0.5 : 0.38 });
+    marks.push({ k: "r", x: X(0) - 1.5, y: 0.2, z, text: now ? `page ${st.page}` : st.page, tone: now ? "text" : "muted", size: now ? 0.5 : 0.4 }, { k: "o", x: X(n - 1) + 1.35, y: 0.2, z, text: st.hit ? "hit" : "fault", tone: st.hit ? "good" : "bad", size: now ? 0.5 : 0.38 });
   }
-  if (s.victim != null) items.push({ k: `out${i}`, x: X(s.slot), y: -0.06, z: 1.5, w: 1, d: 0.85, h: 0.6, text: s.victim, tone: "bad" }), marks.push({ k: "outl", x: X(s.slot) + 1.1, y: 0.2, z: 1.5, text: "out", tone: "bad", size: 0.42 });
-  if (next) items.push({ k: `t${i + 1}:p${next.slot}`, x: X(next.slot), y: 1.75, z: 0, w: 1.06, d: 0.9, h: 0.7, text: next.page, tone: "ghost" });
+  if (s.victim != null && !(next && !next.hit && next.page === s.victim)) items.push({ k: `pg${s.victim}`, x: X(s.slot), y: -0.06, z: 1.5, w: 1, d: 0.85, h: 0.6, text: s.victim, tone: "bad" }), marks.push({ k: "outl", x: X(s.slot) + 1.1, y: 0.2, z: 1.5, text: "out", tone: "bad", size: 0.42 });
+  if (next) items.push({ k: next.hit ? "nexthit" : `pg${next.page}`, x: X(next.slot), y: 1.9, z: 0, w: 1.06, d: 0.9, h: 0.7, text: next.page, tone: "ghost" });
   return { items, marks, links: [] };
 }
 
