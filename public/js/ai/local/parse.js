@@ -87,7 +87,7 @@ const READERS = {
     if (has(t, /(?:toward\w*|direction)[a-z ]*(?:lower|smaller|decreas|zero|0\b|left|inner)|moving (?:down|left)/)) p.dir = "down"; else if (has(t, /(?:toward\w*|direction)[a-z ]*(?:higher|larger|increas|right|outer)|moving (?:up|right)/)) p.dir = "up"; else if (/scan|look/.test(algo)) return null;
     return { params: p, used };
   },
-  "sorting"(t) { const algo = found(t, SORT), l = longest(t, 3); return algo && l ? { params: { algo, a: l.v.join(" ") }, used: l.v } : null; },
+  "sorting"(t) { if (SORT.filter(([re]) => re.test(t)).length > 1 || /\d[a-z]\b/.test(t)) return null; const algo = found(t, SORT), l = longest(t, 3); return algo && l ? { params: { algo, a: l.v.join(" ") }, used: l.v } : null; },
   "searching"(t) {
     const algo = found(t, [[/interpolation/, "interpolation"], [/jump/, "jump"], [/lower bound/, "lower"], [/upper bound/, "upper"], [/binary/, "binary"], [/linear/, "linear"]]), l = longest(t, 3);
     const x = num(t, /(?:search\w*|find\w*|locat\w*|look\w*|target|key|element)\s*(?:for|the|key|element|of|is|=|:|value|\s)*?(-?\d+)(?!\s*[,\s]\s*\d)/);
@@ -98,7 +98,7 @@ const READERS = {
   "binary-heap"(t) {
     const l = longest(t, 3), kind = has(t, /max/) ? "max" : has(t, /min/) ? "min" : null;
     if (!l || !kind || !has(t, /insert|add(?:ed|ing)? /) || has(t, /extract|delet|remov|build|heapify|bottom.?up|array (?:represents|is)/)) return null;
-    return { params: { kind, ops: l.v.map((n) => `i${n}`).join(",") }, used: l.v };
+    return { params: { kind, ops: `r${l.v.join(".")}` }, used: l.v };
   },
   "shortest-paths"(t) {
     const algo = found(t, [[/bellman/, "bellman"], [/floyd|all.?pairs/, "floyd"], [/dijkstra/, "dijkstra"]]), e = edges(t), s = /(?:from|source|start\w*)\s*(?:vertex|node|at|from|is|=|:|\s)*\s*([a-z])\b/.exec(t);
@@ -135,7 +135,8 @@ const READERS = {
   },
   "first-follow": grammar(), "left-recursion": grammar(), "ll1-parsing": grammar(), "cfg-to-cnf": grammar(),
   "lr-parsing": grammar((t) => ({ kind: found(t, [[/lalr/, "lalr"], [/clr|canonical lr|lr\s*\(1\)/, "clr"], [/lr\s*\(0\)|lr0/, "lr0"], [/slr/, "slr"]]) ?? "slr" })),
-  "number-systems"(t) {
+  "number-systems"(t, raw) {
+    if (/[₀-₉]|\)\s*_?\d/.test(raw)) return null; // bases as subscripts: not read yet
     const BASE = [["binary", 2], ["octal", 8], ["decimal", 10], ["hexadecimal", 16], ["hex", 16]], b = (s) => BASE.find(([n]) => s.startsWith(n))?.[1];
     const m = /\b(?:0x|0b)?([0-9a-f]+(?:\.[0-9a-f]+)?)\s*(?:\(?(binary|octal|decimal|hexadecimal|hex)\)?)?\s*(?:number\s*)?(?:to|into|in|ko|se)\s*(binary|octal|decimal|hexadecimal|hex)/.exec(t);
     if (!m || !/\d/.test(m[1])) return null;

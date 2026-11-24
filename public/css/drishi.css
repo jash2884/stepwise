@@ -166,7 +166,8 @@ details.theory { border: 0; background: none; padding: 0; margin: 0; }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } .boot-eyes i, .logo:hover .i::before { animation: none; } }
 @media print { .eye-stage, .top, .foot { display: none; } }
 
-.rm-stage .card { border-left: 0 !important; padding-left: 0; }
+.rm-stage .card { border-left: 0 !important; padding-left: 0; overflow: visible; } .rm-stage .card::before { display: none; }
+#home-continue > * { background: none; } @media (max-width: 899px) { #home-continue { margin: 0 0 4vh; background: var(--bg); } }
 @media (max-width: 400px) { .see h1 { font-size: 29px; } }
 @media (max-width: 700px) {
   .calm .stepper input[type="range"] { display: none; } .calm .stepper { width: max-content; max-width: 100%; gap: 4px; }

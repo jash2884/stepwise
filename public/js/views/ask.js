@@ -16,11 +16,11 @@ async function local(q, cloud) {
   const choices = (title, note) => h("section", { class: "card local" }, h("h2", null, title), note ? h("p", { class: "read" }, note) : null,
     h("ul", { class: "choices" }, hits.map((t) => { const tool = bySlug.get(t.slug); return h("li", null, h("a", { href: `/${t.slug}` }, tool.title, h("span", null, tool.summary))); })),
     h("p", null, h("button", { type: "button", class: "btn ghost", onclick: cloud }, "Ask the cloud AI instead")));
-  if (r.tools[0].slug === "none" || top.p < 0.25) return choices("Is it one of these?", "I'm not sure which visualiser fits. These are the closest.");
+  if (r.tools[0].slug === "none" || top.p < 0.2) return h("section", { class: "card local" }, h("h2", null, "Nothing here shows that yet"), h("p", { class: "read" }, "drishi covers computer science and the maths behind it. Try naming the topic, like “LRU” or “B+ tree insertion”."), h("div", { class: "row" }, h("a", { class: "btn primary", href: "/#explore" }, "Explore every topic"), h("button", { type: "button", class: "btn ghost", onclick: cloud }, "Ask the cloud AI")));
   if (top.p < 0.5) return choices("Which of these do you mean?");
   const tool = bySlug.get(top.slug);
-  if (hasData(q) && r.intent !== "explain") {
-    const got = read(top.slug, q);
+  const got = hasData(q) ? read(top.slug, q) : null;
+  if (got || (hasData(q) && r.intent !== "explain")) {
     if (got) {
       const { SCHEMA_BY_SLUG, check } = await import("../ai/tool-schemas.js");
       const c = check(SCHEMA_BY_SLUG.get(top.slug), got.params);

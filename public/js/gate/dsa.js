@@ -107,7 +107,7 @@ function sorting(r) {
   const values = Array.from({ length: n }, () => int(r, 1, 5));
   const dup = values.filter((v, i) => values.indexOf(v) !== i);
   if (!dup.length) return null;
-  const tag = (i) => { const v = values[i], same = values.map((x, j) => (x === v ? j : -1)).filter((j) => j >= 0); return same.length > 1 ? `${v}${"abc"[same.indexOf(i)]}` : String(v); };
+  const tag = (i) => { const v = values[i], same = values.map((x, j) => (x === v ? j : -1)).filter((j) => j >= 0); return same.length > 1 ? `${v}${"abcdefghij"[same.indexOf(i)]}` : String(v); };
   const algos = shuffle(r, ["bubble", "insertion", "merge", "selection", "quick", "heap", "shell"]).slice(0, 4);
   const finals = algos.map((a) => sortRun(a, values).steps.at(-1).A.map((x) => x.id));
   const keeps = finals.map((ids) => ids.every((id, i) => i === 0 || values[ids[i - 1]] !== values[id] || ids[i - 1] < id));
