@@ -1,0 +1,1714 @@
+[
+ {
+  "q": "Sort the array 29, 10, 14, 37, 13 using selection sort and show the array after each pass.",
+  "tool": "sorting",
+  "kind": "textbook",
+  "also": []
+ },
+ {
+  "q": "why is heap sort not stable but merge sort is",
+  "tool": "sorting",
+  "kind": "concept",
+  "also": []
+ },
+ {
+  "q": "radix sort 170 45 75 90 802 24 2 66",
+  "tool": "sorting",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "inorder successor of 40 in bst",
+  "tool": "binary-search-tree",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "why does inorder traversal of a BST come out sorted",
+  "tool": "binary-search-tree",
+  "kind": "concept",
+  "also": []
+ },
+ {
+  "q": "Construct a BST by inserting 8, 3, 10, 1, 6, 14, 4, 7, 13 and write preorder, postorder and level order traversals.",
+  "tool": "binary-search-tree",
+  "kind": "textbook",
+  "also": []
+ },
+ {
+  "q": "avl tree me balance factor kab 2 ho jata hai aur kya karna padta hai",
+  "tool": "avl-tree",
+  "kind": "hinglish",
+  "also": []
+ },
+ {
+  "q": "why is the height of an AVL tree always O(log n), what is the max height with 15 nodes",
+  "tool": "avl-tree",
+  "kind": "concept",
+  "also": []
+ },
+ {
+  "q": "avl insert 3 2 1 then 4 5 6 7 final tree",
+  "tool": "avl-tree",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "extract min from min heap 2 5 3 9 6 8",
+  "tool": "binary-heap",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "why is build heap O(n) and not O(n log n)",
+  "tool": "binary-heap",
+  "kind": "concept",
+  "also": []
+ },
+ {
+  "q": "priority queue using array parent child index formula",
+  "tool": "binary-heap",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "Insert the words bat, bath, bad, cat into a trie. How many nodes excluding the root does it have, and what changes if we delete bat?",
+  "tool": "trie",
+  "kind": "textbook",
+  "also": []
+ },
+ {
+  "q": "trie me word search aur starts with kaise kaam karta hai",
+  "tool": "trie",
+  "kind": "hinglish",
+  "also": []
+ },
+ {
+  "q": "longest common prefix of strings using trie",
+  "tool": "trie",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "disjoint set union by size find with compression",
+  "tool": "union-find",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "dsu me do elements same set me hai ya nahi kaise check karte hai",
+  "tool": "union-find",
+  "kind": "hinglish",
+  "also": []
+ },
+ {
+  "q": "amortised cost of union find, inverse ackermann, explain simply",
+  "tool": "union-find",
+  "kind": "concept",
+  "also": []
+ },
+ {
+  "q": "Perform DFS on the directed graph with edges 1->2, 1->3, 2->4, 3->4, 4->5 starting at 1 and give discovery and finish times.",
+  "tool": "graph-traversal",
+  "kind": "textbook",
+  "also": []
+ },
+ {
+  "q": "topological sort kaise nikalte hai DAG ka",
+  "tool": "graph-traversal",
+  "kind": "hinglish",
+  "also": []
+ },
+ {
+  "q": "detect cycle in undirected graph dfs",
+  "tool": "graph-traversal",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "prims algo step by step with priority queue",
+  "tool": "minimum-spanning-tree",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "can a graph have more than one MST, when does that happen",
+  "tool": "minimum-spanning-tree",
+  "kind": "concept",
+  "also": []
+ },
+ {
+  "q": "kruskal sorted edges cycle check mst weight",
+  "tool": "minimum-spanning-tree",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "Using Bellman-Ford from vertex 0, find shortest distances for edges (0,1,6),(0,2,7),(1,2,8),(1,3,5),(1,4,-4),(2,3,-3),(2,4,9),(3,1,-2),(4,0,2),(4,3,7).",
+  "tool": "shortest-paths",
+  "kind": "textbook",
+  "also": []
+ },
+ {
+  "q": "floyd warshall ka matrix kaise update hota hai har k ke liye",
+  "tool": "shortest-paths",
+  "kind": "hinglish",
+  "also": []
+ },
+ {
+  "q": "negative cycle detection single source",
+  "tool": "shortest-paths",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "what is the condensation graph and why is it always a DAG",
+  "tool": "strongly-connected-components",
+  "kind": "concept",
+  "also": []
+ },
+ {
+  "q": "tarjan me low link value ka matlab kya hota hai",
+  "tool": "strongly-connected-components",
+  "kind": "hinglish",
+  "also": []
+ },
+ {
+  "q": "scc tarjan disc low stack example",
+  "tool": "strongly-connected-components",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "Array is 2, 5, 8, 12, 16, 23, 38, 56, 72, 91. Trace jump search for 56 with block size 3.",
+  "tool": "searching",
+  "kind": "textbook",
+  "also": []
+ },
+ {
+  "q": "lower bound aur upper bound me kya difference hai sorted array me",
+  "tool": "searching",
+  "kind": "hinglish",
+  "also": []
+ },
+ {
+  "q": "max comparisons binary search 1000 elements",
+  "tool": "searching",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "evaluate postfix 5 3 + 8 2 - *",
+  "tool": "stacks-queues",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "stack vs queue, real life uses of lifo and fifo",
+  "tool": "stacks-queues",
+  "kind": "concept",
+  "also": []
+ },
+ {
+  "q": "balanced parentheses check {[()]}",
+  "tool": "stacks-queues",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "A list has nodes 3 -> 7 -> 1 -> 9 -> 4 and the last node points back to the node holding 1. Use Floyd's tortoise and hare and say where they meet.",
+  "tool": "linked-list",
+  "kind": "textbook",
+  "also": []
+ },
+ {
+  "q": "linked list me middle node kaise nikale",
+  "tool": "linked-list",
+  "kind": "hinglish",
+  "also": []
+ },
+ {
+  "q": "delete node from circular linked list",
+  "tool": "linked-list",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "edit distance kitten sitting",
+  "tool": "dynamic-programming",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "how to tell if a problem needs dp, overlapping subproblems vs divide and conquer",
+  "tool": "dynamic-programming",
+  "kind": "concept",
+  "also": []
+ },
+ {
+  "q": "coin change min coins 1 5 6 9 amount 11",
+  "tool": "dynamic-programming",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "srtf aur sjf me kya difference hai",
+  "tool": "cpu-scheduling",
+  "kind": "hinglish",
+  "also": []
+ },
+ {
+  "q": "what is convoy effect in fcfs and how does sjf avoid it",
+  "tool": "cpu-scheduling",
+  "kind": "concept",
+  "also": []
+ },
+ {
+  "q": "Three processes arrive at 0 with burst times 24, 3 and 3. Find the average turnaround time under FCFS and then Round Robin with quantum 4.",
+  "tool": "cpu-scheduling",
+  "kind": "textbook",
+  "also": []
+ },
+ {
+  "q": "optimal page replacement me future dekhna padta hai, kaise decide karte hai kaun sa page hataye",
+  "tool": "page-replacement",
+  "kind": "hinglish",
+  "also": []
+ },
+ {
+  "q": "why does LRU not suffer from belady's anomaly",
+  "tool": "page-replacement",
+  "kind": "concept",
+  "also": []
+ },
+ {
+  "q": "fifo 4 frames 1 2 3 4 1 2 5 1 2 3 4 5 page faults",
+  "tool": "page-replacement",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "look aur scan me kya farak hai disk scheduling me",
+  "tool": "disk-scheduling",
+  "kind": "hinglish",
+  "also": []
+ },
+ {
+  "q": "why does SSTF cause starvation",
+  "tool": "disk-scheduling",
+  "kind": "concept",
+  "also": []
+ },
+ {
+  "q": "c-look head at 50 moving right requests 10 95 180 34 119",
+  "tool": "disk-scheduling",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "banker's algorithm me request grant karne se pehle kya check karte hai",
+  "tool": "bankers-algorithm",
+  "kind": "hinglish",
+  "also": []
+ },
+ {
+  "q": "difference between an unsafe state and a deadlock",
+  "tool": "bankers-algorithm",
+  "kind": "concept",
+  "also": []
+ },
+ {
+  "q": "banker resource request P1 asks 1 0 2 grant or not",
+  "tool": "bankers-algorithm",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "P1 holds R1 and requests R2, P2 holds R2 and requests R3, P3 holds R3 and requests R1, all single-instance resources. Is there a deadlock?",
+  "tool": "deadlock-detection",
+  "kind": "textbook",
+  "also": []
+ },
+ {
+  "q": "deadlock detect karne ka algorithm kaise chalta hai multiple instance resources ke liye",
+  "tool": "deadlock-detection",
+  "kind": "hinglish",
+  "also": []
+ },
+ {
+  "q": "wait for graph from rag",
+  "tool": "deadlock-detection",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "what is a race condition and why does count++ from two threads give a wrong answer",
+  "tool": "semaphores",
+  "kind": "concept",
+  "also": []
+ },
+ {
+  "q": "Semaphore S is initialised to 1 and three processes each do wait(S), critical section, signal(S). Show a possible execution and the value of S at each step.",
+  "tool": "semaphores",
+  "kind": "textbook",
+  "also": []
+ },
+ {
+  "q": "readers writers problem first reader priority",
+  "tool": "semaphores",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "buddy system allocation 70k request",
+  "tool": "memory-allocation",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "first fit best fit worst fit me kaun sabse accha hai",
+  "tool": "memory-allocation",
+  "kind": "hinglish",
+  "also": []
+ },
+ {
+  "q": "next fit vs first fit",
+  "tool": "memory-allocation",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "why do we need multilevel page tables",
+  "tool": "address-translation",
+  "kind": "concept",
+  "also": []
+ },
+ {
+  "q": "segmentation me logical address se physical address kaise nikalte hai segment table se",
+  "tool": "address-translation",
+  "kind": "hinglish",
+  "also": []
+ },
+ {
+  "q": "two level paging 32 bit address 10 10 12 bits",
+  "tool": "address-translation",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "contiguous linked indexed allocation me kya farak hai file ka",
+  "tool": "file-systems",
+  "kind": "hinglish",
+  "also": []
+ },
+ {
+  "q": "why do unix inodes use indirect blocks instead of storing every block number",
+  "tool": "file-systems",
+  "kind": "concept",
+  "also": []
+ },
+ {
+  "q": "how many disk reads to get last block with triple indirect inode",
+  "tool": "file-systems",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "why do databases use b+ trees instead of binary search trees",
+  "tool": "b-plus-tree",
+  "kind": "concept",
+  "also": []
+ },
+ {
+  "q": "b plus tree me delete karne par merge aur borrow kab hota hai",
+  "tool": "b-plus-tree",
+  "kind": "hinglish",
+  "also": []
+ },
+ {
+  "q": "b+ tree order 3 insert 1 4 7 10 17 21 31",
+  "tool": "b-plus-tree",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "Insert keys 10, 20, 5, 6, 12, 30, 7, 17 into a B-tree of minimum degree t=2.",
+  "tool": "b-tree",
+  "kind": "textbook",
+  "also": []
+ },
+ {
+  "q": "b tree me delete karte waqt predecessor successor swap kyu karte hai",
+  "tool": "b-tree",
+  "kind": "hinglish",
+  "also": []
+ },
+ {
+  "q": "b-tree height with n keys min degree t",
+  "tool": "b-tree",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "minimal cover of A->BC B->C A->B AB->C",
+  "tool": "normalization",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "why do we normalise tables, what anomalies does it remove",
+  "tool": "normalization",
+  "kind": "concept",
+  "also": []
+ },
+ {
+  "q": "Check whether the decomposition of R(A,B,C,D) with FDs A->B, C->D into R1(A,B) and R2(C,D) is lossless.",
+  "tool": "normalization",
+  "kind": "textbook",
+  "also": []
+ },
+ {
+  "q": "left outer join me null kab aata hai explain with example",
+  "tool": "sql-joins",
+  "kind": "hinglish",
+  "also": []
+ },
+ {
+  "q": "when is hash join better than sort merge join",
+  "tool": "sql-joins",
+  "kind": "concept",
+  "also": []
+ },
+ {
+  "q": "anti join not exists",
+  "tool": "sql-joins",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "why push selections down before joins",
+  "tool": "query-processing",
+  "kind": "concept",
+  "also": []
+ },
+ {
+  "q": "query optimizer join order kaise decide karta hai",
+  "tool": "query-processing",
+  "kind": "hinglish",
+  "also": []
+ },
+ {
+  "q": "selectivity estimate result size of join",
+  "tool": "query-processing",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "recoverable schedule aur cascadeless schedule me kya farak hai",
+  "tool": "serializability",
+  "kind": "hinglish",
+  "also": []
+ },
+ {
+  "q": "why does a cycle in the precedence graph mean not serializable",
+  "tool": "serializability",
+  "kind": "concept",
+  "also": []
+ },
+ {
+  "q": "r1(a) w2(a) w1(a) c1 c2 strict schedule?",
+  "tool": "serializability",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "Transactions T1 (ts=5) and T2 (ts=10). T2 writes X, then T1 tries to read X. Under basic timestamp ordering what happens?",
+  "tool": "concurrency-control",
+  "kind": "textbook",
+  "also": []
+ },
+ {
+  "q": "how does two phase locking cause deadlock and how is it handled",
+  "tool": "concurrency-control",
+  "kind": "concept",
+  "also": []
+ },
+ {
+  "q": "wait die wound wait",
+  "tool": "concurrency-control",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "write ahead logging kyu zaruri hai",
+  "tool": "recovery",
+  "kind": "hinglish",
+  "also": []
+ },
+ {
+  "q": "difference between deferred and immediate database modification",
+  "tool": "recovery",
+  "kind": "concept",
+  "also": []
+ },
+ {
+  "q": "checkpoint in log recovery",
+  "tool": "recovery",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "Use double hashing with h1(k)=k mod 7 and h2(k)=5-(k mod 5) to insert 15, 22, 8, 36 into a table of size 7.",
+  "tool": "hashing",
+  "kind": "textbook",
+  "also": []
+ },
+ {
+  "q": "extendible hashing me bucket split hone par directory double kab hota hai",
+  "tool": "hashing",
+  "kind": "hinglish",
+  "also": []
+ },
+ {
+  "q": "quadratic probing clustering",
+  "tool": "hashing",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "many to many relationship ko table me kaise convert karte hai",
+  "tool": "er-to-relational",
+  "kind": "hinglish",
+  "also": []
+ },
+ {
+  "q": "how is a one to many relationship represented using a foreign key",
+  "tool": "er-to-relational",
+  "kind": "concept",
+  "also": []
+ },
+ {
+  "q": "specialization isa to relations",
+  "tool": "er-to-relational",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "subnet mask for 500 hosts",
+  "tool": "subnetting",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "why is the number of usable hosts 2^n minus 2",
+  "tool": "subnetting",
+  "kind": "concept",
+  "also": []
+ },
+ {
+  "q": "172.16.45.9/20 range",
+  "tool": "subnetting",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "A link has bandwidth 1 Mbps, one way delay 20 ms and frames of 1000 bits. What is the efficiency of stop and wait?",
+  "tool": "sliding-window",
+  "kind": "textbook",
+  "also": []
+ },
+ {
+  "q": "stop and wait me timeout kab hota hai aur duplicate frame kaise handle hota hai",
+  "tool": "sliding-window",
+  "kind": "hinglish",
+  "also": []
+ },
+ {
+  "q": "sender window size for go-back-n with 3 bit sequence",
+  "tool": "sliding-window",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "link state routing me flooding kaise hota hai",
+  "tool": "routing",
+  "kind": "hinglish",
+  "also": []
+ },
+ {
+  "q": "difference between link state and distance vector",
+  "tool": "routing",
+  "kind": "concept",
+  "also": []
+ },
+ {
+  "q": "ospf dijkstra routing table per router",
+  "tool": "routing",
+  "kind": "typed",
+  "also": [
+   "shortest-paths"
+  ]
+ },
+ {
+  "q": "three way handshake me syn syn ack kya hota hai",
+  "tool": "tcp-congestion-control",
+  "kind": "hinglish",
+  "also": []
+ },
+ {
+  "q": "why does tcp halve the window on loss but reset to 1 on timeout",
+  "tool": "tcp-congestion-control",
+  "kind": "concept",
+  "also": []
+ },
+ {
+  "q": "tahoe vs reno fast recovery",
+  "tool": "tcp-congestion-control",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "internet checksum kaise nikalte hai 16 bit words add karke",
+  "tool": "error-detection",
+  "kind": "hinglish",
+  "also": []
+ },
+ {
+  "q": "how many parity bits are needed for hamming code with 11 data bits and why",
+  "tool": "error-detection",
+  "kind": "concept",
+  "also": []
+ },
+ {
+  "q": "crc divisor 1011 data 100100",
+  "tool": "error-detection",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "mtu chota ho to ip packet ke fragments kaise bante hai",
+  "tool": "ip-fragmentation",
+  "kind": "hinglish",
+  "also": []
+ },
+ {
+  "q": "why is fragment offset measured in units of 8 bytes",
+  "tool": "ip-fragmentation",
+  "kind": "concept",
+  "also": []
+ },
+ {
+  "q": "reassembly when one fragment is lost",
+  "tool": "ip-fragmentation",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "route summarization kaise karte hai supernet banake",
+  "tool": "cidr-and-longest-prefix-match",
+  "kind": "hinglish",
+  "also": []
+ },
+ {
+  "q": "why does the router choose the most specific route",
+  "tool": "cidr-and-longest-prefix-match",
+  "kind": "concept",
+  "also": []
+ },
+ {
+  "q": "aggregate 200.1.0.0/24 to 200.1.3.0/24",
+  "tool": "cidr-and-longest-prefix-match",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "In CSMA/CD after 3 collisions, from what range does a station pick its backoff slot? If it picks 5, how long does it wait with slot time 51.2 microseconds?",
+  "tool": "mac-protocols",
+  "kind": "textbook",
+  "also": []
+ },
+ {
+  "q": "why does wifi use collision avoidance instead of collision detection",
+  "tool": "mac-protocols",
+  "kind": "concept",
+  "also": []
+ },
+ {
+  "q": "pure aloha vulnerable time",
+  "tool": "mac-protocols",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "leaky bucket me packet overflow kab hota hai",
+  "tool": "traffic-shaping",
+  "kind": "hinglish",
+  "also": []
+ },
+ {
+  "q": "why can a token bucket send bursts but a leaky bucket cannot",
+  "tool": "traffic-shaping",
+  "kind": "concept",
+  "also": []
+ },
+ {
+  "q": "rate limiting bucket drop packets example",
+  "tool": "traffic-shaping",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "dns cache kaise kaam karta hai aur ttl kya hota hai",
+  "tool": "dns-and-http",
+  "kind": "hinglish",
+  "also": []
+ },
+ {
+  "q": "what happens from typing a url in the browser until the page loads, dns and http",
+  "tool": "dns-and-http",
+  "kind": "concept",
+  "also": []
+ },
+ {
+  "q": "http 1.1 persistent connection response time",
+  "tool": "dns-and-http",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "An application sends 1000 bytes. TCP adds 20 bytes, IP adds 20 and Ethernet adds 18. What is the overhead percentage on the wire?",
+  "tool": "osi-encapsulation",
+  "kind": "textbook",
+  "also": []
+ },
+ {
+  "q": "encapsulation aur decapsulation kya hota hai data ke saath",
+  "tool": "osi-encapsulation",
+  "kind": "hinglish",
+  "also": []
+ },
+ {
+  "q": "tcp ip 4 layers pdu names segment packet frame",
+  "tool": "osi-encapsulation",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "dfa banao jisme 'ab' substring ho",
+  "tool": "finite-automata",
+  "kind": "hinglish",
+  "also": []
+ },
+ {
+  "q": "difference between dfa and nfa, can nfa recognise more languages",
+  "tool": "finite-automata",
+  "kind": "concept",
+  "also": []
+ },
+ {
+  "q": "epsilon nfa simulate string",
+  "tool": "finite-automata",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "nfa se dfa banate time kitne states ho sakte hai",
+  "tool": "nfa-to-dfa",
+  "kind": "hinglish",
+  "also": []
+ },
+ {
+  "q": "why can the DFA have 2^n states in the worst case",
+  "tool": "nfa-to-dfa",
+  "kind": "concept",
+  "also": []
+ },
+ {
+  "q": "nfa to dfa transition table 3 states",
+  "tool": "nfa-to-dfa",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "A DFA has states A to F, start A, finals C, D, E. A-0->B, A-1->C, B-0->A, B-1->D, C-0->E, C-1->F, D-0->E, D-1->F, E-0->E, E-1->F, F-0->F, F-1->F. Minimise it.",
+  "tool": "dfa-minimization",
+  "kind": "textbook",
+  "also": []
+ },
+ {
+  "q": "dfa minimise karne ke steps batao partition method",
+  "tool": "dfa-minimization",
+  "kind": "hinglish",
+  "also": []
+ },
+ {
+  "q": "0 equivalent 1 equivalent states grouping",
+  "tool": "dfa-minimization",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "Build an epsilon-NFA for the regular expression (0+1)*01.",
+  "tool": "regex-to-nfa",
+  "kind": "textbook",
+  "also": []
+ },
+ {
+  "q": "why does thompson's construction produce at most two transitions per state",
+  "tool": "regex-to-nfa",
+  "kind": "concept",
+  "also": []
+ },
+ {
+  "q": "regex union concatenation star nfa fragments",
+  "tool": "regex-to-nfa",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "arden theorem se regex nikalo dfa se",
+  "tool": "dfa-to-regex",
+  "kind": "hinglish",
+  "also": []
+ },
+ {
+  "q": "how do you combine two dfas to accept the union of their languages",
+  "tool": "dfa-to-regex",
+  "kind": "concept",
+  "also": []
+ },
+ {
+  "q": "product construction dfa intersection",
+  "tool": "dfa-to-regex",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "is a^n b^m with n > m regular pumping lemma",
+  "tool": "pumping-lemma",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "what does the pumping length p mean and who picks it",
+  "tool": "pumping-lemma",
+  "kind": "concept",
+  "also": []
+ },
+ {
+  "q": "prove 0^(n^2) not regular",
+  "tool": "pumping-lemma",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "pda me stack kab push aur pop hota hai palindrome ke liye",
+  "tool": "pushdown-automata",
+  "kind": "hinglish",
+  "also": []
+ },
+ {
+  "q": "why can't a DFA recognise balanced parentheses but a PDA can",
+  "tool": "pushdown-automata",
+  "kind": "concept",
+  "also": []
+ },
+ {
+  "q": "npda accept by empty stack vs final state",
+  "tool": "pushdown-automata",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "greibach normal form kaise banate hai",
+  "tool": "cfg-to-cnf",
+  "kind": "hinglish",
+  "also": []
+ },
+ {
+  "q": "why does every context free grammar have a CNF equivalent and why do we want it",
+  "tool": "cfg-to-cnf",
+  "kind": "concept",
+  "also": []
+ },
+ {
+  "q": "cnf binarise long rules",
+  "tool": "cfg-to-cnf",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "cyk table parse tree membership test",
+  "tool": "cyk-parsing",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "cyk algorithm me triangle table kaise bharte hai",
+  "tool": "cyk-parsing",
+  "kind": "hinglish",
+  "also": []
+ },
+ {
+  "q": "Does aab belong to the CNF grammar S->AB, A->a, B->b|AB? Fill the CYK table.",
+  "tool": "cyk-parsing",
+  "kind": "textbook",
+  "also": []
+ },
+ {
+  "q": "why is a turing machine more powerful than a pushdown automaton",
+  "tool": "turing-machine",
+  "kind": "concept",
+  "also": []
+ },
+ {
+  "q": "Design a Turing machine that accepts palindromes over {0,1}.",
+  "tool": "turing-machine",
+  "kind": "textbook",
+  "also": []
+ },
+ {
+  "q": "busy beaver 3 state",
+  "tool": "turing-machine",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "Identify the tokens and lexemes in: if (count >= 10) total = total + 2.5;",
+  "tool": "lexical-analysis",
+  "kind": "textbook",
+  "also": []
+ },
+ {
+  "q": "symbol table lexical analysis me kaise banta hai",
+  "tool": "lexical-analysis",
+  "kind": "hinglish",
+  "also": []
+ },
+ {
+  "q": "keywords vs identifiers lexer dfa",
+  "tool": "lexical-analysis",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "indirect left recursion kaise remove karte hai",
+  "tool": "left-recursion",
+  "kind": "hinglish",
+  "also": []
+ },
+ {
+  "q": "why can't top-down parsers handle left recursive grammars",
+  "tool": "left-recursion",
+  "kind": "concept",
+  "also": []
+ },
+ {
+  "q": "A -> Aa | b remove left recursion",
+  "tool": "left-recursion",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "first follow rules epsilon production",
+  "tool": "first-follow",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "what are FIRST and FOLLOW sets used for",
+  "tool": "first-follow",
+  "kind": "concept",
+  "also": []
+ },
+ {
+  "q": "Compute FOLLOW(A) for S -> aAb | c, A -> d | e.",
+  "tool": "first-follow",
+  "kind": "textbook",
+  "also": []
+ },
+ {
+  "q": "ll(1) conflict kab aata hai table me",
+  "tool": "ll1-parsing",
+  "kind": "hinglish",
+  "also": []
+ },
+ {
+  "q": "why does the LL(1) parser need FIRST and FOLLOW",
+  "tool": "ll1-parsing",
+  "kind": "concept",
+  "also": []
+ },
+ {
+  "q": "predictive parser stack input action trace",
+  "tool": "ll1-parsing",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "For E -> E + E | E * E | id, compute LEADING and TRAILING of E and build the operator precedence table.",
+  "tool": "operator-precedence",
+  "kind": "textbook",
+  "also": []
+ },
+ {
+  "q": "precedence functions f aur g kaise nikalte hai",
+  "tool": "operator-precedence",
+  "kind": "hinglish",
+  "also": []
+ },
+ {
+  "q": "shift reduce parse id + id * id operator precedence",
+  "tool": "operator-precedence",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "shift reduce conflict aur reduce reduce conflict kya hota hai",
+  "tool": "lr-parsing",
+  "kind": "hinglish",
+  "also": []
+ },
+ {
+  "q": "why is LALR used in yacc instead of CLR",
+  "tool": "lr-parsing",
+  "kind": "concept",
+  "also": []
+ },
+ {
+  "q": "canonical lr(1) items closure goto",
+  "tool": "lr-parsing",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "annotated parse tree dependency graph kaise banate hai",
+  "tool": "syntax-directed-translation",
+  "kind": "hinglish",
+  "also": []
+ },
+ {
+  "q": "what is an L-attributed definition",
+  "tool": "syntax-directed-translation",
+  "kind": "concept",
+  "also": []
+ },
+ {
+  "q": "sdt evaluation order of attributes",
+  "tool": "syntax-directed-translation",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "triples aur indirect triples me farak kya hai",
+  "tool": "three-address-code",
+  "kind": "hinglish",
+  "also": []
+ },
+ {
+  "q": "why do compilers use an intermediate representation like three address code",
+  "tool": "three-address-code",
+  "kind": "concept",
+  "also": []
+ },
+ {
+  "q": "tac for while loop",
+  "tool": "three-address-code",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "common subexpression elimination aur dead code elimination me kya hota hai",
+  "tool": "code-optimisation",
+  "kind": "hinglish",
+  "also": []
+ },
+ {
+  "q": "why must an optimisation preserve program meaning, when is loop invariant code motion unsafe",
+  "tool": "code-optimisation",
+  "kind": "concept",
+  "also": []
+ },
+ {
+  "q": "peephole optimization strength reduction",
+  "tool": "code-optimisation",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "Variables a, b, c, d: a interferes with b and c, b with c and d. Can they be coloured with 3 registers? Which gets spilled with 2?",
+  "tool": "register-allocation",
+  "kind": "textbook",
+  "also": []
+ },
+ {
+  "q": "liveness analysis kaise karte hai live in live out",
+  "tool": "register-allocation",
+  "kind": "hinglish",
+  "also": []
+ },
+ {
+  "q": "chaitin simplify select",
+  "tool": "register-allocation",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "0.625 ko binary me kaise convert karte hai",
+  "tool": "number-systems",
+  "kind": "hinglish",
+  "also": []
+ },
+ {
+  "q": "why do computers use 2's complement instead of sign magnitude",
+  "tool": "number-systems",
+  "kind": "concept",
+  "also": []
+ },
+ {
+  "q": "1's complement subtraction 1011 - 0110",
+  "tool": "number-systems",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "Simplify F(A,B,C) = Σm(1,3,5,6,7) using a K-map and give the minimal SOP.",
+  "tool": "k-map",
+  "kind": "textbook",
+  "also": []
+ },
+ {
+  "q": "what is a prime implicant versus an essential prime implicant",
+  "tool": "k-map",
+  "kind": "concept",
+  "also": []
+ },
+ {
+  "q": "quine mccluskey method minterms 4 8 10 11 12 15",
+  "tool": "k-map",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "Design a full adder using two half adders and an OR gate. Give the sum and carry for A=1, B=1, Cin=1.",
+  "tool": "combinational-circuits",
+  "kind": "textbook",
+  "also": []
+ },
+ {
+  "q": "ripple carry adder me delay kitna lagta hai 4 bit",
+  "tool": "combinational-circuits",
+  "kind": "hinglish",
+  "also": []
+ },
+ {
+  "q": "magnitude comparator 2 bit",
+  "tool": "combinational-circuits",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "ring counter aur johnson counter me kya farak hai",
+  "tool": "sequential-circuits",
+  "kind": "hinglish",
+  "also": []
+ },
+ {
+  "q": "why do we need flip flops when latches exist, what is the race around condition",
+  "tool": "sequential-circuits",
+  "kind": "concept",
+  "also": []
+ },
+ {
+  "q": "convert sr flip flop to d",
+  "tool": "sequential-circuits",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "fully associative cache me fifo replacement ka example",
+  "tool": "cache-mapping",
+  "kind": "hinglish",
+  "also": []
+ },
+ {
+  "q": "why does a direct mapped cache have more conflict misses",
+  "tool": "cache-mapping",
+  "kind": "concept",
+  "also": []
+ },
+ {
+  "q": "average memory access time hit 2ns miss penalty 50ns hit rate 95%",
+  "tool": "cache-mapping",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "data forwarding se stall kab bachta hai",
+  "tool": "pipelining",
+  "kind": "hinglish",
+  "also": []
+ },
+ {
+  "q": "why do branches hurt pipeline performance",
+  "tool": "pipelining",
+  "kind": "concept",
+  "also": []
+ },
+ {
+  "q": "pipeline cpi with branch penalty 20% branches 3 cycles",
+  "tool": "pipelining",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "relative addressing me branch ka target kaise nikalte hai",
+  "tool": "addressing-modes",
+  "kind": "hinglish",
+  "also": []
+ },
+ {
+  "q": "why do processors provide so many addressing modes",
+  "tool": "addressing-modes",
+  "kind": "concept",
+  "also": []
+ },
+ {
+  "q": "indexed addressing array access example",
+  "tool": "addressing-modes",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "ieee 754 me bias 127 kyu add karte hai",
+  "tool": "ieee-754",
+  "kind": "hinglish",
+  "also": []
+ },
+ {
+  "q": "what are denormal numbers and why do we need them",
+  "tool": "ieee-754",
+  "kind": "concept",
+  "also": []
+ },
+ {
+  "q": "0.1 in binary floating point why not exact",
+  "tool": "ieee-754",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "A device delivers 400 KB/s in 4-byte words and each interrupt takes 5 microseconds to service. What fraction of CPU time goes to interrupt-driven I/O?",
+  "tool": "io-dma",
+  "kind": "textbook",
+  "also": []
+ },
+ {
+  "q": "why is dma better than interrupt driven io for large transfers",
+  "tool": "io-dma",
+  "kind": "concept",
+  "also": []
+ },
+ {
+  "q": "burst mode vs cycle stealing dma",
+  "tool": "io-dma",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "Show using a truth table that (p -> q) is equivalent to (¬q -> ¬p).",
+  "tool": "propositional-logic",
+  "kind": "textbook",
+  "also": []
+ },
+ {
+  "q": "cnf aur dnf me convert kaise karte hai",
+  "tool": "propositional-logic",
+  "kind": "hinglish",
+  "also": []
+ },
+ {
+  "q": "modus ponens modus tollens rules of inference",
+  "tool": "propositional-logic",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "relation reflexive symmetric transitive hai ya nahi kaise check kare",
+  "tool": "sets-relations",
+  "kind": "hinglish",
+  "also": []
+ },
+ {
+  "q": "what makes a relation an equivalence relation and how does it partition a set",
+  "tool": "sets-relations",
+  "kind": "concept",
+  "also": []
+ },
+ {
+  "q": "lattice join meet poset",
+  "tool": "sets-relations",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "derangement kya hota hai 4 letters ka",
+  "tool": "combinatorics",
+  "kind": "hinglish",
+  "also": []
+ },
+ {
+  "q": "when to use permutation and when combination",
+  "tool": "combinatorics",
+  "kind": "concept",
+  "also": []
+ },
+ {
+  "q": "inclusion exclusion numbers 1 to 100 divisible by 2 3 or 5",
+  "tool": "combinatorics",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "How many edges does a connected planar graph with 8 vertices and 5 faces have? Use Euler's formula.",
+  "tool": "graph-theory",
+  "kind": "textbook",
+  "also": []
+ },
+ {
+  "q": "chromatic number kya hota hai K4 aur cycle C5 ka",
+  "tool": "graph-theory",
+  "kind": "hinglish",
+  "also": []
+ },
+ {
+  "q": "number of spanning trees of complete graph k5 kirchhoff",
+  "tool": "graph-theory",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "recurrence relation T(n)=T(n-1)+n ka solution kya hoga",
+  "tool": "recurrences",
+  "kind": "hinglish",
+  "also": []
+ },
+ {
+  "q": "why does the master theorem not apply to T(n)=2T(n/2)+n/log n",
+  "tool": "recurrences",
+  "kind": "concept",
+  "also": []
+ },
+ {
+  "q": "substitution method prove T(n)=O(n log n)",
+  "tool": "recurrences",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "inverse of matrix adjoint se kaise nikalte hai 2x2",
+  "tool": "matrices",
+  "kind": "hinglish",
+  "also": []
+ },
+ {
+  "q": "when does Ax=b have no solution, one solution or infinitely many",
+  "tool": "matrices",
+  "kind": "concept",
+  "also": []
+ },
+ {
+  "q": "determinant of 3x3 1 2 3 0 4 5 1 0 6",
+  "tool": "matrices",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "binomial distribution me mean aur variance kya hota hai",
+  "tool": "probability",
+  "kind": "hinglish",
+  "also": []
+ },
+ {
+  "q": "what is the difference between independent and mutually exclusive events",
+  "tool": "probability",
+  "kind": "concept",
+  "also": []
+ },
+ {
+  "q": "expected value and variance of a fair die roll",
+  "tool": "probability",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "riemann sum se integral kaise nikalte hai",
+  "tool": "calculus",
+  "kind": "hinglish",
+  "also": []
+ },
+ {
+  "q": "what does the mean value theorem say geometrically",
+  "tool": "calculus",
+  "kind": "concept",
+  "also": []
+ },
+ {
+  "q": "critical points sign chart f(x)=x^4-4x^3",
+  "tool": "calculus",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "train 150 m long 54 km/h kitne time me platform cross karegi 250 m",
+  "tool": "aptitude",
+  "kind": "hinglish",
+  "also": []
+ },
+ {
+  "q": "how to quickly find the angle between clock hands at 4:20",
+  "tool": "aptitude",
+  "kind": "concept",
+  "also": []
+ },
+ {
+  "q": "compound interest 10000 at 8% for 3 years",
+  "tool": "aptitude",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "Train BPE for 3 merges on the corpus aaabdaaabac. List the merges in order.",
+  "tool": "tokenisation",
+  "kind": "textbook",
+  "also": []
+ },
+ {
+  "q": "tokenizer kya hota hai chatgpt me words ko tokens me kaise todta hai",
+  "tool": "tokenisation",
+  "kind": "hinglish",
+  "also": []
+ },
+ {
+  "q": "why does gpt struggle to count letters in strawberry tokens",
+  "tool": "tokenisation",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "Vectors a = (1, 2, 2) and b = (2, 0, 1). Compute their cosine similarity and euclidean distance.",
+  "tool": "embeddings",
+  "kind": "textbook",
+  "also": []
+ },
+ {
+  "q": "embeddings se semantic search kaise hota hai",
+  "tool": "embeddings",
+  "kind": "hinglish",
+  "also": []
+ },
+ {
+  "q": "pca plot of word vectors",
+  "tool": "embeddings",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "Q = [1,0], K1 = [1,0], K2 = [0,1], d = 2. Compute the attention weights of this one query over the two keys.",
+  "tool": "attention",
+  "kind": "textbook",
+  "also": []
+ },
+ {
+  "q": "causal mask kya karta hai decoder me",
+  "tool": "attention",
+  "kind": "hinglish",
+  "also": []
+ },
+ {
+  "q": "multi head attention 2 heads heatmap",
+  "tool": "attention",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "Logits are [2.0, 1.0, 0.1]. Compute the probabilities at temperature 1 and at temperature 0.5.",
+  "tool": "sampling",
+  "kind": "textbook",
+  "also": []
+ },
+ {
+  "q": "llm same prompt par alag alag answer kyu deta hai randomness",
+  "tool": "sampling",
+  "kind": "hinglish",
+  "also": []
+ },
+ {
+  "q": "repetition penalty entropy",
+  "tool": "sampling",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "A model has 32 layers, 32 heads, head dimension 128, fp16. How much KV cache memory per token and for 4096 tokens?",
+  "tool": "kv-cache",
+  "kind": "textbook",
+  "also": []
+ },
+ {
+  "q": "kv cache nahi ho to har token pe poora attention dobara kyu compute karna padta hai",
+  "tool": "kv-cache",
+  "kind": "hinglish",
+  "also": []
+ },
+ {
+  "q": "time to first token vs tokens per second",
+  "tool": "kv-cache",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "Two ranked lists: A = [d1, d2, d3], B = [d3, d1, d4]. Compute Reciprocal Rank Fusion scores with k=60.",
+  "tool": "retrieval",
+  "kind": "textbook",
+  "also": []
+ },
+ {
+  "q": "rag me chunk size kitna rakhna chahiye aur overlap kyu",
+  "tool": "retrieval",
+  "kind": "hinglish",
+  "also": []
+ },
+ {
+  "q": "reranker cross encoder rag citations",
+  "tool": "retrieval",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "In HNSW what do the parameters M and efConstruction control, and how do they trade off recall against build time?",
+  "tool": "hnsw",
+  "kind": "textbook",
+  "also": []
+ },
+ {
+  "q": "hnsw me upar ki layer me kam nodes kyu hote hai",
+  "tool": "hnsw",
+  "kind": "hinglish",
+  "also": []
+ },
+ {
+  "q": "small world graph vector search recall",
+  "tool": "hnsw",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "how to center a div in css",
+  "tool": null,
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "nextjs vs remix which is better",
+  "tool": null,
+  "kind": "concept",
+  "also": []
+ },
+ {
+  "q": "paneer butter masala kaise banate hai",
+  "tool": null,
+  "kind": "hinglish",
+  "also": []
+ },
+ {
+  "q": "queue at the railway counter is too long what to do",
+  "tool": null,
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "ek joke sunao",
+  "tool": null,
+  "kind": "hinglish",
+  "also": []
+ },
+ {
+  "q": "aws lambda cold start",
+  "tool": null,
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "what is the capital of australia",
+  "tool": null,
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "State Newton's third law and give two examples.",
+  "tool": null,
+  "kind": "textbook",
+  "also": []
+ },
+ {
+  "q": "how do I hash a password with bcrypt in node",
+  "tool": null,
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "kya tum mera resume check kar sakte ho",
+  "tool": null,
+  "kind": "hinglish",
+  "also": []
+ },
+ {
+  "q": "git stash pop conflict",
+  "tool": null,
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "linkedin profile tips for freshers",
+  "tool": null,
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "how to clear chrome cache",
+  "tool": null,
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "merge two excel files into one",
+  "tool": null,
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "thanks bye",
+  "tool": null,
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "terraform state file explained",
+  "tool": null,
+  "kind": "concept",
+  "also": []
+ },
+ {
+  "q": "sorting hat harry potter which house am i",
+  "tool": null,
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "A rope bridge spans 45 m and needs 1.2 m extra for each end. How much rope is needed?",
+  "tool": null,
+  "kind": "textbook",
+  "also": []
+ }
+]

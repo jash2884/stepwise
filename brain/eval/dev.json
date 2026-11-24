@@ -1,0 +1,1144 @@
+[
+ {
+  "q": "Sort 38, 27, 43, 3, 9, 82, 10 with merge sort and show each merge.",
+  "tool": "sorting",
+  "kind": "textbook",
+  "also": []
+ },
+ {
+  "q": "quicksort me pivot kaise choose karte hai aur partition kaise hota hai",
+  "tool": "sorting",
+  "kind": "hinglish",
+  "also": []
+ },
+ {
+  "q": "Insert 50, 30, 70, 20, 40, 60, 80 into an empty BST and then delete 50. Give the inorder traversal.",
+  "tool": "binary-search-tree",
+  "kind": "textbook",
+  "also": []
+ },
+ {
+  "q": "bst me node delete karte time do children ho to kya karte hai",
+  "tool": "binary-search-tree",
+  "kind": "hinglish",
+  "also": []
+ },
+ {
+  "q": "Insert 10, 20, 30, 40, 50, 25 into an AVL tree. Show rotations performed.",
+  "tool": "avl-tree",
+  "kind": "textbook",
+  "also": []
+ },
+ {
+  "q": "avl lr rotation vs rl rotation",
+  "tool": "avl-tree",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "Build a max heap from 4, 10, 3, 5, 1 using Floyd's method and write the array.",
+  "tool": "binary-heap",
+  "kind": "textbook",
+  "also": []
+ },
+ {
+  "q": "heap me insert karne ke baad element ko upar kyu bubble karte hai",
+  "tool": "binary-heap",
+  "kind": "hinglish",
+  "also": []
+ },
+ {
+  "q": "autocomplete using prefix tree app apple apt",
+  "tool": "trie",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "trie vs hash map for storing a dictionary of words, when is a trie better",
+  "tool": "trie",
+  "kind": "concept",
+  "also": []
+ },
+ {
+  "q": "what does path compression actually do to the tree",
+  "tool": "union-find",
+  "kind": "concept",
+  "also": []
+ },
+ {
+  "q": "Elements 1 to 8 start as separate sets. Perform union(1,2), union(3,4), union(1,3), union(5,6), union(1,5) with union by rank. What is the parent array and the rank of the root?",
+  "tool": "union-find",
+  "kind": "textbook",
+  "also": []
+ },
+ {
+  "q": "bfs from node A on graph A-B A-C B-D C-D D-E",
+  "tool": "graph-traversal",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "when to use bfs and when dfs",
+  "tool": "graph-traversal",
+  "kind": "concept",
+  "also": []
+ },
+ {
+  "q": "Find the MST of a graph with edges AB=4, AC=1, BC=3, BD=2, CD=5, DE=7, CE=6 using Kruskal and give total weight.",
+  "tool": "minimum-spanning-tree",
+  "kind": "textbook",
+  "also": []
+ },
+ {
+  "q": "prim aur kruskal me kya farak hai, kab kaunsa use kare",
+  "tool": "minimum-spanning-tree",
+  "kind": "hinglish",
+  "also": []
+ },
+ {
+  "q": "dijkstra source A edges A-B 4, A-C 2, C-B 1, B-D 5, C-D 8",
+  "tool": "shortest-paths",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "why does dijkstra fail with negative edge weights",
+  "tool": "shortest-paths",
+  "kind": "concept",
+  "also": []
+ },
+ {
+  "q": "kosaraju algorithm steps reverse graph",
+  "tool": "strongly-connected-components",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "Find the strongly connected components of the directed graph with edges 1->2, 2->3, 3->1, 3->4, 4->5, 5->6, 6->4.",
+  "tool": "strongly-connected-components",
+  "kind": "textbook",
+  "also": []
+ },
+ {
+  "q": "binary search on 3 8 12 19 25 31 47 for 25",
+  "tool": "searching",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "when is interpolation search better than binary search",
+  "tool": "searching",
+  "kind": "concept",
+  "also": []
+ },
+ {
+  "q": "Convert the infix expression (A+B)*C-D/E to postfix using a stack.",
+  "tool": "stacks-queues",
+  "kind": "textbook",
+  "also": []
+ },
+ {
+  "q": "circular queue me front rear wrap around kaise hota hai",
+  "tool": "stacks-queues",
+  "kind": "hinglish",
+  "also": []
+ },
+ {
+  "q": "reverse a singly linked list iterative pointers",
+  "tool": "linked-list",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "why use a doubly linked list instead of a singly one",
+  "tool": "linked-list",
+  "kind": "concept",
+  "also": []
+ },
+ {
+  "q": "Find the LCS of ABCBDAB and BDCABA and give the table.",
+  "tool": "dynamic-programming",
+  "kind": "textbook",
+  "also": []
+ },
+ {
+  "q": "0/1 knapsack ka dp table samjhao weights 1 3 4 5 values 1 4 5 7 capacity 7",
+  "tool": "dynamic-programming",
+  "kind": "hinglish",
+  "also": []
+ },
+ {
+  "q": "Processes P1(arrival 0, burst 5), P2(1,3), P3(2,8), P4(3,6). Calculate average waiting time using SJF non-preemptive.",
+  "tool": "cpu-scheduling",
+  "kind": "textbook",
+  "also": []
+ },
+ {
+  "q": "round robin quantum 4 gantt chart",
+  "tool": "cpu-scheduling",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "belady anomaly example",
+  "tool": "page-replacement",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "A system has 3 frames. Reference string: 7 0 1 2 0 3 0 4 2 3 0 3 2. Count page faults using LRU.",
+  "tool": "page-replacement",
+  "kind": "textbook",
+  "also": []
+ },
+ {
+  "q": "Disk has 200 cylinders (0-199). Request queue 98, 183, 37, 122, 14, 124, 65, 67 with head at 53. Total head movement with SSTF?",
+  "tool": "disk-scheduling",
+  "kind": "textbook",
+  "also": []
+ },
+ {
+  "q": "scan vs c-scan disk",
+  "tool": "disk-scheduling",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "5 processes, 3 resource types A B C with totals 10, 5, 7. Allocation P0 010, P1 200, P2 302, P3 211, P4 002; Max P0 753, P1 322, P2 902, P3 222, P4 433. Is the system in a safe state?",
+  "tool": "bankers-algorithm",
+  "kind": "textbook",
+  "also": []
+ },
+ {
+  "q": "safe sequence banker algo need matrix",
+  "tool": "bankers-algorithm",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "resource allocation graph cycle deadlock",
+  "tool": "deadlock-detection",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "if there is a cycle in a resource allocation graph is there always deadlock",
+  "tool": "deadlock-detection",
+  "kind": "concept",
+  "also": []
+ },
+ {
+  "q": "producer consumer problem semaphore mutex empty full",
+  "tool": "semaphores",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "dining philosophers me deadlock kaise hota hai",
+  "tool": "semaphores",
+  "kind": "hinglish",
+  "also": []
+ },
+ {
+  "q": "Memory partitions of 100K, 500K, 200K, 300K, 600K in order. Place processes of 212K, 417K, 112K, 426K using best fit.",
+  "tool": "memory-allocation",
+  "kind": "textbook",
+  "also": []
+ },
+ {
+  "q": "external vs internal fragmentation, which allocation strategy causes which",
+  "tool": "memory-allocation",
+  "kind": "concept",
+  "also": []
+ },
+ {
+  "q": "Logical address space 64 KB, page size 4 KB, physical memory 256 KB. For logical address 0x3A7C, what are the page number and offset?",
+  "tool": "address-translation",
+  "kind": "textbook",
+  "also": []
+ },
+ {
+  "q": "tlb hit ratio effective access time 20ns 100ns 80%",
+  "tool": "address-translation",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "A file system has 12 direct pointers, one single and one double indirect pointer, block size 4 KB, pointer size 4 bytes. What is the maximum file size?",
+  "tool": "file-systems",
+  "kind": "textbook",
+  "also": []
+ },
+ {
+  "q": "inode structure unix",
+  "tool": "file-systems",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "Insert 5, 15, 25, 35, 45, 55 into an empty B+ tree of order 4 (max 3 keys per node). Show the splits.",
+  "tool": "b-plus-tree",
+  "kind": "textbook",
+  "also": []
+ },
+ {
+  "q": "b+ tree leaf linked list range query",
+  "tool": "b-plus-tree",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "btree median split insert",
+  "tool": "b-tree",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "difference between b tree and b+ tree",
+  "tool": "b-tree",
+  "kind": "concept",
+  "also": [
+   "b-plus-tree"
+  ]
+ },
+ {
+  "q": "R(A,B,C,D,E) with FDs A->B, BC->E, ED->A. Find all candidate keys.",
+  "tool": "normalization",
+  "kind": "textbook",
+  "also": []
+ },
+ {
+  "q": "bcnf aur 3nf me kya farak hai simple me batao",
+  "tool": "normalization",
+  "kind": "hinglish",
+  "also": []
+ },
+ {
+  "q": "left join vs inner join",
+  "tool": "sql-joins",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "Table R has 1000 blocks and S has 500 blocks, and the buffer has 52 blocks. Estimate block I/Os for a block nested loop join.",
+  "tool": "sql-joins",
+  "kind": "textbook",
+  "also": []
+ },
+ {
+  "q": "relational algebra tree push selection down",
+  "tool": "query-processing",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "Convert SELECT name FROM student, enrolled WHERE student.id = enrolled.sid AND course = 'DB' into a relational algebra expression and optimise it.",
+  "tool": "query-processing",
+  "kind": "textbook",
+  "also": []
+ },
+ {
+  "q": "Schedule S: R1(X) W1(X) R2(X) W2(X) R1(Y) W1(Y). Is it conflict serializable? Draw the precedence graph.",
+  "tool": "serializability",
+  "kind": "textbook",
+  "also": []
+ },
+ {
+  "q": "view serializable but not conflict serializable",
+  "tool": "serializability",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "2pl strict vs rigorous",
+  "tool": "concurrency-control",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "timestamp ordering me thomas write rule kya hai",
+  "tool": "concurrency-control",
+  "kind": "hinglish",
+  "also": []
+ },
+ {
+  "q": "The log has: <T1 start>, <T1,A,10,20>, <T2 start>, <T2,B,5,15>, <T1 commit>, then a crash. Which transactions are redone and which undone?",
+  "tool": "recovery",
+  "kind": "textbook",
+  "also": []
+ },
+ {
+  "q": "aries analysis redo undo phases",
+  "tool": "recovery",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "linear probing insert 18 41 22 44 59 32 31 73 table size 13",
+  "tool": "hashing",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "chaining vs open addressing pros and cons",
+  "tool": "hashing",
+  "kind": "concept",
+  "also": []
+ },
+ {
+  "q": "er diagram to tables weak entity",
+  "tool": "er-to-relational",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "Employee works for Department (many to one) and each employee has a multivalued attribute phone. Convert this ER diagram to a relational schema.",
+  "tool": "er-to-relational",
+  "kind": "textbook",
+  "also": []
+ },
+ {
+  "q": "Find the network address, broadcast address and number of usable hosts for 192.168.10.77/26.",
+  "tool": "subnetting",
+  "kind": "textbook",
+  "also": []
+ },
+ {
+  "q": "vlsm kya hota hai aur kaise karte hai departments ke liye hosts 50 25 10",
+  "tool": "subnetting",
+  "kind": "hinglish",
+  "also": []
+ },
+ {
+  "q": "go back n window size 4 lost frame 2",
+  "tool": "sliding-window",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "selective repeat vs go back n, which uses less bandwidth when errors happen",
+  "tool": "sliding-window",
+  "kind": "concept",
+  "also": []
+ },
+ {
+  "q": "distance vector routing count to infinity",
+  "tool": "routing",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "Router A has neighbours B (cost 2) and C (cost 5). B advertises distance 3 to D, C advertises distance 1 to D. What is A's updated distance vector entry for D?",
+  "tool": "routing",
+  "kind": "textbook",
+  "also": []
+ },
+ {
+  "q": "slow start ssthresh cwnd graph reno",
+  "tool": "tcp-congestion-control",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "TCP Reno starts with cwnd = 1 MSS and ssthresh = 16. A timeout occurs at round 10. Give cwnd for each round from 1 to 14.",
+  "tool": "tcp-congestion-control",
+  "kind": "textbook",
+  "also": []
+ },
+ {
+  "q": "Compute the CRC for data 1101011011 using generator polynomial x^4 + x + 1.",
+  "tool": "error-detection",
+  "kind": "textbook",
+  "also": []
+ },
+ {
+  "q": "hamming code 7 4 error at position",
+  "tool": "error-detection",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "A datagram of total size 4000 bytes (20-byte header) must pass through a link with MTU 1500. Give the size, offset and MF flag of each fragment.",
+  "tool": "ip-fragmentation",
+  "kind": "textbook",
+  "also": []
+ },
+ {
+  "q": "fragment offset field 8 bytes",
+  "tool": "ip-fragmentation",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "longest prefix match 192.168.1.130",
+  "tool": "cidr-and-longest-prefix-match",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "Routing table: 10.0.0.0/8 via A, 10.1.0.0/16 via B, 10.1.2.0/24 via C, default via D. Where is a packet for 10.1.2.77 sent? And for 10.1.9.5?",
+  "tool": "cidr-and-longest-prefix-match",
+  "kind": "textbook",
+  "also": []
+ },
+ {
+  "q": "slotted aloha throughput max",
+  "tool": "mac-protocols",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "csma cd me collision ke baad binary exponential backoff kaise kaam karta hai",
+  "tool": "mac-protocols",
+  "kind": "hinglish",
+  "also": []
+ },
+ {
+  "q": "token bucket vs leaky bucket",
+  "tool": "traffic-shaping",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "A token bucket has capacity 6000 bytes, token rate 1 MB/s and the line rate is 10 MB/s. Calculate the maximum burst duration.",
+  "tool": "traffic-shaping",
+  "kind": "textbook",
+  "also": []
+ },
+ {
+  "q": "iterative vs recursive dns query",
+  "tool": "dns-and-http",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "A page has 1 base HTML object and 5 small images, RTT 100 ms, ignore transmission time. Compute total time with non-persistent HTTP and with persistent pipelined HTTP.",
+  "tool": "dns-and-http",
+  "kind": "textbook",
+  "also": []
+ },
+ {
+  "q": "headers added at each layer osi",
+  "tool": "osi-encapsulation",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "what does a router do at layer 3 versus a switch at layer 2",
+  "tool": "osi-encapsulation",
+  "kind": "concept",
+  "also": []
+ },
+ {
+  "q": "dfa accepts strings ending in 01",
+  "tool": "finite-automata",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "Run the NFA with q0 -a-> {q0,q1} and q1 -b-> q2 (q2 final) on the string aab. Is it accepted?",
+  "tool": "finite-automata",
+  "kind": "textbook",
+  "also": []
+ },
+ {
+  "q": "Convert the NFA with states {q0,q1,q2}, start q0, final q2, d(q0,0)={q0,q1}, d(q0,1)={q0}, d(q1,1)={q2} to a DFA.",
+  "tool": "nfa-to-dfa",
+  "kind": "textbook",
+  "also": []
+ },
+ {
+  "q": "subset construction epsilon closure",
+  "tool": "nfa-to-dfa",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "myhill nerode table filling minimize dfa",
+  "tool": "dfa-minimization",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "how do you know two states of a DFA are equivalent",
+  "tool": "dfa-minimization",
+  "kind": "concept",
+  "also": []
+ },
+ {
+  "q": "thompson construction (a|b)*abb",
+  "tool": "regex-to-nfa",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "regular expression ko nfa me convert karo a*b",
+  "tool": "regex-to-nfa",
+  "kind": "hinglish",
+  "also": []
+ },
+ {
+  "q": "state elimination method dfa to regular expression",
+  "tool": "dfa-to-regex",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "Construct a DFA for the intersection of 'even number of a's' and 'ends with b'.",
+  "tool": "dfa-to-regex",
+  "kind": "textbook",
+  "also": []
+ },
+ {
+  "q": "Prove using the pumping lemma that L = { a^n b^n : n >= 0 } is not regular.",
+  "tool": "pumping-lemma",
+  "kind": "textbook",
+  "also": []
+ },
+ {
+  "q": "pumping lemma me s kaise choose karte hai proof ke liye",
+  "tool": "pumping-lemma",
+  "kind": "hinglish",
+  "also": []
+ },
+ {
+  "q": "pda for a^n b^n stack",
+  "tool": "pushdown-automata",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "Convert the grammar S -> aSb | ab to an equivalent PDA.",
+  "tool": "pushdown-automata",
+  "kind": "textbook",
+  "also": []
+ },
+ {
+  "q": "Convert S -> ASB | e, A -> aAS | a, B -> SbS | A | bb to Chomsky normal form.",
+  "tool": "cfg-to-cnf",
+  "kind": "textbook",
+  "also": []
+ },
+ {
+  "q": "remove unit productions useless symbols",
+  "tool": "cfg-to-cnf",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "Use CYK to check whether baaba is in L(G), where S->AB|BC, A->BA|a, B->CC|b, C->AB|a.",
+  "tool": "cyk-parsing",
+  "kind": "textbook",
+  "also": []
+ },
+ {
+  "q": "what is the time complexity of CYK and why does it need CNF",
+  "tool": "cyk-parsing",
+  "kind": "concept",
+  "also": []
+ },
+ {
+  "q": "turing machine for a^n b^n c^n",
+  "tool": "turing-machine",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "turing machine me binary number me 1 add karna hai kaise",
+  "tool": "turing-machine",
+  "kind": "hinglish",
+  "also": []
+ },
+ {
+  "q": "lexer tokens for int x = 5 + y;",
+  "tool": "lexical-analysis",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "what is the maximal munch rule in a lexer",
+  "tool": "lexical-analysis",
+  "kind": "concept",
+  "also": []
+ },
+ {
+  "q": "Eliminate left recursion from E -> E + T | T, T -> T * F | F, F -> (E) | id.",
+  "tool": "left-recursion",
+  "kind": "textbook",
+  "also": []
+ },
+ {
+  "q": "left factoring grammar S -> iEtS | iEtSeS | a",
+  "tool": "left-recursion",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "Compute FIRST and FOLLOW for E -> TE', E' -> +TE' | e, T -> FT', T' -> *FT' | e, F -> (E) | id.",
+  "tool": "first-follow",
+  "kind": "textbook",
+  "also": []
+ },
+ {
+  "q": "follow set me $ kab aata hai",
+  "tool": "first-follow",
+  "kind": "hinglish",
+  "also": []
+ },
+ {
+  "q": "ll1 parsing table is grammar ll1 or not",
+  "tool": "ll1-parsing",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "Build the LL(1) table for S -> aSb | c and trace the parse of aacbb.",
+  "tool": "ll1-parsing",
+  "kind": "textbook",
+  "also": []
+ },
+ {
+  "q": "operator precedence parser table id + * $",
+  "tool": "operator-precedence",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "what is the restriction on the grammar for operator precedence parsing",
+  "tool": "operator-precedence",
+  "kind": "concept",
+  "also": []
+ },
+ {
+  "q": "slr vs lalr vs clr",
+  "tool": "lr-parsing",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "Construct the LR(0) item sets for S -> AA, A -> aA | b.",
+  "tool": "lr-parsing",
+  "kind": "textbook",
+  "also": []
+ },
+ {
+  "q": "synthesized vs inherited attributes",
+  "tool": "syntax-directed-translation",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "Annotate the parse tree for 3*5+4 using E -> E1 + T {E.val = E1.val + T.val}, T -> T1 * F {T.val = T1.val * F.val}, F -> digit.",
+  "tool": "syntax-directed-translation",
+  "kind": "textbook",
+  "also": []
+ },
+ {
+  "q": "Generate three address code, quadruples and triples for a = b * -c + b * -c.",
+  "tool": "three-address-code",
+  "kind": "textbook",
+  "also": []
+ },
+ {
+  "q": "dag common subexpression",
+  "tool": "three-address-code",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "basic blocks leaders flow graph",
+  "tool": "code-optimisation",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "Apply constant folding, copy propagation and dead code elimination to: x = 4*2; y = x + z; w = y; x = 10; return w.",
+  "tool": "code-optimisation",
+  "kind": "textbook",
+  "also": []
+ },
+ {
+  "q": "interference graph coloring k=3 registers",
+  "tool": "register-allocation",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "what is spilling in register allocation",
+  "tool": "register-allocation",
+  "kind": "concept",
+  "also": []
+ },
+ {
+  "q": "convert 156 decimal to binary and hex",
+  "tool": "number-systems",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "Represent -37 in 8-bit 2's complement and add it to 52. Is there overflow?",
+  "tool": "number-systems",
+  "kind": "textbook",
+  "also": []
+ },
+ {
+  "q": "k map f(a,b,c,d)= sum m(0,1,2,5,6,7,8,9,10,14)",
+  "tool": "k-map",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "kmap me dont care ko kab 1 maante hai",
+  "tool": "k-map",
+  "kind": "hinglish",
+  "also": []
+ },
+ {
+  "q": "4x1 mux implement f = sum m(1,2,6,7)",
+  "tool": "combinational-circuits",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "difference between decoder and demultiplexer",
+  "tool": "combinational-circuits",
+  "kind": "concept",
+  "also": []
+ },
+ {
+  "q": "jk flip flop characteristic table",
+  "tool": "sequential-circuits",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "Design a synchronous mod-6 counter using T flip-flops.",
+  "tool": "sequential-circuits",
+  "kind": "textbook",
+  "also": []
+ },
+ {
+  "q": "A 32-bit address, 16 KB direct-mapped cache with 64-byte blocks. How many bits for tag, index and offset?",
+  "tool": "cache-mapping",
+  "kind": "textbook",
+  "also": []
+ },
+ {
+  "q": "2 way set associative lru trace 0 4 8 0 12 4",
+  "tool": "cache-mapping",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "load use hazard stall 5 stage pipeline",
+  "tool": "pipelining",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "A non-pipelined processor takes 10 ns per instruction. A 5-stage pipeline has stage time 2 ns. Find the speedup for 100 instructions.",
+  "tool": "pipelining",
+  "kind": "textbook",
+  "also": []
+ },
+ {
+  "q": "indirect vs direct addressing mode",
+  "tool": "addressing-modes",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "Memory location 200 holds 500 and location 500 holds 800. Register R1 = 100. Find the operand for LOAD 200 in immediate, direct and indirect modes.",
+  "tool": "addressing-modes",
+  "kind": "textbook",
+  "also": []
+ },
+ {
+  "q": "Represent -12.375 in IEEE 754 single precision.",
+  "tool": "ieee-754",
+  "kind": "textbook",
+  "also": []
+ },
+ {
+  "q": "float 0x40490FDB decode",
+  "tool": "ieee-754",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "polling vs interrupt vs dma cpu time",
+  "tool": "io-dma",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "dma me cycle stealing kya hota hai",
+  "tool": "io-dma",
+  "kind": "hinglish",
+  "also": []
+ },
+ {
+  "q": "truth table p implies q or r",
+  "tool": "propositional-logic",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "difference between a tautology and a contradiction",
+  "tool": "propositional-logic",
+  "kind": "concept",
+  "also": []
+ },
+ {
+  "q": "A = {1,2,3,4}, R = {(1,2),(2,3),(3,4)}. Find the transitive closure using Warshall's algorithm.",
+  "tool": "sets-relations",
+  "kind": "textbook",
+  "also": []
+ },
+ {
+  "q": "hasse diagram divisors of 12",
+  "tool": "sets-relations",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "How many ways can 5 people be seated around a circular table if two particular people must sit together?",
+  "tool": "combinatorics",
+  "kind": "textbook",
+  "also": []
+ },
+ {
+  "q": "stars and bars 10 identical balls 4 boxes",
+  "tool": "combinatorics",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "havel hakimi 4 3 3 2 2 1",
+  "tool": "graph-theory",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "difference between an euler path and a hamiltonian path",
+  "tool": "graph-theory",
+  "kind": "concept",
+  "also": []
+ },
+ {
+  "q": "master theorem T(n)=2T(n/2)+n log n",
+  "tool": "recurrences",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "Solve T(n) = 3T(n/4) + n using the recursion tree method.",
+  "tool": "recurrences",
+  "kind": "textbook",
+  "also": []
+ },
+ {
+  "q": "Find the eigenvalues and eigenvectors of [[4,1],[2,3]].",
+  "tool": "matrices",
+  "kind": "textbook",
+  "also": []
+ },
+ {
+  "q": "rank of matrix gauss elimination 3x3",
+  "tool": "matrices",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "A box has 3 red and 2 blue balls. Two are drawn without replacement. What is the probability that both are red?",
+  "tool": "probability",
+  "kind": "textbook",
+  "also": []
+ },
+ {
+  "q": "bayes theorem false positive disease test",
+  "tool": "probability",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "limit sin x / x as x->0 lhopital",
+  "tool": "calculus",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "Find the local maxima and minima of f(x) = x^3 - 6x^2 + 9x + 2.",
+  "tool": "calculus",
+  "kind": "textbook",
+  "also": []
+ },
+ {
+  "q": "A shopkeeper marks an item 25% above cost and gives a 10% discount. What is the profit percent?",
+  "tool": "aptitude",
+  "kind": "textbook",
+  "also": []
+ },
+ {
+  "q": "pipes and cisterns problem",
+  "tool": "aptitude",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "bpe merges on low lower lowest",
+  "tool": "tokenisation",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "why do LLMs split hindi text into so many more tokens than english",
+  "tool": "tokenisation",
+  "kind": "concept",
+  "also": []
+ },
+ {
+  "q": "cosine similarity vs dot product",
+  "tool": "embeddings",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "how does king minus man plus woman equals queen work with word vectors",
+  "tool": "embeddings",
+  "kind": "concept",
+  "also": []
+ },
+ {
+  "q": "scaled dot product attention softmax(QK^T/sqrt(d))V",
+  "tool": "attention",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "why divide by square root of d in attention",
+  "tool": "attention",
+  "kind": "concept",
+  "also": []
+ },
+ {
+  "q": "temperature 0.5 vs 1.5 effect on logits softmax",
+  "tool": "sampling",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "what is the difference between top-k and top-p sampling",
+  "tool": "sampling",
+  "kind": "concept",
+  "also": []
+ },
+ {
+  "q": "kv cache memory formula layers heads",
+  "tool": "kv-cache",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "why is the prefill phase fast but decoding slow",
+  "tool": "kv-cache",
+  "kind": "concept",
+  "also": []
+ },
+ {
+  "q": "bm25 formula idf term frequency",
+  "tool": "retrieval",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "why combine keyword search and vector search in rag",
+  "tool": "retrieval",
+  "kind": "concept",
+  "also": []
+ },
+ {
+  "q": "hnsw layers entry point greedy search",
+  "tool": "hnsw",
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "why is approximate nearest neighbour search used instead of brute force",
+  "tool": "hnsw",
+  "kind": "concept",
+  "also": []
+ },
+ {
+  "q": "how do react hooks like useEffect work",
+  "tool": null,
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "docker container vs virtual machine",
+  "tool": null,
+  "kind": "concept",
+  "also": []
+ },
+ {
+  "q": "git rebase vs merge",
+  "tool": null,
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "how do I sort my excel sheet by date",
+  "tool": null,
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "rajkot se mumbai jaane ka best route kya hai",
+  "tool": null,
+  "kind": "hinglish",
+  "also": []
+ },
+ {
+  "q": "Write an essay of 300 words on tree plantation for class 8.",
+  "tool": null,
+  "kind": "textbook",
+  "also": []
+ },
+ {
+  "q": "kubernetes pod crashloopbackoff fix",
+  "tool": null,
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "hi how are you",
+  "tool": null,
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "who won the ipl 2024",
+  "tool": null,
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "explain photosynthesis in simple words",
+  "tool": null,
+  "kind": "concept",
+  "also": []
+ },
+ {
+  "q": "python list comprehension syntax",
+  "tool": null,
+  "kind": "typed",
+  "also": []
+ },
+ {
+  "q": "60000 ke under kaun sa laptop lena chahiye",
+  "tool": null,
+  "kind": "hinglish",
+  "also": []
+ }
+]

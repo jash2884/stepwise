@@ -1,0 +1,10 @@
+test: in scope 94.8% (top 3: 98.9%, n=267)
+  typed     95.8% (top 3: 97.9%, n=95)
+  hinglish  97.2% (top 3: 100.0%, n=72)
+  textbook  100.0% (top 3: 100.0%, n=37)
+  concept   87.3% (top 3: 98.4%, n=63)
+  out of scope refused 6/18
+  confidence >= 0.3: answers 91%, right 95.0%
+  confidence >= 0.5: answers 82%, right 97.4%
+  confidence >= 0.7: answers 74%, right 98.1%
+  confidence >= 0.9: answers 49%, right 100.0%
