@@ -55,5 +55,41 @@ export const ANSWERS = {
   "dynamic-programming": {
     "url": "/dynamic-programming?problem=lcs&a=AB&b=CAB",
     "text": "Longest common subsequence: the answer is 2 (AB)."
+  },
+  "cpu-scheduling": {
+    "url": "/cpu-scheduling?algo=rr&q=2&p=0-5-0_1-3-0_2-1-0",
+    "text": "Round Robin (RR): average waiting time 3.3333, average turnaround time 6.3333; completion times P1 9, P2 8, P3 5."
+  },
+  "page-replacement": {
+    "url": "/page-replacement?r=1+2+3+4+1+2+5+1+2+3+4+5&f=3&algo=fifo",
+    "text": "FIFO with 3 frames: 9 page faults and 3 hits out of 12 references."
+  },
+  "disk-scheduling": {
+    "url": "/disk-scheduling?r=98+183+37+122+14+124+65+67&h=53&c=200&algo=scan&dir=up",
+    "text": "SCAN (elevator) from cylinder 53: total head movement 331 cylinders, visiting 65, 67, 98, 122, 124, 183, 199, 37, 14."
+  },
+  "bankers-algorithm": {
+    "url": "/bankers-algorithm?s=0.1.0_2.0.0_3.0.2_2.1.1_0.0.2%7E7.5.3_3.2.2_9.0.2_2.2.2_4.3.3%7E3.3.2&req=P1+1+0+2",
+    "text": "Safe, with safe sequence P1, P3, P4, P0, P2. Requests: P1 (1, 0, 2) granted."
+  },
+  "deadlock-detection": {
+    "url": "/deadlock-detection?res=R1%3A2%2C+R2%3A2&e=R1+-%3E+P1%3BR1+-%3E+P3%3BP1+-%3E+R2%3BR2+-%3E+P2%3BR2+-%3E+P4%3BP2+-%3E+R1",
+    "text": "There's a cycle (P1 → P2 → P1), but no deadlock: some resource has spare instances, so a process in the cycle can still finish. With multiple instances a cycle is necessary but not sufficient."
+  },
+  "semaphores": {
+    "url": "/semaphores?preset=producer-consumer&v=correct",
+    "text": "Producer–consumer (bounded buffer), Correct: semaphores mutex=1, empty=3, full=0; processes P1, P2, C1. Pick which process runs next to see blocking, races and deadlocks."
+  },
+  "memory-allocation": {
+    "url": "/memory-allocation?algo=best&h=100+500+200+300+600&s=P1+212%3B+P2+417%3B+P3+112%3B+P4+426",
+    "text": "Best fit: P2 at 140 (417 KB), P3 at 680 (112 KB), P1 at 920 (212 KB), P4 at 1260 (426 KB); every request was placed. Free 533 KB, largest 174 KB."
+  },
+  "address-translation": {
+    "url": "/address-translation?mode=paging&ps=4&ab=4&pt=5+6+1+2&tlb=3&pol=lru&a=0+3+4+13&m=100&t=20",
+    "text": "Physical addresses: 0 -> 20, 3 -> 23, 4 -> 24, 13 -> 9. TLB hits 1, misses 3, EAT 195 ns."
+  },
+  "file-systems": {
+    "url": "/file-systems?b=1024&p=4&d=10&s=1&dd=1&t=0&x=300000",
+    "text": "k = 256 pointers per block, so the maximum file size is 64.26 MB (67381248 bytes); byte 300000 is in the double region and takes 3 block accesses."
   }
 };
