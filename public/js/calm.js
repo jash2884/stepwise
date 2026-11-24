@@ -12,14 +12,18 @@ export function calm(host) {
   const saved = load(), bar = h("div", { class: "calm-bar", role: "group", "aria-label": "Show or hide" });
   const toggle = (label, open, set) => {
     const b = h("button", { type: "button", "aria-expanded": String(open), onclick: () => { const now = b.getAttribute("aria-expanded") !== "true"; b.setAttribute("aria-expanded", String(now)); set(now, true); } }, label);
+    b.close = () => { if (b.getAttribute("aria-expanded") === "true") { b.setAttribute("aria-expanded", "false"); set(false, true); } };
     set(open, false);
     return b;
   };
   const broken = !!host.querySelector(".inputs .notice.error");
-  const inputBtn = toggle("Change the input", broken || !!saved.inputs, (on, save_) => { host.classList.toggle("no-inputs", !on); if (save_) save({ inputs: on }); });
-  const codeBtn = toggle("Code and variables", saved.code ?? matchMedia("(min-width: 900px)").matches, (on, save_) => { host.classList.toggle("no-code", !on); if (save_) save({ code: on }); });
+  // What opens must be seen: the other panel above it closes, and it scrolls into view.
+  let inputBtn, codeBtn, howBtn = null;
+  const reveal = (sel, other) => { other?.close(); requestAnimationFrame(() => { const el = host.querySelector(sel); if (!el) return; const r = el.getBoundingClientRect(); if (r.top > innerHeight - 160 || r.bottom < 90) el.scrollIntoView({ block: "center", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" }); }); };
+  inputBtn = toggle("Change the input", broken || !!saved.inputs, (on, save_) => { host.classList.toggle("no-inputs", !on); if (save_) { save({ inputs: on }); if (on) reveal(".inputs", howBtn); } });
+  codeBtn = toggle("Code and variables", saved.code ?? matchMedia("(min-width: 900px)").matches, (on, save_) => { host.classList.toggle("no-code", !on); if (save_) { save({ code: on }); if (on) reveal(".trace-side", howBtn); } });
   const theory = host.querySelector("details.theory");
-  const howBtn = theory ? toggle("How it works", false, (on) => { theory.open = on; }) : null;
+  howBtn = theory ? toggle("How it works", false, (on, by) => { theory.open = on; if (on && by) inputBtn.close(); }) : null;
   bar.append(inputBtn, codeBtn, ...(howBtn ? [howBtn] : []));
   (host.querySelector(".tool-head") ?? host.firstElementChild)?.after(bar);
   // The description is for first-timers: it opens with the explanation.

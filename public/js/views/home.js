@@ -1,17 +1,8 @@
-// Home: the eye and one question on the left, every subject on the right.
+// Home: one big eye, one question, and the subjects as a single quiet line.
 import { SUBJECTS, TOOLS } from "../tools.js";
-import { ROADMAPS } from "../roadmaps.js";
 import { h } from "../ui.js";
 
 const bySlug = new Map(TOOLS.map((t) => [t.slug, t]));
-const DOORS = [
-  ["/roadmaps", "Follow a roadmap", `${ROADMAPS.length} paths: GATE, placements, semester exams and AI.`],
-  ["/gate", "Practise questions", "Endless GATE-style questions with worked solutions."],
-  ["/mock", "Sit a mock test", "Timed, marked the GATE way."],
-  ["/mistakes", "Fix your mistakes", "See which misconception you most likely had, and where."],
-  ["/syllabus", "Bring your syllabus", "Turn your college PDF into a plan."],
-];
-
 export function render(root) {
   const stage = h("div", { class: "eye-stage", "aria-hidden": "true" });
   const input = h("input", { id: "see", class: "see-input", type: "text", autocomplete: "off", spellcheck: "false", maxlength: 1200, placeholder: "LRU with 3 frames", "aria-describedby": "see-help" });
@@ -23,19 +14,16 @@ export function render(root) {
     h("p", { id: "see-help", class: "vh" }, "Type a topic or a whole question. Matches appear as you type, worked out on your device."));
   const links = SUBJECTS.map((s) => h("li", null, h("a", { href: `/subject/${s.id}`, "data-subject": s.id }, s.name)));
   root.replaceChildren(h("div", { class: "home" },
-    h("section", { class: "home-top" },
-      h("div", { class: "home-left" }, stage, form),
-      h("nav", { class: "home-subjects", id: "explore", "aria-label": "Subjects" }, h("ul", null, links))),
-    h("section", { id: "home-continue", hidden: true }),
-    h("section", { class: "doors" }, h("h2", null, "Then make it stick"),
-      h("ul", null, DOORS.map(([href, t, d]) => h("li", null, h("a", { href }, h("b", null, t), h("span", null, d))))))));
+    h("section", { class: "home-top" }, stage, form),
+    h("nav", { class: "home-subjects", id: "explore", "aria-label": "Subjects" }, h("ul", null, links)),
+    h("section", { id: "home-continue", hidden: true })));
   import("../learn/continue.js").then((m) => m.mountContinue(document.getElementById("home-continue"))).catch(() => {});
 
   let eye = null, gone = false, hover = null, typed = null;
-  import("../eye.js").then((m) => m.mountEye(stage, { scale: 1.02 })).then((e) => {
+  import("../eye.js").then((m) => m.mountEye(stage, { scale: 1 })).then((e) => {
     if (gone) { e?.dispose(); return; }
     if (!e) { stage.classList.add("no-webgl"); return; }
-    eye = e; sync();
+    eye = e; e.place({ y: matchMedia("(max-width: 700px)").matches ? 0.9 : 0.55, scale: matchMedia("(max-width: 700px)").matches ? 0.92 : 0.95 }); sync();
   }).catch(() => stage.classList.add("no-webgl"));
   const sync = () => eye?.shape(hover ?? typed ?? "eye");
   for (const li of links) {
