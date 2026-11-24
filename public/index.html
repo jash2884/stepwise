@@ -1,15 +1,15 @@
 <!doctype html>
-<html lang="en" data-theme="light" data-accent="indigo">
+<html lang="en" data-theme="light">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Stepwise: see every step of DSA, OS, DBMS, networks, theory & compiler algorithms</title>
+  <title>drishi: see every step of DSA, OS, DBMS, networks, theory & compiler algorithms</title>
   <meta name="description" content="Interactive, step-by-step visualisers with pseudocode for data structures and algorithms, operating systems, databases, networks, theory of computation and compiler design, with practice questions that check your answers." />
   <link rel="canonical" href="https://stepwise.jashparmar.com/" />
-  <meta name="theme-color" content="#f7f6f2" />
+  <meta name="theme-color" content="#eef2f3" />
   <meta property="og:type" content="website" />
-  <meta property="og:site_name" content="Stepwise" />
-  <meta property="og:title" content="Stepwise: see every step" />
+  <meta property="og:site_name" content="drishi" />
+  <meta property="og:title" content="drishi: see every step" />
   <meta property="og:description" content="OS, DBMS, networks, automata and compiler algorithms animated step by step, with practice questions that check every answer." />
   <meta property="og:image" content="https://stepwise.jashparmar.com/og.png" />
   <meta name="twitter:card" content="summary_large_image" />
@@ -22,7 +22,7 @@
   <link rel="modulepreload" href="/js/tools.js" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Anek+Latin:wdth,wght@75..125,100..800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/style.css" />
   <link rel="stylesheet" href="/css/learning.css" />
   <link rel="stylesheet" href="/css/digital-logic.css" />
@@ -35,67 +35,36 @@
   <link rel="stylesheet" href="/css/tracks.css" />
   <link rel="stylesheet" href="/css/ask.css" />
   <link rel="stylesheet" href="/css/syllabus.css" />
-  <!-- design.css holds the shared tokens and component polish: keep it last. -->
+  <!-- design.css holds the shared tokens and component polish: drishi.css (last) is the current look. -->
   <link rel="stylesheet" href="/css/design.css" />
   <link rel="stylesheet" href="/css/loader.css" />
+  <link rel="stylesheet" href="/css/drishi.css" />
 </head>
 <body>
   <div id="routebar" class="routebar" aria-hidden="true"></div>
-  <div class="boot" aria-hidden="true">
-    <div class="boot-bars"><i></i><i></i><i></i><i></i><i></i></div>
-    <p class="boot-name">Stepwise</p>
-    <p class="boot-line">Sorting out every step…</p>
-  </div>
+  <div class="boot" aria-hidden="true"><div class="boot-eyes"><i></i><i></i></div></div>
   <a class="skip" href="#app">Skip to content</a>
   <header class="top">
     <div class="wrap top-inner">
-      <a class="logo" href="/" aria-label="Stepwise home"><span class="logo-mark" aria-hidden="true"><i></i><i></i><i></i></span>Stepwise</a>
+      <a class="logo" href="/" aria-label="drishi home"><span aria-hidden="true">dr<span class="i">ı</span>sh<span class="i">ı</span></span></a>
       <nav id="nav" class="nav" aria-label="Main"></nav>
       <div class="top-tools">
-        <button id="search-btn" class="search-btn" type="button" data-palette aria-label="Search Stepwise" aria-keyshortcuts="Control+K Meta+K">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="M20 20l-4-4" /></svg>
-          <span class="search-label">Search</span><kbd data-kbd>Ctrl K</kbd>
-        </button>
-        <div class="theme-menu">
-          <button id="theme" class="icon-btn" type="button" aria-label="Theme and accent colour" aria-haspopup="true" aria-expanded="false" aria-controls="theme-pop">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8" /><path d="M12 4a8 8 0 0 1 0 16z" class="fill" /></svg>
-          </button>
-        </div>
-        <button id="menu-btn" class="icon-btn menu-btn" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="nav">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" /></svg>
-        </button>
+        <button id="search-btn" class="search-btn" type="button" data-palette aria-label="Search drishi" aria-keyshortcuts="Control+K Meta+K"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="M20 20l-4-4" /></svg></button>
+        <button id="theme" class="icon-btn" type="button" aria-label="Switch between light and dark"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8" /><path d="M12 4a8 8 0 0 1 0 16z" class="fill" /></svg></button>
+        <button id="menu-btn" class="icon-btn menu-btn" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="nav"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h16M4 16h16" /></svg></button>
       </div>
     </div>
   </header>
   <main id="app" class="wrap" tabindex="-1">
     <!--static-->
-    <noscript><p class="notice info">Stepwise's visualisers need JavaScript. Please enable it to use the interactive tools.</p></noscript>
+    <noscript><p class="notice info">drishi's visualisers need JavaScript. Please enable it to use the interactive tools.</p></noscript>
   </main>
-  <footer class="foot">
-    <div class="wrap foot-grid">
-      <div class="foot-brand">
-        <a class="logo" href="/" aria-label="Stepwise home"><span class="logo-mark" aria-hidden="true"><i></i><i></i><i></i></span>Stepwise</a>
-        <p class="muted">See every step of the algorithms in your syllabus, then test yourself. Free, no sign-up, works on your phone and offline.</p>
-        <button class="btn ghost small" type="button" data-palette>Search everything <kbd data-kbd>Ctrl K</kbd></button>
-      </div>
-      <nav class="foot-col" aria-label="Subjects"><h2>Subjects</h2><ul id="foot-subjects"></ul></nav>
-      <nav class="foot-col" aria-label="Roadmaps"><h2>Roadmaps</h2><ul id="foot-roadmaps"><li><a href="/roadmap/gate-cs">GATE CS</a></li><li><a href="/roadmaps">All roadmaps</a></li></ul></nav>
-      <nav class="foot-col" aria-label="Practice"><h2>Practice</h2><ul>
-        <li><a href="/ask">Ask anything</a></li><li><a href="/gate">GATE practice</a></li><li><a href="/mock">Mock test</a></li><li><a href="/diagnostic">Diagnostic</a></li>
-        <li><a href="/review">Review</a></li><li><a href="/mistakes">Mistakes</a></li><li><a href="/plan">Study plan</a></li><li><a href="/progress">Progress</a></li>
-        <li><button type="button" class="linkish" data-ai-settings>AI settings</button></li>
-      </ul></nav>
-      <nav class="foot-col" aria-label="About"><h2>About</h2><ul>
-        <li><a href="https://github.com/jash2884/stepwise">Source code</a></li>
-        <li><a href="https://github.com/jash2884/stepwise/issues/new">Report a problem</a></li>
-        <li><a href="https://jashparmar.com">Jash Parmar</a></li>
-      </ul></nav>
-    </div>
-    <div class="wrap foot-base">
-      <span>Built by <a href="https://jashparmar.com">Jash Parmar</a> · <a href="https://github.com/jash2884/stepwise">Source</a> · <a href="https://github.com/jash2884/stepwise/issues/new">Report a problem</a></span>
-      <span class="muted">Free, no sign-up, works on your phone and offline.</span>
-    </div>
-  </footer>
+  <footer class="foot"><div class="wrap foot-line">
+    <a class="logo" href="/" aria-label="drishi home"><span aria-hidden="true">dr<span class="i">ı</span>sh<span class="i">ı</span></span></a>
+    <a href="/ask">Ask</a><a href="/mock">Mock tests</a><a href="/plan">Study plan</a><a href="/review">Review</a><a href="/syllabus">Syllabus</a>
+    <button type="button" data-ai-settings>AI settings</button>
+    <a href="https://github.com/jash2884/stepwise">Source</a><a href="https://github.com/jash2884/stepwise/issues/new">Report a problem</a><span>Built by <a href="https://jashparmar.com">Jash Parmar</a></span>
+  </div></footer>
   <script type="module" src="/js/app.js"></script>
 </body>
 </html>

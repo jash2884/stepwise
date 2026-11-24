@@ -22,7 +22,7 @@ function withTimeout<T>(p: Promise<T>, ms: number, what: string): Promise<T> {
   return Promise.race([p, new Promise<T>((_, reject) => { timer = setTimeout(() => reject(new Error(`${what} timed out`)), ms); })]).finally(() => clearTimeout(timer));
 }
 
-const SYSTEM = `You route a computer-science student's request to one of Stepwise's step-by-step visualisers and fill in its inputs.
+const SYSTEM = `You route a computer-science student's request to one of drishi's step-by-step visualisers and fill in its inputs.
 Rules:
 - Never compute or state the final numeric answer yourself. A deterministic engine computes it from the inputs you fill.
 - Pick exactly one tool from the candidates (use its slug). If none fits, use "tool": null.

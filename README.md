@@ -1,4 +1,4 @@
-# Stepwise
+# drishi
 
 **See every step of the data structures, OS, DBMS, computer networks, theory of computation and compiler design algorithms you get examined on.** 62 interactive tools, each with pseudocode (the running line highlighted), live variables, a practice mode and links to related LeetCode, CSES, HackerRank and GeeksforGeeks problems. Interactive visualisers that animate each algorithm one step at a time with the reasoning written out, plus a practice mode that generates fresh exam-style questions and checks every answer.
 

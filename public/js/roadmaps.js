@@ -1,4 +1,4 @@
-// Roadmaps: guided paths through Stepwise. A roadmap is a list of stages (one
+// Roadmaps: guided paths through drishi. A roadmap is a list of stages (one
 // per syllabus subject), each stage a list of modules, and each module points
 // at the visualisers, GATE question topics and reading that teach it.
 //

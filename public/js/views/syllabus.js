@@ -1,6 +1,6 @@
 // /syllabus: upload your syllabus, get your roadmap. The PDF is read in the
 // browser; the text goes to the AI model to pull out units and topics, which
-// are matched to Stepwise; the roadmap is saved on this device only.
+// are matched to drishi; the roadmap is saved on this device only.
 import { h } from "../ui.js";
 import { aiCall } from "../ai/client.js";
 import { fill, header, plural } from "../learn/common.js";
@@ -13,7 +13,7 @@ import { catalogue, syllabusBadge, unitsList } from "../syllabus/ui.js";
 
 export const META = {
   title: "Turn your syllabus into a study roadmap",
-  description: "Upload your university syllabus PDF or paste it in: Stepwise matches every topic to visualisers and practice, then plans your study to the exam date.",
+  description: "Upload your university syllabus PDF or paste it in: drishi matches every topic to visualisers and practice, then plans your study to the exam date.",
 };
 const MAX_CHARS = 60000;
 
@@ -89,7 +89,7 @@ export function render(root) {
     fileStatus,
     h("label", { class: "lp-field", for: "sy-text" }, h("span", null, "Syllabus text")),
     text, count,
-    h("p", { class: "notice info small sy-privacy" }, "Privacy: the syllabus text is sent to the AI model (Stepwise's own, or yours if you added a key in AI settings) to read the units and topics. Nothing is stored on the server. Your roadmap is saved in this browser only."),
+    h("p", { class: "notice info small sy-privacy" }, "Privacy: the syllabus text is sent to the AI model (drishi's own, or yours if you added a key in AI settings) to read the units and topics. Nothing is stored on the server. Your roadmap is saved in this browser only."),
     h("h2", null, "2. Your exam"),
     h("div", { class: "lp-fields" },
       h("label", { class: "lp-field" }, h("span", null, "Exam date"), exam),
@@ -120,7 +120,7 @@ export function render(root) {
       h("ul", { class: "hero-facts lp-facts" },
         h("li", null, h("b", null, roadmap.stages.length), " units"),
         h("li", null, h("b", null, topics.length), " topics"),
-        h("li", null, h("b", null, covered), " matched to Stepwise"),
+        h("li", null, h("b", null, covered), " matched to drishi"),
         h("li", null, h("b", null, topics.length - covered), " to study elsewhere")),
       data.stats?.verifierFailed ? h("p", { class: "notice info small" }, "The AI check on borderline matches didn't answer, so those were decided on similarity alone. You can run the matching again from the roadmap page.") : null,
       h("div", { class: "row" },
@@ -145,7 +145,7 @@ export function render(root) {
   }
 
   fill(root, h("div", { class: "tool sy" },
-    header("Your syllabus", "Upload your syllabus, get your roadmap", "Every college teaches its own syllabus. Give Stepwise yours and it lists the units in order, matches each topic to the visualisers and practice that teach it, says plainly which topics it doesn't cover, and plans your study to the exam."),
+    header("Your syllabus", "Upload your syllabus, get your roadmap", "Every college teaches its own syllabus. Give drishi yours and it lists the units in order, matches each topic to the visualisers and practice that teach it, says plainly which topics it doesn't cover, and plans your study to the exam."),
     form, result, saved));
   drawSaved();
 }

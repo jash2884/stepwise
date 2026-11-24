@@ -1,4 +1,4 @@
-// Stepwise's only server code: the "Ask about this step" tutor at /api/ask.
+// drishi's only server code: the "Ask about this step" tutor at /api/ask.
 // Every other path is a static asset served straight from dist/.
 import { clean, messages, SYSTEM, validate } from "./tutor.ts";
 import { handleAi } from "./ai/routes.ts";

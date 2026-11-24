@@ -84,7 +84,7 @@ export function assembleRoadmap(syllabus, entries, { id = null, created = Date.n
         id: t.key, title: t.name, hours: half(t.hours ?? DEFAULT_HOURS), placement: 0,
         needs: [...needs].filter((n) => n !== t.key),
         outcomes: [`Learn ${t.name} from your course notes and textbook`],
-        tools: [], gate: [], uncovered: true, comingSoon: "Not covered by Stepwise yet.",
+        tools: [], gate: [], uncovered: true, comingSoon: "Not covered by drishi yet.",
         reading: [{ title: `${t.name} on GeeksforGeeks`, url: gfgSearch(t.name) }, { title: `Search the web for ${t.name}`, url: googleSearch(t.name, src.course) }],
       };
     });
@@ -104,10 +104,10 @@ export function assembleRoadmap(syllabus, entries, { id = null, created = Date.n
   });
   return {
     id: roadmapId, title: course, local: true, created, updated,
-    summary: `Your ${course} syllabus as a roadmap: ${covered} of ${total} topics matched to Stepwise visualisers and practice.`,
+    summary: `Your ${course} syllabus as a roadmap: ${covered} of ${total} topics matched to drishi visualisers and practice.`,
     description: `A personal roadmap built from your ${course} syllabus.`,
     howTo: [
-      "Units are in your syllabus's order. Topics matched to Stepwise have visualisers and practice; the rest link to reading.",
+      "Units are in your syllabus's order. Topics matched to drishi have visualisers and practice; the rest link to reading.",
       "Check the matches below. Rename or remove a topic, then run the matching again if something looks wrong.",
       "Make a study plan from it on the Plan page, with your exam date.",
     ],

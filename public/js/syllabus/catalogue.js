@@ -1,5 +1,5 @@
 // What a syllabus topic can be matched against: every roadmap module that
-// teaches something in Stepwise, and every visualiser (tool card). Pure data
+// teaches something in drishi, and every visualiser (tool card). Pure data
 // in, pure data out, shared by the browser (to turn a match id back into
 // tools, GATE topics, outcomes and hours) and by scripts/syllabus-catalogue.js
 // (which writes the id, title and text the Worker embeds).

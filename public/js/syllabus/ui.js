@@ -17,7 +17,7 @@ export const syllabusBadge = () => h("span", { class: "sy-badge" }, "Your syllab
 
 const pct = (x) => `${Math.round(x * 100)}%`;
 
-// One topic's match, as a short line: where it goes in Stepwise, or the
+// One topic's match, as a short line: where it goes in drishi, or the
 // honest "not covered" with search links.
 export function matchLine(t, course = "") {
   if (t.match) {
@@ -31,7 +31,7 @@ export function matchLine(t, course = "") {
   }
   return h("span", { class: "sy-match" },
     h("span", { class: "sy-dot", "aria-hidden": "true" }),
-    h("span", null, "Not covered by Stepwise yet. "),
+    h("span", null, "Not covered by drishi yet. "),
     h("a", { href: gfgSearch(t.name), target: "_blank", rel: "noopener" }, "GeeksforGeeks"),
     h("span", { class: "muted" }, " · "),
     h("a", { href: googleSearch(t.name, course), target: "_blank", rel: "noopener" }, "Google"));

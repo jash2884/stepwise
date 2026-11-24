@@ -2,7 +2,7 @@
 // (static HTML, sitemap, offline cache). Each page's view is views/<slug>.js.
 export const LEARN_PAGES = [
   { slug: "progress", title: "Your progress", heading: "How you're doing",
-    description: "Your Stepwise progress: streak, this week's practice, mastery for every roadmap stage, weakest topics and reviews due. Saved on your device, no account." },
+    description: "Your drishi progress: streak, this week's practice, mastery for every roadmap stage, weakest topics and reviews due. Saved on your device, no account." },
   { slug: "plan", title: "GATE CS study planner", heading: "Your plan to exam day",
     description: "A free day by day GATE CS study plan to your exam date: topics in order, weak topics first, the last fifth kept for mocks and revision. Replans if you fall behind." },
   { slug: "review", title: "Spaced repetition reviews", heading: "Quick reviews",

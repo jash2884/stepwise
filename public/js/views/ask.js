@@ -3,6 +3,37 @@
 // the answer, and questions with options are checked against them.
 import { h } from "../ui.js";
 import { aiCall, aiSettings } from "../ai/client.js";
+import { TOOLS } from "../tools.js";
+
+const bySlug = new Map(TOOLS.map((t) => [t.slug, t]));
+
+// Answer on this device: the tiny router picks the visualiser, plain code reads
+// the inputs, and the visualiser's engine works out the answer. Returns a card.
+async function local(q, cloud) {
+  const [{ guess }, { read, hasData }] = await Promise.all([import("../ai/local/router.js"), import("../ai/local/parse.js")]);
+  const r = await guess(q), hits = r.tools.filter((t) => t.slug !== "none").slice(0, 3), top = hits[0];
+  const more = h("p", { class: "also" }, "Not what you meant? ", hits.slice(1).map((t) => h("a", { href: `/${t.slug}` }, bySlug.get(t.slug).title)), h("button", { type: "button", class: "linkish", onclick: cloud }, "Ask the cloud AI"));
+  const choices = (title, note) => h("section", { class: "card local" }, h("h2", null, title), note ? h("p", { class: "read" }, note) : null,
+    h("ul", { class: "choices" }, hits.map((t) => { const tool = bySlug.get(t.slug); return h("li", null, h("a", { href: `/${t.slug}` }, tool.title, h("span", null, tool.summary))); })),
+    h("p", null, h("button", { type: "button", class: "btn ghost", onclick: cloud }, "Ask the cloud AI instead")));
+  if (r.tools[0].slug === "none" || top.p < 0.25) return choices("Is it one of these?", "I'm not sure which visualiser fits. These are the closest.");
+  if (top.p < 0.5) return choices("Which of these do you mean?");
+  const tool = bySlug.get(top.slug);
+  if (hasData(q) && r.intent !== "explain") {
+    const got = read(top.slug, q);
+    if (got) {
+      const { SCHEMA_BY_SLUG, check } = await import("../ai/tool-schemas.js");
+      const c = check(SCHEMA_BY_SLUG.get(top.slug), got.params);
+      if (c.ok) return h("section", { class: "card local" }, h("h2", null, tool.title), h("p", { class: "answer" }, c.answer.text),
+        h("p", { class: "read" }, "I read this as ", Object.entries(c.params).map(([k, v]) => `${k} = ${v}`).join(", "), ". Check it matches your question."),
+        h("a", { class: "btn primary", href: c.url }, "See it step by step"), more);
+    }
+    return h("section", { class: "card local" }, h("h2", null, tool.title),
+      h("p", { class: "read" }, "This is the right kind of question, but I couldn't read every value in it, so I won't guess an answer. Open the visualiser and enter your values, or let the cloud AI read it."),
+      h("div", { class: "row" }, h("a", { class: "btn primary", href: `/${top.slug}` }, `Open ${tool.title}`), h("button", { type: "button", class: "btn ghost", onclick: cloud }, "Read it with the cloud AI")), more);
+  }
+  return h("section", { class: "card local" }, h("h2", null, tool.title), h("p", { class: "read" }, tool.summary), h("a", { class: "btn primary", href: `/${top.slug}` }, "See it step by step"), more);
+}
 
 const EXAMPLES = [
   "Round robin, quantum 2: P1 arrives 0 burst 5, P2 at 1 burst 3, P3 at 2 burst 1. Average waiting time?",
@@ -45,7 +76,7 @@ export function render(root) {
     h("svg", { viewBox: "0 0 24 24", "aria-hidden": "true" }, h("path", { d: "M4 8h3l2-3h6l2 3h3v11H4z" }), h("circle", { cx: 12, cy: 13, r: 3.5 })), "Snap a question");
   const askBtn = h("button", { type: "submit", class: "btn primary" }, "Ask");
   const mode = h("span", { class: "muted small" });
-  const syncMode = () => { const s = aiSettings(); mode.textContent = s.provider && s.key ? `Using your ${s.provider} key` : "Using free shared models"; };
+  const syncMode = () => { const s = aiSettings(); mode.textContent = s.provider && s.key ? `Using your ${s.provider} key` : ""; };
   syncMode();
   const settingsBtn = h("button", { type: "button", class: "linkish small", onclick: () => import("../ai/settings.js").then((m) => { m.openAiSettings(); document.querySelector("dialog.ai-set")?.addEventListener("close", syncMode); }) }, "AI settings");
 
@@ -60,11 +91,11 @@ export function render(root) {
 
   root.replaceChildren(h("div", { class: "ask-page" },
     h("header", { class: "tool-head" },
-      h("p", { class: "eyebrow" }, "Ask Stepwise"),
+      h("p", { class: "eyebrow" }, "Ask drishi"),
       h("h1", null, "Ask anything, see it happen"),
-      h("p", { class: "lede" }, "Type a question or snap a photo of one. The AI picks the right visualiser and fills in your numbers; the visualiser's own engine works out the answer, step by step.")),
+      h("p", { class: "lede" }, "Type a question. It is read on your device, and the visualiser's own engine works out the answer.")),
     form, chips, progress, out,
-    h("p", { class: "ask-privacy muted small" }, "What you type, and any photo you send, goes to the AI model chosen in AI settings (free shared models unless you add your own key). Don't include personal details. The AI only reads the question; every answer comes from the visualiser's engine.")));
+    h("p", { class: "ask-privacy muted small" }, "Typed questions stay on your device unless you choose the cloud AI. Photos, and anything you send to the cloud AI, go to the model chosen in AI settings, so leave out personal details.")));
 
   // --- Progress --------------------------------------------------------------------------
   function steps(labels) {
@@ -78,10 +109,16 @@ export function render(root) {
 
   function stop() { busy?.abort(); busy = null; }
 
-  async function run(transcript = null) {
+  async function run(transcript = null, cloud = false) {
     const q = input.value.trim();
     if (!q && !transcript) { input.focus(); return; }
     stop();
+    if (!cloud && !transcript) {
+      const mine = (busy = new AbortController());
+      history.replaceState(null, "", `/ask?q=${encodeURIComponent(q.slice(0, 600))}`);
+      progress.hidden = true;
+      try { const card = await local(q, () => run(null, true)); if (mine !== busy) return; busy = null; out.replaceChildren(card); return; } catch (e) { console.warn("on-device ask failed", e); if (mine !== busy) return; }
+    }
     const ctl = (busy = new AbortController());
     if (!transcript) {
       photo = null;

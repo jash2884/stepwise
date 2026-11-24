@@ -123,7 +123,7 @@ function build(navigate) {
   const list = h("ul", { id: "pal-list", class: "pal-list", role: "listbox", "aria-label": "Results" });
   const status = h("p", { class: "pal-status", "aria-live": "polite" });
   const closeBtn = h("button", { type: "button", class: "pal-close", "aria-label": "Close search" }, "Esc");
-  const dialog = h("div", { class: "pal", role: "dialog", "aria-modal": "true", "aria-label": "Search Stepwise" },
+  const dialog = h("div", { class: "pal", role: "dialog", "aria-modal": "true", "aria-label": "Search drishi" },
     h("div", { class: "pal-field" },
       h("svg", { viewBox: "0 0 24 24", "aria-hidden": "true", class: "pal-icon" }, h("circle", { cx: 11, cy: 11, r: 7 }), h("path", { d: "M20 20l-4-4" })),
       input, closeBtn),

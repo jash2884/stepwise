@@ -100,7 +100,7 @@ export function render(root) {
         h("button", { type: "button", class: "btn ghost small", onclick: download }, "Export progress"),
         h("button", { type: "button", class: "btn ghost small", onclick: () => file.click() }, "Import a file"),
         h("button", { type: "button", class: "btn ghost small lp-danger", onclick: () => {
-          if (!confirm("Delete all your Stepwise progress on this device? This can't be undone. Export a copy first if you might want it.")) return;
+          if (!confirm("Delete all your drishi progress on this device? This can't be undone. Export a copy first if you might want it.")) return;
           reset(); draw();
         } }, "Reset everything")),
       file, status);

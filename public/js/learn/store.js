@@ -1,4 +1,4 @@
-// The learning store: everything Stepwise remembers about a learner, kept on
+// The learning store: everything drishi remembers about a learner, kept on
 // this device only (localStorage, no accounts, no network).
 //
 // State shape (version 2; version 1 had no ty, r, dx, doctor or elo, and
@@ -221,7 +221,7 @@ export function exportText(s = load()) {
 export function importText(text) {
   let raw;
   try { raw = JSON.parse(text); } catch { throw new Error("That file isn't valid JSON."); }
-  if (!raw || raw.app !== "stepwise" || (raw.v !== 1 && raw.v !== VERSION)) throw new Error("That file isn't a Stepwise progress export.");
+  if (!raw || raw.app !== "stepwise" || (raw.v !== 1 && raw.v !== VERSION)) throw new Error("That file isn't a drishi progress export.");
   const s = migrate(raw, null);
   save(s);
   return s;

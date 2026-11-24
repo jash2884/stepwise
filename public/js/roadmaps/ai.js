@@ -1,6 +1,6 @@
 // AI engineering roadmap: from how text becomes tokens to building retrieval
 // systems. Inspired by public AI-engineering roadmaps; the structure and all
-// text here are Stepwise's own. Same shape and rules as roadmaps.js: ids are
+// text here are drishi's own. Same shape and rules as roadmaps.js: ids are
 // stable, hours and placement (0 to 5, how often it comes up in interviews for
 // AI engineering roles) are editorial estimates.
 //

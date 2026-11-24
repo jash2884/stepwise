@@ -103,11 +103,11 @@ await writeFile(join(out, "gate.html"), pageHtml({
 }));
 
 // Ask anything: the AI front door to every visualiser.
-const ASK_DESCRIPTION = "Type or snap a CS question: Stepwise picks the right visualiser, fills in your numbers, and its engine works out and checks the answer step by step.";
+const ASK_DESCRIPTION = "Type or snap a CS question: drishi picks the right visualiser, fills in your numbers, and its engine works out and checks the answer step by step.";
 if (ASK_DESCRIPTION.length > 170) throw new Error("/ask: description too long");
 await writeFile(join(out, "ask.html"), pageHtml({
   title: `Ask anything, see it happen · ${SITE.name}`, description: ASK_DESCRIPTION, path: "/ask",
-  body: `<section class="static-content"><p class="eyebrow">Ask Stepwise</p><h1>Ask anything, see it happen</h1><p class="lede">${esc(ASK_DESCRIPTION)}</p><p><a href="/">All ${TOOLS.length} visualisers</a> · <a href="/gate">GATE practice</a></p></section>`,
+  body: `<section class="static-content"><p class="eyebrow">Ask drishi</p><h1>Ask anything, see it happen</h1><p class="lede">${esc(ASK_DESCRIPTION)}</p><p><a href="/">All ${TOOLS.length} visualisers</a> · <a href="/gate">GATE practice</a></p></section>`,
 }));
 
 // Roadmaps: an index, one page per roadmap and one per stage, all indexable.

@@ -75,7 +75,7 @@ function renderIndex(root) {
           h("h2", null, r.title),
           h("p", { class: "muted" }, r.summary),
           h("span", { class: "btn primary" }, "Open the roadmap →")))) : null,
-        h("p", { class: "muted" }, mine.length ? null : "Every college has its own syllabus. ", h("a", { href: "/syllabus" }, mine.length ? "Add another syllabus" : "Upload yours and get a roadmap that follows it"), mine.length ? "" : ", matched to Stepwise topic by topic."));
+        h("p", { class: "muted" }, mine.length ? null : "Every college has its own syllabus. ", h("a", { href: "/syllabus" }, mine.length ? "Add another syllabus" : "Upload yours and get a roadmap that follows it"), mine.length ? "" : ", matched to drishi topic by topic."));
     })(),
     h("div", { class: "rm-list" }, ROADMAPS.map((r) => {
       const modules = r.stages.flatMap((s) => s.modules);
@@ -149,8 +149,8 @@ function renderMap(root, roadmap, editing = false) {
         h("a", { class: "btn ghost small", href: `/roadmap/${roadmap.id}/${stage.id}` }, "Open this stage →")))),
     ),
     h("p", { class: "muted small rm-note" }, roadmap.local
-      ? "Hours are borrowed from the matching Stepwise topics (or your syllabus's lecture hours), so treat them as rough. Topics in grey aren't covered by Stepwise yet and link to searches instead."
-      : "Hours are rough estimates for a first pass, including practice. Topics in grey don't have a Stepwise visualiser yet and link to reading instead."));
+      ? "Hours are borrowed from the matching drishi topics (or your syllabus's lecture hours), so treat them as rough. Topics in grey aren't covered by drishi yet and link to searches instead."
+      : "Hours are rough estimates for a first pass, including practice. Topics in grey don't have a drishi visualiser yet and link to reading instead."));
 }
 
 // --- /roadmap/<id>/<stage> -----------------------------------------------------------
@@ -199,9 +199,9 @@ function renderStage(root, roadmap, stage) {
         return h("a", { class: "rm-tool", href: `/${slug}` }, h("b", null, t.title), h("span", { class: "muted small" }, t.summary));
       })),
     ] : null,
-    m.uncovered ? h("p", { class: "notice info rm-soon" }, "Not covered by Stepwise yet. Use your notes and the searches below.")
-      : m.comingSoon ? h("p", { class: "notice info rm-soon" }, `No Stepwise visualiser for this yet. ${m.comingSoon === "Planned." ? "One is planned." : m.comingSoon} Use the reading below for now.`) : null,
-    m.match?.title ? h("p", { class: "muted small sy-from" }, `Matched to the Stepwise topic "${m.match.title}"${m.match.via === "verifier" ? ", checked by the AI" : ""}.`) : null,
+    m.uncovered ? h("p", { class: "notice info rm-soon" }, "Not covered by drishi yet. Use your notes and the searches below.")
+      : m.comingSoon ? h("p", { class: "notice info rm-soon" }, `No drishi visualiser for this yet. ${m.comingSoon === "Planned." ? "One is planned." : m.comingSoon} Use the reading below for now.`) : null,
+    m.match?.title ? h("p", { class: "muted small sy-from" }, `Matched to the drishi topic "${m.match.title}"${m.match.via === "verifier" ? ", checked by the AI" : ""}.`) : null,
     m.tryIt?.length ? [
       h("h3", null, "Try these examples"),
       h("div", { class: "row rm-try" }, m.tryIt.map((t) => h("a", { class: "btn ghost small", href: `/${t.tool}?${t.query}` }, t.label))),
