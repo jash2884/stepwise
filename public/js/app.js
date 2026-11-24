@@ -1,6 +1,9 @@
 import { SITE, SUBJECTS, TOOLS } from "./tools.js";
 import { h } from "./ui.js";
 import { LEARN_PAGES } from "./learn/pages.js";
+import { acceptMove } from "./move.js";
+
+acceptMove(); // before anything reads saved progress
 
 const LEARN = new Map(LEARN_PAGES.map((p) => [p.slug, p]));
 

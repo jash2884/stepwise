@@ -281,4 +281,4 @@ const EXTRA = [DIGITAL_LOGIC, COA, DISCRETE_MATHS, MATHS, AI].filter((m) => m.TO
 export const SUBJECTS = [...BASE_SUBJECTS, ...EXTRA.map((m) => m.SUBJECT)];
 export const TOOLS = [...BASE_TOOLS, ...EXTRA.flatMap((m) => m.TOOLS)];
 
-export const SITE = { name: "drishi", url: "https://stepwise.jashparmar.com" };
+export const SITE = { name: "drishi", url: "https://drishi.jashparmar.com" };

@@ -6,7 +6,7 @@
   // Every algorithm runs in the browser; `npm run build` writes dist/. The Worker
   // only handles /api/* (the tutor); every other path is served as a static asset.
   "assets": { "directory": "./dist", "binding": "ASSETS", "not_found_handling": "404-page", "html_handling": "auto-trailing-slash", "run_worker_first": ["/api/*"] },
-  "routes": [{ "pattern": "stepwise.jashparmar.com", "custom_domain": true }],
+  "routes": [{ "pattern": "drishi.jashparmar.com", "custom_domain": true }],
   "workers_dev": false,
   // Workers AI answers by default; set GEMINI_API_KEY (wrangler secret) to try Gemini first.
   "ai": { "binding": "AI" },

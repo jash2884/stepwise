@@ -1,0 +1,7 @@
+{
+  "name": "stepwise-redirect",
+  "main": "worker.js",
+  "compatibility_date": "2026-10-01",
+  "routes": [{ "pattern": "stepwise.jashparmar.com", "custom_domain": true }],
+  "workers_dev": false
+}
