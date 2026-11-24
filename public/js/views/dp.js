@@ -1,3 +1,5 @@
+import { blockStage, view3d } from "../view3d.js";
+import { dpFrame } from "../frames3d.js";
 import { COMPLEXITY, PROBLEMS, run } from "../engines/dp.js";
 import { codePanel, traceLayout, varsPanel } from "../code.js";
 import { treeDiagram } from "../diagram.js";
@@ -80,6 +82,7 @@ export function render(root) {
   const problem = PROBLEMS[p.get("problem")] ? p.get("problem") : "lcs";
   const state = { problem, input: Object.fromEntries(PROBLEMS[problem].params.map((q) => [q.key, p.get(q.key) ?? q.def])) };
   let player = null;
+  const v3 = view3d("dynamic-programming");
   const head = page({
     subject: "Data structures & algorithms", title: "Dynamic programming",
     lede: "Watch DP tables fill cell by cell: the cells each answer depends on light up, then the traceback walks back to the solution. LCS, edit distance, knapsack, coin change, matrix chain, LIS and Fibonacci.",
@@ -103,6 +106,7 @@ export function render(root) {
 
   function update() {
     player?.destroy();
+    v3.disposeAll();
     writeParams({ problem: state.problem, ...state.input });
     probSel.value = state.problem;
     let res;
@@ -112,11 +116,13 @@ export function render(root) {
     const stage = h("div", { class: "chart-wrap" }), treeBox = h("div", { class: "chart-wrap" }), note = h("p", { class: "step-note", "aria-live": "polite" });
     const counters = h("div", { class: "stats-row" }), total = res.steps.at(-1).cells.flat().filter(Boolean).length;
     treeBox.hidden = state.problem !== "fibMemo";
+    const st3 = blockStage(v3, stage, res.steps.length, (i) => dpFrame(res, res.steps[i]), { tilt: 0.72, turn: 0.35, aria: "Table in 3D" });
     player = stepper({
       count: res.steps.length, label: "Step", interval: state.problem === "mcm" ? 900 : 700,
       render: (i) => {
         const st = res.steps[i];
         glide(stage, gridSvg(res, st));
+        st3.show(i);
         if (st.tree) morph(treeBox, treeDiagram(st.tree, { lit: st.lit ?? [], aria: "Recursion tree", gapY: 54 }));
         code.show(st.line); vars.show(st.vars);
         note.textContent = st.note;
@@ -131,7 +137,7 @@ export function render(root) {
     });
     out.replaceChildren(
       h("section", { class: "card" }, h("h2", null, P.name), player.el, note,
-        traceLayout(h("div", null, treeBox, stage, h("p", { class: "muted small" }, BLURB[state.problem]),
+        traceLayout(h("div", null, treeBox, st3.el, h("p", { class: "muted small" }, BLURB[state.problem]),
           legend([["Cell being filled", "var(--accent)"], ["Cells it reads", "var(--series-4)"], ["The one that wins", "var(--series-2)"], ["Traceback", "var(--good)"], ...(res.base ? [["Base case (given)", "var(--muted)"]] : [])])), code, vars),
         counters),
       h("section", { class: "card" }, h("h2", null, "Complexity"),
@@ -156,7 +162,7 @@ export function render(root) {
   };
   fields();
   const visual = h("div", { class: "panel-body" },
-    h("section", { class: "card inputs" },
+    h("section", { class: "card inputs" }, v3.el,
       h("div", { class: "row" }, probSel, toolbar(EXAMPLES, (ex) => set(ex.problem, ex.input), random)),
       fieldRow, msg),
     out);
@@ -204,5 +210,5 @@ export function render(root) {
 
   mountTabs(root, head, visual, practice, newQuestion);
   update();
-  return () => player?.destroy();
+  return () => { player?.destroy(); v3.disposeAll(); };
 }

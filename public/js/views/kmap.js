@@ -1,3 +1,5 @@
+import { blockStage, view3d } from "../view3d.js";
+import { kmapFrame } from "../frames3d.js";
 import { KMAP_CODE, literals, minimise, NAMES, parseList, parseSop, pattern, productTerm, QM_CODE, randomFunction, sumTerm, evalSop } from "../engines/kmap.js";
 import { copyLink, h, notice, page, readParams, rng, writeParams } from "../ui.js";
 import { exampleSelect, mountTabs, stat } from "./kit.js";
@@ -32,6 +34,7 @@ export function render(root) {
     view: p.get("view") === "qm" ? "qm" : "kmap",
   };
   let players = [];
+  const v3 = view3d("k-map");
   const head = page({
     subject: "Digital logic",
     title: "K-map minimiser",
@@ -127,6 +130,7 @@ export function render(root) {
 
   function update() {
     players.forEach((x) => x.destroy()); players = [];
+    v3.disposeAll();
     writeParams({ n: state.n, m: state.m, d: state.d, form: state.form, view: state.view });
     msg.replaceChildren();
     try {
@@ -134,7 +138,10 @@ export function render(root) {
       const r = minimise(state.n, ones, dcs, { form: state.form });
       const values = Array.from({ length: 1 << state.n }, (_, m) => (ones.includes(m) ? 1 : dcs.includes(m) ? "X" : 0));
       let t;
-      if (state.view === "kmap") t = traced(r.steps, KMAP_CODE, (s) => mapStage(r, s, values));
+      if (state.view === "kmap") {
+        const flat = h("div"), st3 = blockStage(v3, flat, r.steps.length, (i) => kmapFrame(state.n, values, r.steps[i], r.primes), { tilt: 0.8, turn: 0.3, aria: "K-map in 3D" });
+        t = traced(r.steps, KMAP_CODE, (s, i) => { const d = mapStage(r, s, values); flat.replaceChildren(...[...d.children].slice(0, 2)); st3.show(i); return h("div", null, st3.el, ...d.children); });
+      }
       else {
         const steps = [...r.qm.steps.map((s) => ({ ...s, chart: false })),
           ...r.steps.filter((s) => s.line !== 2 && s.line !== 1).map((s) => ({ ...s, chart: true, line: chartLine(s.line) }))];
@@ -176,7 +183,7 @@ export function render(root) {
   }
 
   const visual = h("div", { class: "panel-body" },
-    h("section", { class: "card inputs" },
+    h("section", { class: "card inputs" }, v3.el,
       h("div", { class: "row" }, nSel, exampleSelect(EXAMPLES, (ex) => { Object.assign(state, { n: ex.n, m: ex.m, d: ex.d }); sync(); update(); }),
         h("button", { type: "button", class: "btn ghost", onclick: () => { const f = randomFunction(rng(), state.n, { dcChance: 0.12 }); state.m = f.ones.join(","); state.d = f.dcs.join(","); sync(); update(); } }, "Random"),
         h("button", { type: "button", class: "btn ghost", onclick: (e) => copyLink(e.currentTarget) }, "Copy link")),
@@ -229,5 +236,5 @@ export function render(root) {
   sync();
   mountTabs(root, head, visual, practice, newQuestion);
   update();
-  return () => players.forEach((x) => x.destroy());
+  return () => { players.forEach((x) => x.destroy()); v3.disposeAll(); };
 }

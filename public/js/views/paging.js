@@ -1,3 +1,5 @@
+import { blockStage, view3d } from "../view3d.js";
+import { pagingFrame } from "../frames3d.js";
 import { codePanel, traceLayout, varsPanel } from "../code.js";
 import { ALGORITHMS, beladyCheck, CLASS_NAMES, formatAccesses, NRU_TICK, parseAccesses, randomRefs, randomWrites, replace, workingSet } from "../engines/paging.js";
 import { copyLink, h, morph, notice, page, readParams, reducedMotion, rng, stepper, tabs, writeParams } from "../ui.js";
@@ -165,6 +167,7 @@ export function render(root) {
     tick: Number(params.get("k")) || NRU_TICK,
   };
   let player = null;
+  const v3 = view3d("page-replacement");
 
   const head = page({
     subject: "Operating systems",
@@ -193,6 +196,7 @@ export function render(root) {
 
   function update() {
     player?.destroy();
+    v3.disposeAll();
     writeParams({ r: state.refs, f: state.frames, algo: state.algo, ...(state.algo === "nru" ? { k: state.tick } : {}) });
     const nru = state.algo === "nru";
     tickLabel.hidden = !nru;
@@ -210,6 +214,7 @@ export function render(root) {
     if (clock) box.replaceChildren(clock.el);
     const buckets = nru ? h("div", { class: "chart-wrap pf-wrap" }) : null, bucketCap = nru ? h("p", { class: "muted small" }) : null;
     const running = h("div", { class: "stats-row" });
+    const st3 = blockStage(v3, box, refs.length, (i) => pagingFrame(result.steps, i, state.frames), { tilt: 0.55, turn: 0.22, aria: "Frames in 3D, with past references behind" });
     player = stepper({
       count: refs.length, label: "Reference", interval: 1000, start: 0,
       render: (i) => {
@@ -220,6 +225,7 @@ export function render(root) {
           const st = result.steps[i];
           bucketCap.textContent = `Classes as ${st.write ? "a write to" : "a read of"} page ${st.page} arrives${st.tick ? ", just after a clock tick cleared every R bit" : ""}.${st.victim != null ? ` The lowest non-empty class is ${CLASS_NAMES[st.vars["lowest class"]]}.` : ""}`;
         }
+        st3.show(i);
         const st = result.steps[i];
         note.textContent = `Step ${i + 1}: ${st.note}`;
         note.className = `step-note${st.hit ? " good" : ""}`;
@@ -232,7 +238,7 @@ export function render(root) {
     const belady = beladyCheck(refs, state.frames);
     out.replaceChildren(
       h("section", { class: "card" }, h("h2", null, spec.name), player.el, note,
-        traceLayout(h("div", null, box, buckets, bucketCap, running), code, vars),
+        traceLayout(h("div", null, st3.el, buckets, bucketCap, running), code, vars),
         stage,
         h("div", { class: "stats-row" },
           stat("Page faults", result.faults), stat("Hits", result.hits),
@@ -258,7 +264,7 @@ export function render(root) {
           Object.assign(state, { refs: NRU_EXAMPLE, frames: 3, algo: "nru", tick: NRU_TICK });
           refsIn.value = NRU_EXAMPLE; framesIn.value = 3; algoSel.value = "nru"; tickIn.value = NRU_TICK; update();
         } }, "NRU example"),
-        h("button", { type: "button", class: "btn ghost", onclick: (e) => copyLink(e.currentTarget) }, "Copy link")),
+        h("button", { type: "button", class: "btn ghost", onclick: (e) => copyLink(e.currentTarget) }, "Copy link"), v3.el),
       msg),
     out);
 
@@ -316,6 +322,6 @@ export function render(root) {
   root.replaceChildren(head, tab.el, panels);
   tab.select("visual");
   update();
-  return () => player?.destroy();
+  return () => { player?.destroy(); v3.disposeAll(); };
 }
 

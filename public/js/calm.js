@@ -1,6 +1,7 @@
 // Keeps tool pages calm: the visual shows first, the player sits at the bottom,
 // and the inputs, the explanation and the code open from one quiet row.
 // Choices are remembered. Views redraw parts of themselves, so this watches.
+import { SUBJECTS } from "./tools.js";
 import { h } from "./ui.js";
 const KEY = "drishi.calm";
 const load = () => { try { return JSON.parse(localStorage.getItem(KEY)) ?? {}; } catch { return {}; } };
@@ -21,7 +22,15 @@ export function calm(host) {
   const howBtn = theory ? toggle("How it works", false, (on) => { theory.open = on; }) : null;
   bar.append(inputBtn, codeBtn, ...(howBtn ? [howBtn] : []));
   (host.querySelector(".tool-head") ?? host.firstElementChild)?.after(bar);
+  // The description is for first-timers: it opens with the explanation.
+  const lede = host.querySelector(".tool-head .lede");
+  if (lede && theory) theory.querySelector("summary")?.after(lede);
+  const brow = host.querySelector(".tool-head .eyebrow"), subject = brow && SUBJECTS.find((s) => s.name === brow.textContent.trim());
+  if (subject) brow.replaceChildren(h("a", { href: `/subject/${subject.id}` }, subject.name));
+  const tabs = host.querySelector(".tabs");
+  if (tabs) { tabs.classList.add("in-bar"); bar.prepend(tabs); }
   const scan = () => {
+    for (const t of host.querySelectorAll(".view-toggle")) if (t.parentElement !== bar) { if (t.dataset.home) t.remove(); else { t.dataset.home = "1"; (tabs ? tabs.after(t) : bar.prepend(t)); } }
     inputBtn.hidden = !host.querySelector(".inputs");
     codeBtn.hidden = !host.querySelector(".trace-side");
     for (const s of host.querySelectorAll(".stepper")) if (s.parentElement && s.parentElement.lastElementChild !== s) s.parentElement.append(s);

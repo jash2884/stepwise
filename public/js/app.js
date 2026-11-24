@@ -15,7 +15,7 @@ let renderId = 0;
 
 // --- Navigation ------------------------------------------------------------------------
 const nav = document.getElementById("nav"), header = document.querySelector(".top"), menuBtn = document.getElementById("menu-btn");
-nav.replaceChildren(...[["/#explore", "explore", "Explore"], ["/roadmaps", "roadmaps", "Roadmaps"], ["/gate", "gate", "Practise"], ["/progress", "progress", "Progress"]].map(([href, slug, text]) => h("a", { href, "data-slug": slug }, text)));
+nav.replaceChildren(...[["/#explore", "explore", "Subjects"], ["/roadmaps", "roadmaps", "Roadmaps"], ["/gate", "gate", "Practise"], ["/progress", "progress", "Progress"]].map(([href, slug, text]) => h("a", { href, "data-slug": slug }, text)));
 function setMenu(open) {
   header.classList.toggle("nav-open", open);
   menuBtn.setAttribute("aria-expanded", String(open));
@@ -96,7 +96,7 @@ async function renderRoute() {
   cleanup?.();
   cleanup = null;
   closeMenus();
-  const section = slug.startsWith("roadmap") || slug === "syllabus" ? "roadmaps" : LEARN.has(slug) ? "progress" : slug;
+  const section = slug.startsWith("subject/") ? "explore" : slug.startsWith("roadmap") || slug === "syllabus" ? "roadmaps" : LEARN.has(slug) ? "progress" : slug;
   for (const a of nav.querySelectorAll("a")) a.setAttribute("aria-current", a.dataset.slug === section ? "page" : "false");
   for (const d of nav.querySelectorAll("details")) d.classList.toggle("current", !!d.querySelector('[aria-current="page"]'));
 
@@ -142,6 +142,12 @@ async function renderRoute() {
         main.replaceChildren();
         cleanup = roadmap.render(main, page) ?? null;
       }
+    } else if (slug.startsWith("subject/")) {
+      const view = await import("./views/subject.js");
+      if (id !== renderId) return;
+      const s = view.subjectOf(slug.slice(8));
+      if (!s) { setMeta(`Page not found · ${SITE.name}`, "This page doesn't exist.", location.pathname); main.replaceChildren(failure("Page not found", "There's no subject at this address.", null)); }
+      else { const m = view.meta(s, SITE.name); setMeta(m.title, m.description, `/${slug}`); cleanup = view.render(main, s) ?? null; }
     } else if (slug === "ask") {
       // Ask anything: AI routing to a visualiser (views/ask.js, server in src/ai/ask.ts).
       const ask = await import("./views/ask.js");
@@ -162,7 +168,8 @@ async function renderRoute() {
       const [gateSlot, roadSlot, elseSlot] = [0, 1, 2].map(() => h("div", { class: "card-slot" }));
       const { calm, tray } = await import("./calm.js");
       if (id !== renderId) return;
-      main.replaceChildren(host, tray([["Practise exam questions", gateSlot], ["Where this fits in the roadmap", roadSlot], ["Practise on other sites", elseSlot]]));
+      const nextRow = h("div");
+      main.replaceChildren(host, nextRow, tray([["Practise exam questions", gateSlot], ["Where this fits in the roadmap", roadSlot], ["Practise on other sites", elseSlot]]));
       const undo = view.render(host) ?? null, stopCalm = calm(host);
       cleanup = () => { stopCalm(); undo?.(); };
       // A link like /sliding-window?...#calc opens on that part of the tool.
@@ -170,6 +177,7 @@ async function renderRoute() {
       import("./learn/store.js").then((s) => s.update((st) => s.recordVisit(st, tool.slug))).catch(() => {});
       import("./tutor.js").then(({ mountTutor }) => { if (id === renderId) mountTutor(tool); }).catch(() => {});
       const fill = (slot, card) => { if (card && id === renderId) slot.replaceChildren(card); };
+      Promise.all([import("./roadmap-link.js"), import("./gate-link.js")]).then(([r, g]) => { if (id === renderId) nextRow.replaceChildren(r.nextStep(tool, g.GATE_SLUGS.has(tool.slug))); }).catch(() => {});
       import("./gate-link.js").then(({ gateCard }) => fill(gateSlot, gateCard(tool.slug))).catch(() => {});
       import("./roadmap-link.js").then(({ roadmapCard }) => fill(roadSlot, roadmapCard(tool.slug))).catch(() => {});
       import("./elsewhere.js").then(({ practiceElsewhere }) => fill(elseSlot, practiceElsewhere(tool.slug))).catch(() => {});

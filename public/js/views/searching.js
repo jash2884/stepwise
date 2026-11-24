@@ -1,3 +1,5 @@
+import { blockStage, view3d } from "../view3d.js";
+import { searchingFrame } from "../frames3d.js";
 import { ALGORITHMS, binaryProbes, COMPLEXITY, parseValues, randomValues, run } from "../engines/searching.js";
 import { codePanel, traceLayout, varsPanel } from "../code.js";
 import { h, notice, page, readParams, rng, stepper, writeParams } from "../ui.js";
@@ -59,6 +61,7 @@ export function render(root) {
   const p = readParams();
   const state = { algo: ALGORITHMS[p.get("algo")] ? p.get("algo") : "binary", values: p.get("a") ?? EXAMPLES.gfg.a, target: Number.isInteger(Number(p.get("t"))) && p.get("t") !== null ? Number(p.get("t")) : 23 };
   let player = null;
+  const v3 = view3d("searching");
   const head = page({
     subject: "Data structures & algorithms", title: "Searching",
     lede: "Linear, binary, jump and interpolation search, plus lower and upper bound: watch the range of possible answers shrink with every probe.",
@@ -78,6 +81,7 @@ export function render(root) {
 
   function update() {
     player?.destroy();
+    v3.disposeAll();
     writeParams({ algo: state.algo, a: state.values, t: state.target });
     algoSel.value = state.algo;
     let vals, res;
@@ -87,11 +91,13 @@ export function render(root) {
     const code = codePanel(algo.code), vars = varsPanel();
     const stage = h("div", { class: "chart-wrap" }), note = h("p", { class: "step-note", "aria-live": "polite" });
     const trail = h("div", { class: "srch-trail" }), counters = h("div", { class: "stats-row" });
+    const st3 = blockStage(v3, stage, res.steps.length, (i) => searchingFrame(res.A, res.steps[i], bounds), { aria: "Array in 3D" });
     player = stepper({
       count: res.steps.length, label: "Step", interval: 1000,
       render: (i) => {
         const st = res.steps[i];
         glide(stage, cellsSvg(res.A, st, bounds));
+        st3.show(i);
         code.show(st.line); vars.show(st.vars);
         note.textContent = st.note;
         note.className = `step-note${st.done ? (st.miss ? " warn" : " good") : ""}`;
@@ -104,7 +110,7 @@ export function render(root) {
     const n = res.A.length;
     out.replaceChildren(
       h("section", { class: "card" }, h("h2", null, algo.name), player.el, note,
-        traceLayout(h("div", null, stage, trail,
+        traceLayout(h("div", null, st3.el, trail,
           legend([["Range still in play", "var(--accent)"], ["Probe", "var(--series-4)"], ["Found", "var(--good)"], ["Ruled out", "var(--line)"]])), code, vars),
         counters),
       h("section", { class: "card" }, h("h2", null, "Same array, every algorithm"),
@@ -120,7 +126,7 @@ export function render(root) {
     set(state.algo, a.join(" "), t);
   };
   const visual = h("div", { class: "panel-body" },
-    h("section", { class: "card inputs" },
+    h("section", { class: "card inputs" }, v3.el,
       h("div", { class: "row" }, algoSel, toolbar(EXAMPLES, (ex) => set(ex.algo, ex.a, ex.t), random)),
       h("div", { class: "row" }, h("label", { class: "stack", style: "flex:1;margin:0" }, "Values (up to 20)", valIn), h("label", { class: "stack", style: "margin:0" }, "Target", tIn)),
       msg),
@@ -160,7 +166,7 @@ export function render(root) {
 
   mountTabs(root, head, visual, practice, newQuestion);
   update();
-  return () => player?.destroy();
+  return () => { player?.destroy(); v3.disposeAll(); };
 }
 
 // The common mistake: rounding mid up.

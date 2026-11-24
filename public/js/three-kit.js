@@ -73,6 +73,7 @@ export async function scene3d(container, opts = {}) {
 
   // Orbit: drag to rotate around the target, wheel or pinch to zoom.
   const sph = new THREE.Spherical().setFromVector3(camera.position.clone().sub(target));
+  const home = sph.clone();
   const limits = { min: sph.radius * 0.45, max: sph.radius * 2.2 };
   let autoRotate = reducedMotion() ? 0 : (opts.autoRotate ?? 0), userTouched = false;
   const place = () => { camera.position.copy(new THREE.Vector3().setFromSpherical(sph).add(target)); camera.lookAt(target); };
@@ -211,6 +212,7 @@ export async function scene3d(container, opts = {}) {
     colour: (name) => token(THREE, name),
     tween, travel, label, dispose,
     render: () => renderer.render(scene, camera),
+    resetView: () => { sph.copy(home); userTouched = false; place(); kick(); },
     setAutoRotate: (v) => { autoRotate = reducedMotion() ? 0 : v; },
     lookAt: (x, y, z, radius) => { target.set(x, y, z); if (radius) sph.radius = radius; place(); },
   };
@@ -222,10 +224,11 @@ export const has2d = (mode) => mode !== "3d";
 export const has3d = (mode) => mode !== "2d";
 export function viewToggle(key, onChange) {
   const store = `view3d:${key}`;
-  let mode = "2d";
-  try { const saved = localStorage.getItem(store); if ((saved === "3d" || saved === "both") && webglAvailable()) mode = saved; } catch { /* private mode */ }
+  // 3D first, unless this person chose otherwise here or the device would struggle.
+  let mode = webglAvailable() && !reducedMotion() && (navigator.deviceMemory ?? 8) >= 3 ? "3d" : "2d";
+  try { const saved = localStorage.getItem(store); if (saved === "2d" || ((saved === "3d" || saved === "both") && webglAvailable())) mode = saved; } catch { /* private mode */ }
   const btn = (m, text) => h("button", { type: "button", class: "btn ghost toggle", "aria-pressed": String(mode === m), "data-m": m, onclick: () => set(m) }, text);
-  const el = h("div", { class: "view-toggle", role: "group", "aria-label": "View" }, btn("2d", "2D"), btn("3d", "3D"), btn("both", "Both"));
+  const el = h("div", { class: "view-toggle", role: "group", "aria-label": "View" }, btn("3d", "3D"), btn("2d", "2D"));
   if (!webglAvailable()) { el.hidden = true; }
   function set(m) {
     mode = m;

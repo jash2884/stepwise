@@ -1,3 +1,5 @@
+import { blockStage, view3d } from "../view3d.js";
+import { buddyFrame, memoryFrame } from "../frames3d.js";
 import { ALGORITHMS, BUDDY_EXAMPLE, buddy, buddyTree, contiguous, EXAMPLE, nextPow2, parseHoles, parseScript, randomHoles, randomScript, scriptText } from "../engines/memory.js";
 import { codePanel, traceLayout, varsPanel } from "../code.js";
 import { copyLink, h, morph, notice, page, readParams, rng, stepper, writeParams } from "../ui.js";
@@ -134,6 +136,7 @@ export function render(root) {
     buddyScript: algo0 === "buddy" && p.get("s") ? p.get("s") : BUDDY_EXAMPLE.script,
   };
   let player = null;
+  const v3 = view3d("memory-allocation");
   const head = page({
     subject: "Operating systems", title: "Memory allocation",
     lede: "Processes come and go, and memory gets chopped into holes. Watch first, next, best and worst fit choose a hole, and the buddy system split and merge blocks.",
@@ -165,6 +168,7 @@ export function render(root) {
 
   function update() {
     player?.destroy();
+    v3.disposeAll();
     const isBuddy = state.algo === "buddy";
     const script = isBuddy ? state.buddyScript : state.fitScript;
     algoSel.value = state.algo;
@@ -183,11 +187,14 @@ export function render(root) {
     const stage = h("div", { class: "chart-wrap mem-stage" }), note = h("p", { class: "step-note", "aria-live": "polite" });
     const opsList = h("ol", { class: "mem-ops" });
     const counters = h("div", { class: "stats-row" });
+    const owners = [...new Set(res.steps.flatMap((s) => (s.segs ?? s.blocks ?? []).map((b) => b.owner)).filter(Boolean))];
+    const st3 = blockStage(v3, stage, res.steps.length, (i) => (isBuddy ? buddyFrame(res.steps[i], state.total, owners) : memoryFrame(res.steps[i], res.steps[i].stats.total, owners)), { turn: 0.2, aria: "Memory in 3D" });
     player = stepper({
       count: res.steps.length, label: "Step", interval: 900,
       render: (i) => {
         const st = res.steps[i];
         morph(stage, isBuddy ? buddySvg(st, state.total, colour) : barSvg(st, colour));
+        st3.show(i);
         code.show(st.line);
         vars.show(st.vars);
         note.textContent = st.note;
@@ -205,7 +212,7 @@ export function render(root) {
       h("span", null, h("i", { class: "mem-key-waste" }), "Internal fragmentation"), isBuddy ? h("span", null, h("i", { class: "mem-key-buddy" }), "Buddy being checked") : h("span", null, h("i", { class: "mem-key-pick" }), "Chosen / candidate hole"));
     out.replaceChildren(
       h("section", { class: "card" }, h("h2", null, spec.name), player.el, note,
-        traceLayout(h("div", null, opsList, stage, legend), code, vars), counters),
+        traceLayout(h("div", null, opsList, st3.el, legend), code, vars), counters),
       isBuddy ? buddyTable(res) : fitCompare(holes, ops, state.unit, state.algo, (id) => { state.algo = id; update(); }));
   }
 
@@ -219,7 +226,7 @@ export function render(root) {
           else { state.holes = randomHoles(r).join(" "); holesIn.value = state.holes; state.fitScript = scriptText(randomScript(r)); }
           update();
         } }, "Random"),
-        h("button", { type: "button", class: "btn ghost", onclick: (e) => copyLink(e.currentTarget) }, "Copy link")),
+        h("button", { type: "button", class: "btn ghost", onclick: (e) => copyLink(e.currentTarget) }, "Copy link"), v3.el),
       holesRow,
       h("label", { class: "stack" }, "Requests, in order (e.g. A 212; B 417; free A)", scriptIn),
       msg),
@@ -266,5 +273,5 @@ export function render(root) {
 
   mountTabs(root, head, visual, practice, newQuestion);
   update();
-  return () => player?.destroy();
+  return () => { player?.destroy(); v3.disposeAll(); };
 }

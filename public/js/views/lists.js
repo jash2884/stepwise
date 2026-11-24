@@ -1,3 +1,5 @@
+import { blockStage, view3d } from "../view3d.js";
+import { listFrame } from "../frames3d.js";
 import { KINDS, OPS, codeFor, parseValues, run } from "../engines/lists.js";
 import { codePanel, traceLayout, varsPanel } from "../code.js";
 import { h, notice, page, readParams, rng, stepper, writeParams } from "../ui.js";
@@ -109,6 +111,7 @@ export function render(root) {
   const num = (k, d) => (p.get(k) !== null && Number.isInteger(Number(p.get(k))) ? Number(p.get(k)) : d);
   const state = { kind: KINDS[p.get("kind")] ? p.get("kind") : "s", op: OPS[p.get("op")] ? p.get("op") : "reverse", values: p.get("a") ?? "10 20 30 40 50", x: num("x", 25), pos: num("pos", 2), cycle: num("cycle", 2) };
   let player = null;
+  const v3 = view3d("linked-list");
   const head = page({
     subject: "Data structures & algorithms", title: "Linked lists",
     lede: "Singly, doubly and circular lists with every pointer drawn as an arrow. Watch arrows swing as you insert, delete and reverse, and the tortoise and hare hunt for a cycle.",
@@ -131,6 +134,7 @@ export function render(root) {
 
   function update() {
     player?.destroy();
+    v3.disposeAll();
     const arg = OPS[state.op].arg ?? "";
     writeParams({ kind: state.kind, op: state.op, a: state.values, ...(arg.includes("x") ? { x: state.x } : {}), ...(arg.includes("pos") ? { pos: state.pos } : {}), ...(state.op === "floyd" && state.kind === "s" ? { cycle: state.cycle } : {}) });
     kindSel.value = state.kind; opSel.value = state.op;
@@ -143,11 +147,13 @@ export function render(root) {
     const stage = h("div", { class: "chart-wrap" }), note = h("p", { class: "step-note", "aria-live": "polite" }), counters = h("div", { class: "stats-row" });
     const maxX = Math.max(1, ...res.steps.flatMap((s) => s.nodes.map((n) => n.x))), row1 = res.steps.some((s) => s.nodes.some((n) => n.y));
     let changes = 0;
+    const st3 = blockStage(v3, stage, res.steps.length, (i) => listFrame(res.steps[i], maxX), { turn: 0.18, aria: "Linked list in 3D" });
     player = stepper({
       count: res.steps.length, label: "Step", interval: 1100,
       render: (i) => {
         const st = res.steps[i];
         glide(stage, listSvg(st, state.kind, maxX, row1));
+        st3.show(i);
         code.show(st.line); vars.show(st.vars);
         note.textContent = st.note;
         note.className = `step-note${st.done ? " good" : ""}`;
@@ -157,7 +163,7 @@ export function render(root) {
     });
     out.replaceChildren(
       h("section", { class: "card" }, h("h2", null, `${OPS[state.op].name}: ${KINDS[state.kind].toLowerCase()} list`), player.el, note,
-        traceLayout(h("div", null, stage, legend([["Current node", "var(--accent)"], ["Pointer just changed", "var(--series-2)"], ["Found / meeting point", "var(--good)"], ["Being removed", "var(--bad)"]])), code, vars),
+        traceLayout(h("div", null, st3.el, legend([["Current node", "var(--accent)"], ["Pointer just changed", "var(--series-2)"], ["Found / meeting point", "var(--good)"], ["Being removed", "var(--bad)"]])), code, vars),
         counters),
       h("section", { class: "card" }, h("h2", null, "Linked list vs array"),
         summaryTable(["Operation", "Singly", "Doubly", "Circular", "Array"], [
@@ -180,7 +186,7 @@ export function render(root) {
     update();
   };
   const visual = h("div", { class: "panel-body" },
-    h("section", { class: "card inputs" },
+    h("section", { class: "card inputs" }, v3.el,
       h("div", { class: "row" }, kindSel, opSel, toolbar(EXAMPLES, set, random)),
       h("div", { class: "row" }, h("label", { class: "stack", style: "flex:1;margin:0" }, "Starting list (up to 10 values)", valIn), posL, xL, cycL),
       msg),
@@ -222,5 +228,5 @@ export function render(root) {
 
   mountTabs(root, head, visual, practice, newQuestion);
   update();
-  return () => player?.destroy();
+  return () => { player?.destroy(); v3.disposeAll(); };
 }

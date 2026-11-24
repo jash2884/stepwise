@@ -1,3 +1,5 @@
+import { blockStage, view3d } from "../view3d.js";
+import { cacheFrame } from "../frames3d.js";
 import {
   amat, CODE, EXAMPLES, fromParams, geometry, MAPPINGS, parseTrace, POLICIES, randomBlocks, simulate, toBin, toParams, WRITES, tagDirectory,
 } from "../engines/cache.js";
@@ -48,13 +50,14 @@ function refStrip(res, upto) {
   }, `${s.write ? "W" : ""}${res.cfg.unit === "block" ? s.block : s.addr}`, h("small", null, k + 1 > upto ? "·" : s.hit ? "H" : "M"))));
 }
 
-export function simulation(res) {
-  const g = res.geometry;
-  const frame = stepFrame(res.steps, CODE, (s, i) => h("div", null,
+export function simulation(res, v = null) {
+  const g = res.geometry, flat = h("div");
+  const st3 = v ? blockStage(v, flat, res.steps.length, (i) => cacheFrame(res.steps[i], g), { tilt: 0.5, aria: "Cache in 3D" }) : { el: flat, show() {} };
+  const frame = stepFrame(res.steps, CODE, (s, i) => (flat.replaceChildren(cacheTable(s, g)), st3.show(i), h("div", null,
     refStrip(res, i),
     addressBits(s, g, res.cfg.unit),
-    cacheTable(s, g),
-    h("p", { class: "muted small" }, g.ways > 1 ? `#1 is the next to go under ${POLICIES[res.cfg.policy]}. D marks a dirty line (write-back only).` : "Each block has exactly one place it can go: line = block mod lines.")),
+    st3.el,
+    h("p", { class: "muted small" }, g.ways > 1 ? `#1 is the next to go under ${POLICIES[res.cfg.policy]}. D marks a dirty line (write-back only).` : "Each block has exactly one place it can go: line = block mod lines."))),
   { label: "Reference", after: (s, i) => {
     const done = res.steps.slice(1, i + 1);
     const hits = done.filter((x) => x.hit).length, misses = done.length - hits;
@@ -116,6 +119,7 @@ export function render(root) {
   const msg = h("div"), out = h("div", { class: "output" }), geo = h("div"), amatOut = h("div");
   const controls = h("div");
   let sim = null;
+  const v3 = view3d("cache-mapping");
 
   function drawControls() {
     const c = state.cfg;
@@ -167,6 +171,7 @@ export function render(root) {
     drawControls();
     save();
     sim?.player.destroy();
+    v3.disposeAll();
     let refs, res;
     try {
       refs = parseTrace(state.trace);
@@ -180,7 +185,7 @@ export function render(root) {
     geo.replaceChildren(h("div", { class: "coa-geo" },
       bitStrip("t".repeat(g.tagBits) + "i".repeat(g.indexBits) + "o".repeat(g.offsetBits), [{ size: g.tagBits, cls: "tag", label: `tag ${g.tagBits}` }, { size: g.indexBits, cls: "idx", label: `index ${g.indexBits}` }, { size: g.offsetBits, cls: "off", label: `offset ${g.offsetBits}` }].filter((x) => x.size > 0), { small: g.addressBits > 20 }),
       h("p", { class: "muted small" }, `${g.lines} lines of ${g.blockSize} byte${g.blockSize === 1 ? "" : "s"}, ${g.sets} set${g.sets === 1 ? "" : "s"} × ${g.ways} way${g.ways === 1 ? "" : "s"}. Tag storage: ${g.lines} × (${g.tagBits} tag + 1 valid${state.cfg.write === "wb" ? " + 1 dirty" : ""}) = ${dir.total} bits.`)));
-    sim = simulation(res);
+    sim = simulation(res, v3);
     out.replaceChildren(
       h("section", { class: "card" }, h("h2", null, `${g.mapping === "set" ? `${g.ways}-way set-associative` : MAPPINGS[g.mapping]}, ${res.refs} references`), sim.el,
         h("p", { class: "muted small" }, `Final: ${res.hits} hits, ${res.misses} misses, hit ratio ${pct(res.hitRatio)}. ${state.cfg.write === "wb" ? `${res.writeBacks} dirty blocks written back on eviction, ${res.dirtyAtEnd} still dirty.` : `${res.memWrites} writes went through to memory.`}`)),
@@ -188,7 +193,7 @@ export function render(root) {
   }
 
   const visual = h("div", { class: "panel-body" },
-    h("section", { class: "card inputs" }, controls, geo, msg), out, amatOut);
+    h("section", { class: "card inputs" }, v3.el, controls, geo, msg), out, amatOut);
 
   // --- Practice -----------------------------------------------------------------
   const practice = h("div", { class: "panel-body" });
@@ -244,5 +249,5 @@ export function render(root) {
   mountTabs(root, head, visual, practice, newQuestion);
   drawAmat();
   update();
-  return () => sim?.player.destroy();
+  return () => { sim?.player.destroy(); v3.disposeAll(); };
 }

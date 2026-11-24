@@ -1,3 +1,5 @@
+import { blockStage, view3d } from "../view3d.js";
+import { exprFrame, stackFrame } from "../frames3d.js";
 import { COMPLEXITY, evalPostfix, isBalanced, MODES, runExpr, runOps, tokenize, toPostfix } from "../engines/stacks.js";
 import { codePanel, traceLayout, varsPanel } from "../code.js";
 import { h, notice, page, readParams, rng, stepper, writeParams } from "../ui.js";
@@ -138,6 +140,7 @@ export function render(root) {
   const mode0 = MODES[p.get("mode")] ? p.get("mode") : "infix";
   const state = { mode: mode0, text: p.get("in") ?? DEFAULTS[mode0], cap: Math.min(10, Math.max(2, Number(p.get("cap")) || 5)) };
   let player = null;
+  const v3 = view3d("stacks-queues");
   const head = page({
     subject: "Data structures & algorithms", title: "Stacks & queues",
     lede: "Push, pop, enqueue and dequeue on real arrays, a circular queue that wraps round, and the stack at work: bracket matching, infix to postfix and postfix evaluation.",
@@ -158,6 +161,7 @@ export function render(root) {
 
   function update() {
     player?.destroy();
+    v3.disposeAll();
     const ops = MODES[state.mode].kind === "ops";
     writeParams(ops ? { mode: state.mode, in: state.text, cap: state.cap } : { mode: state.mode, in: state.text });
     modeSel.value = state.mode;
@@ -169,10 +173,12 @@ export function render(root) {
     const m = MODES[state.mode], code = codePanel(m.code), vars = varsPanel();
     const stage = h("div", { class: "chart-wrap" }), ring = h("div", { class: "ring-wrap" }), note = h("p", { class: "step-note", "aria-live": "polite" });
     const chips = h("div", { class: "op-chips" }), counters = h("div", { class: "stats-row" });
+    const st3 = blockStage(v3, stage, res.steps.length, (i) => (ops ? stackFrame(res.steps[i], state.cap, state.mode) : exprFrame(res.steps[i])), { tilt: 0.45, turn: 0.3, aria: "Stack or queue in 3D" });
     player = stepper({
       count: res.steps.length, label: "Step", interval: 1000,
       render: (i) => {
         const st = res.steps[i];
+        st3.show(i);
         if (ops) {
           glide(stage, state.mode === "stack" ? stackSvg(st, state.cap) : rowSvg(st, state.cap));
           if (state.mode !== "stack") glide(ring, ringSvg(st, state.cap));
@@ -192,7 +198,7 @@ export function render(root) {
     const numeric = state.mode === "infix" && tokenize(state.text).every((t) => !/^[A-Za-z_]/.test(t));
     out.replaceChildren(
       h("section", { class: "card" }, h("h2", null, m.name), player.el, note,
-        traceLayout(h("div", null, ops ? chips : null, h("div", { class: ops && state.mode !== "stack" ? "sq-pair" : null }, stage, ops && state.mode !== "stack" ? ring : null),
+        traceLayout(h("div", null, ops ? chips : null, h("div", { class: ops && state.mode !== "stack" ? "sq-pair" : null }, st3.el, ops && state.mode !== "stack" ? ring : null),
           legend([["Being used now", "var(--accent)"], ["Matched / result", "var(--good)"], ["Error", "var(--bad)"], ["Incoming / removed", "var(--series-4)"]])), code, vars),
         counters,
         numeric ? h("p", { class: "muted small" }, h("button", { type: "button", class: "linkish", onclick: () => set("postfix", res.postfix) }, "Evaluate this postfix →")) : null),
@@ -208,7 +214,7 @@ export function render(root) {
     else set(mode, toPostfix(randomInfix(r, true).join(" ")));
   };
   const visual = h("div", { class: "panel-body" },
-    h("section", { class: "card inputs" },
+    h("section", { class: "card inputs" }, v3.el,
       h("div", { class: "row" }, modeSel, toolbar(EXAMPLES, (ex) => set(ex.mode, ex.text, ex.cap), random)),
       h("div", { class: "row" }, h("label", { class: "stack", style: "flex:1;margin:0" }, txtLabel, txt), capLabel),
       msg),
@@ -249,7 +255,7 @@ export function render(root) {
 
   mountTabs(root, head, visual, practice, newQuestion);
   update();
-  return () => player?.destroy();
+  return () => { player?.destroy(); v3.disposeAll(); };
 }
 
 function randomOps(r, mode, n) {

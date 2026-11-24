@@ -13,6 +13,7 @@ import { ROADMAPS, hoursOf } from "../public/js/roadmaps.js";
 import { meta as roadmapMeta } from "../public/js/views/roadmap.js";
 import { LEARN_PAGES } from "../public/js/learn/pages.js";
 import { writeCards } from "./ai-cards.js";
+import { meta as subjectMeta, studyOrder } from "../public/js/views/subject.js";
 import { META as SYLLABUS } from "../public/js/views/syllabus.js";
 import { writeCatalogue } from "./syllabus-catalogue.js";
 
@@ -112,6 +113,13 @@ await writeFile(join(out, "ask.html"), pageHtml({
 
 // Roadmaps: an index, one page per roadmap and one per stage, all indexable.
 const roadmapPaths = ["roadmaps"];
+// One page per subject, topics in study order.
+await mkdir(join(out, "subject"), { recursive: true });
+for (const sub of SUBJECTS) {
+  await writeFile(join(out, "subject", `${sub.id}.html`), pageHtml({ ...subjectMeta(sub, SITE.name), path: `/subject/${sub.id}`,
+    body: `<section class="static-content"><h1>${esc(sub.name)}</h1><ol>${studyOrder(sub.id).map((t) => `<li><a href="/${t.slug}">${esc(t.title)}</a>: ${esc(t.summary)}</li>`).join("")}</ol></section>` }));
+  roadmapPaths.push(`subject/${sub.id}`);
+}
 const toolTitle = (slug) => TOOLS.find((t) => t.slug === slug)?.title ?? slug;
 {
   const m = roadmapMeta({ kind: "index" }, SITE.name);

@@ -14,9 +14,9 @@ export function view3d(key) {
   const toggle = viewToggle(key, (m) => { for (const s of stages) s.apply(m); });
   toggle.el.classList.add("net3d-toggle");
 
-  function stage(el2d, build, { hint = "Drag to orbit · pinch or Ctrl+scroll to zoom" } = {}) {
+  function stage(el2d, build, { hint = "Drag to turn, pinch or Ctrl+scroll to zoom" } = {}) {
     const box = h("div", { class: "net3d-box" });
-    const wrap = h("div", { class: "net3d-wrap", hidden: true }, box, h("p", { class: "three-hint" }, hint));
+    const wrap = h("div", { class: "net3d-wrap", hidden: true }, box, h("p", { class: "three-hint" }, hint, " ", h("button", { type: "button", class: "linkish reset3d", onclick: () => scene?.reset?.() }, "Reset view")));
     const el = h("div", { class: "net3d-stage" }, el2d, wrap);
     let scene = null, last = undefined, gen = 0, alive = true;
     async function apply(mode) {
@@ -56,4 +56,12 @@ export function view3d(key) {
     stage,
     disposeAll() { for (const s of [...stages]) s.dispose(); },
   };
+}
+
+// A block stage: frames(i) gives the 3D frame for step i of count steps.
+// show(i) draws it. Frames are worked out once, so the camera fits them all.
+export function blockStage(v, el2d, count, frames, opts = {}) {
+  const list = Array.from({ length: count }, (_, i) => frames(i));
+  const st = v.stage(el2d, (box) => import("./blocks3d.js").then((m) => m.blocksScene(box, { frames: list, ...opts })));
+  return { el: st.el, show: (i) => st.show(list[i]) };
 }

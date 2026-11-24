@@ -1,3 +1,5 @@
+import { blockStage, view3d } from "../view3d.js";
+import { sortingFrame } from "../frames3d.js";
 import { afterPasses, ALGORITHMS, COMPLEXITY, parseValues, randomValues, run } from "../engines/sorting.js";
 import { codePanel, complexityTable, traceLayout, varsPanel } from "../code.js";
 import { treeDiagram } from "../diagram.js";
@@ -66,6 +68,7 @@ export function render(root) {
   const p = readParams();
   const state = { algo: ALGORITHMS[p.get("algo")] ? p.get("algo") : "quick", values: p.get("a") ?? "38 27 43 3 9 82 10 55 19 64" };
   let player = null;
+  const v3 = view3d("sorting");
   const head = page({
     subject: "Data structures & algorithms", title: "Sorting",
     lede: "Nine sorting algorithms, every comparison and move animated, with the pseudocode line and variables beside it.",
@@ -83,6 +86,7 @@ export function render(root) {
 
   function update() {
     player?.destroy();
+    v3.disposeAll();
     writeParams({ algo: state.algo, a: state.values });
     algoSel.value = state.algo;
     let vals, res;
@@ -93,11 +97,13 @@ export function render(root) {
     const stage = h("div", { class: "chart-wrap" }), extra = h("div"), note = h("p", { class: "step-note", "aria-live": "polite" });
     const counters = h("div", { class: "stats-row" });
     const heapBox = h("div", { class: "chart-wrap" });
+    const st3 = blockStage(v3, stage, res.steps.length, (i) => sortingFrame(res.steps[i], vals.length, maxV, AUX.has(state.algo)), { aria: "Bars in 3D" });
     player = stepper({
       count: res.steps.length, label: "Step", interval: 650,
       render: (i) => {
         const st = res.steps[i];
         morph(stage, barsSvg(st, vals.length, maxV, state.algo));
+        st3.show(i);
         const tree = heapTree(st);
         if (tree) { heapBox.hidden = false; morph(heapBox, tree); } else heapBox.hidden = true;
         extra.replaceChildren(...[countsGrid(st), bucketsRow(st)].filter(Boolean));
@@ -113,7 +119,7 @@ export function render(root) {
     const most = Math.max(...all.map((x) => x.r?.comparisons ?? 0), 1);
     out.replaceChildren(
       h("section", { class: "card" }, h("h2", null, algo.name), player.el, note,
-        traceLayout(h("div", null, stage, heapBox, extra,
+        traceLayout(h("div", null, st3.el, heapBox, extra,
           h("div", { class: "legend-chips" }, LEGEND.map(([t, c]) => h("span", null, h("i", { style: `--c:var(--series-${c})` }), t)))), code, vars),
         counters),
       h("section", { class: "card" }, h("h2", null, "Same input, every algorithm"),
@@ -135,7 +141,7 @@ export function render(root) {
         preset("Nearly sorted", (r) => { const a = randomValues(r, 10, 90).sort((x, y) => x - y); const i = Math.floor(r() * 9); [a[i], a[i + 1]] = [a[i + 1], a[i]]; return a; }),
         preset("Reversed", (r) => randomValues(r, 10, 90).sort((x, y) => y - x)),
         preset("Few unique", (r) => Array.from({ length: 12 }, () => [12, 30, 30, 55][Math.floor(r() * 4)])),
-        h("button", { type: "button", class: "btn ghost", onclick: (e) => copyLink(e.currentTarget) }, "Copy link")),
+        h("button", { type: "button", class: "btn ghost", onclick: (e) => copyLink(e.currentTarget) }, "Copy link"), v3.el),
       h("label", { class: "stack" }, "Values (up to 24, from 0 to 999)", valIn),
       msg),
     out);
@@ -168,5 +174,5 @@ export function render(root) {
 
   mountTabs(root, head, visual, practice, newQuestion);
   update();
-  return () => player?.destroy();
+  return () => { player?.destroy(); v3.disposeAll(); };
 }
